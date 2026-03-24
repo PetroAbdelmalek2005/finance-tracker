@@ -1,0 +1,3275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Finance Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer onload="if(typeof gisLoaded==='function')gisLoaded()"></script>
+<style>
+/* ── CONFIG BANNER ───────────────────────────────────────────── */
+#config-banner{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:999;align-items:center;justify-content:center;padding:20px;}
+#config-banner.show{display:flex;}
+.config-box{background:var(--bg-2);border:var(--border2);border-radius:20px;padding:28px;width:100%;max-width:440px;}
+.config-box h2{color:var(--text);font-size:18px;font-weight:500;margin-bottom:6px;}
+.config-box p{color:var(--text3);font-size:13px;line-height:1.6;margin-bottom:18px;}
+.config-box label{display:block;color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;}
+.config-box input{width:100%;background:var(--bg-base);border:var(--border2);border-radius:10px;padding:11px 14px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;margin-bottom:12px;box-sizing:border-box;}
+.config-box input:focus{outline:none;border-color:var(--blue);}
+.config-save{width:100%;padding:13px;background:var(--blue);border:none;border-radius:10px;color:#fff;font-size:14px;font-family:'DM Sans',sans-serif;cursor:pointer;font-weight:500;margin-top:2px;}
+.config-note{font-size:11px;color:var(--text4);margin-top:10px;text-align:center;}
+
+/* ── THEME VARIABLES ─────────────────────────────────────────── */
+:root{
+  --bg-base:#0b0e18;--bg-card:#121828;--bg-input:#0b0e18;--bg-2:#1a2035;--bg-3:#1e2840;--bg-4:#232d48;
+  --border:1px solid #1e2535;--border2:1px solid #2a3550;--border3:1px solid #3a4870;
+  --text:#eaeef8;--text2:#c8cedf;--text3:#8892aa;--text4:#50607a;--text5:#303d55;
+  --green:#18b880;--red:#f04f4f;--blue:#4a82e4;--amber:#f5a623;--purple:#8b5cf6;
+  --green-bg:#082818;--red-bg:#280a0a;--blue-bg:#0a1830;--amber-bg:#281800;
+  --radius-sm:8px;--radius-md:12px;--radius-lg:16px;--radius-xl:20px;
+  --shadow:0 2px 12px rgba(0,0,0,.35);
+}
+body.light{
+  --bg-base:#f0f2f8;--bg-card:#ffffff;--bg-input:#f8f9fc;--bg-2:#eaecf4;--bg-3:#e0e4ef;--bg-4:#d4d9e8;
+  --border:1px solid #e0e4ef;--border2:1px solid #c8cedf;--border3:1px solid #a8b0c8;
+  --text:#0f1525;--text2:#1e2a42;--text3:#4a5570;--text4:#7a8aaa;--text5:#a8b2c8;
+  --green-bg:#e8f8f0;--red-bg:#fef0f0;--blue-bg:#eff4fe;--amber-bg:#fef8e8;
+  --shadow:0 2px 12px rgba(0,0,0,.08);
+}
+
+/* ── RESET ───────────────────────────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html{font-size:15px;-webkit-text-size-adjust:100%;}
+body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);color:var(--text);min-height:100vh;line-height:1.5;transition:background .25s,color .25s;}
+
+/* ── LAYOUT ──────────────────────────────────────────────────── */
+.shell{display:flex;min-height:100vh;}
+.sidebar{width:220px;min-width:220px;background:var(--bg-base);border-right:var(--border);display:flex;flex-direction:column;position:fixed;top:0;bottom:0;left:0;z-index:10;}
+.main{margin-left:220px;flex:1;padding:32px 28px;max-width:1100px;}
+
+/* ── SIDEBAR ─────────────────────────────────────────────────── */
+.brand{padding:24px 20px 18px;border-bottom:var(--border);display:flex;justify-content:space-between;align-items:center;}
+.brand-name{font-family:'DM Serif Display',serif;font-size:18px;color:var(--text);letter-spacing:.01em;}
+.brand-sub{font-size:10px;color:var(--text5);margin-top:2px;letter-spacing:.06em;text-transform:uppercase;}
+.nav-section{padding:16px 10px 8px;flex:1;overflow-y:auto;}
+.nav-label{font-size:10px;color:var(--text5);text-transform:uppercase;letter-spacing:.1em;padding:0 10px;margin-bottom:5px;margin-top:14px;}
+.nav-label:first-child{margin-top:0;}
+.nav-btn{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;background:none;border:none;color:var(--text3);font-size:13px;font-family:'DM Sans',sans-serif;border-radius:10px;cursor:pointer;text-align:left;transition:all .15s;margin-bottom:1px;}
+.nav-btn:hover{background:var(--bg-2);color:var(--text2);}
+.nav-btn.active{background:var(--bg-3);color:var(--text);font-weight:500;}
+.nav-icon{width:16px;height:16px;opacity:.6;flex-shrink:0;}
+.nav-btn.active .nav-icon{opacity:1;}
+.sidebar-footer{padding:14px 10px;border-top:var(--border);}
+.sync-btn{width:100%;padding:8px 12px;background:var(--bg-2);border:var(--border2);border-radius:10px;color:var(--text3);font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all .15s;}
+.sync-btn:hover{background:var(--bg-3);color:var(--text);}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0;}
+.sync-dot.syncing{background:var(--amber);animation:pulse 1s infinite;}
+.sync-dot.error{background:var(--red);}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+
+/* ── PAGE HEADER ─────────────────────────────────────────────── */
+.page-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;flex-wrap:wrap;gap:10px;}
+.page-title{font-family:'DM Serif Display',serif;font-size:26px;color:var(--text);}
+.page-sub{font-size:13px;color:var(--text4);margin-top:2px;}
+.header-actions{display:flex;gap:8px;align-items:center;}
+
+/* ── BUTTONS ─────────────────────────────────────────────────── */
+.btn{padding:8px 16px;font-size:13px;font-family:'DM Sans',sans-serif;border-radius:10px;border:var(--border2);background:transparent;color:var(--text3);cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px;}
+.btn:hover{background:var(--bg-2);color:var(--text);}
+.btn-primary{background:var(--blue);border-color:var(--blue);color:#fff;}
+.btn-primary:hover{filter:brightness(1.1);}
+.btn-sm{padding:6px 13px;font-size:12px;}
+.btn-danger{border-color:#4a1520;color:#d06070;}
+.btn-danger:hover{background:#2a0f18;color:#f07090;}
+.btn-icon{width:34px;height:34px;padding:0;justify-content:center;border-radius:10px;}
+
+/* ── METRIC CARDS ────────────────────────────────────────────── */
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:22px;}
+.metric{background:var(--bg-card);border:var(--border);border-radius:var(--radius-lg);padding:16px 18px;position:relative;overflow:hidden;box-shadow:var(--shadow);}
+.metric::after{content:'';position:absolute;bottom:-12px;right:-12px;width:56px;height:56px;border-radius:50%;opacity:.08;}
+.metric.green::after{background:var(--green);}
+.metric.red::after{background:var(--red);}
+.metric.blue::after{background:var(--blue);}
+.metric.amber::after{background:var(--amber);}
+.metric-label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;font-weight:500;}
+.metric-value{font-size:22px;font-weight:300;color:var(--text);letter-spacing:-.02em;line-height:1.1;}
+.metric-value.pos{color:var(--green);}
+.metric-value.neg{color:var(--red);}
+.metric-trend{font-size:11px;color:var(--text4);margin-top:5px;}
+
+/* ── CARDS ───────────────────────────────────────────────────── */
+.card{background:var(--bg-card);border:var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:16px;box-shadow:var(--shadow);}
+.card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+.card-title{font-size:14px;font-weight:500;color:var(--text2);}
+
+/* ── GRID ────────────────────────────────────────────────────── */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+@media(max-width:900px){.grid-2{grid-template-columns:1fr;}}
+
+/* ── CHARTS ──────────────────────────────────────────────────── */
+.chart-wrap{position:relative;width:100%;}
+.chart-wrap.h200{height:200px;}
+.chart-wrap.h220{height:220px;}
+.chart-wrap.h160{height:160px;}
+.chart-wrap.h180{height:180px;}
+
+/* ── ROWS ────────────────────────────────────────────────────── */
+.row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:var(--border);}
+.row:last-child{border-bottom:none;}
+.row-left{flex:1;min-width:0;}
+.row-title{font-size:13px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.row-sub{font-size:11px;color:var(--text4);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.row-right{display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:10px;}
+.amount{font-size:13px;font-weight:500;}
+.amount.pos{color:var(--green);}
+.amount.neg{color:var(--red);}
+.amount.neutral{color:var(--text3);}
+
+/* ── BADGES ──────────────────────────────────────────────────── */
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:500;letter-spacing:.03em;}
+.badge-green{background:var(--green-bg);color:var(--green);}
+.badge-red{background:var(--red-bg);color:var(--red);}
+.badge-blue{background:var(--blue-bg);color:var(--blue);}
+.badge-amber{background:var(--amber-bg);color:var(--amber);}
+.badge-gray{background:var(--bg-2);color:var(--text3);}
+
+/* ── PROGRESS BARS ───────────────────────────────────────────── */
+.prog-row{margin-bottom:14px;}
+.prog-row:last-child{margin-bottom:0;}
+.prog-header{display:flex;justify-content:space-between;margin-bottom:5px;}
+.prog-label{font-size:13px;color:var(--text2);}
+.prog-amounts{font-size:12px;color:var(--text4);}
+.prog-bg{height:7px;background:var(--bg-3);border-radius:4px;overflow:hidden;}
+.prog-fill{height:100%;border-radius:4px;transition:width .5s ease;}
+
+/* ── MODALS ──────────────────────────────────────────────────── */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:100;align-items:flex-end;justify-content:center;padding:0;}
+.modal-bg.open{display:flex;}
+.modal{background:var(--bg-card);border:var(--border2);border-radius:20px 20px 0 0;padding:24px 20px 32px;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;}
+.modal-drag{width:40px;height:4px;background:var(--bg-3);border-radius:2px;margin:0 auto 18px;}
+.modal-title{font-size:17px;font-weight:500;color:var(--text);margin-bottom:18px;}
+.field{margin-bottom:13px;}
+.field label{display:block;font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px;font-weight:500;}
+.field input,.field select{width:100%;padding:12px 14px;background:var(--bg-2);border:var(--border);border-radius:10px;color:var(--text);font-size:16px;font-family:'DM Sans',sans-serif;appearance:none;-webkit-appearance:none;}
+.field input:focus,.field select:focus{outline:none;border-color:var(--blue);background:var(--bg-3);}
+.field select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%238892aa' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;cursor:pointer;}
+.field select option{background:var(--bg-2);}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;}
+.modal-footer .btn{flex:1;}
+
+/* ── TABS ────────────────────────────────────────────────────── */
+.tab{display:none;}
+.tab.active{display:block;}
+
+/* ── EMPTY STATE ─────────────────────────────────────────────── */
+.empty{text-align:center;padding:36px 20px;color:var(--text5);font-size:13px;}
+.empty-icon{font-size:32px;margin-bottom:10px;}
+
+/* ── DELETE & EDIT BTNS ──────────────────────────────────────── */
+.del{background:none;border:none;color:var(--text5);cursor:pointer;padding:5px 7px;border-radius:8px;font-size:16px;line-height:1;transition:all .15s;}
+.del:hover{color:var(--red);background:var(--red-bg);}
+
+/* ── STOCK ───────────────────────────────────────────────────── */
+.chg{font-size:11px;margin-top:2px;}
+.chg.up{color:var(--green);}
+.chg.dn{color:var(--red);}
+
+/* ── TICKER DROPDOWN ─────────────────────────────────────────── */
+.tdrop-item{display:flex;align-items:center;padding:12px 14px;cursor:pointer;border-bottom:var(--border);transition:background .1s;}
+.tdrop-item:last-child{border-bottom:none;}
+.tdrop-item:hover,.tdrop-item.focused{background:var(--bg-3);}
+.tdrop-ticker{font-size:13px;font-weight:500;color:var(--blue);min-width:64px;}
+.tdrop-name{font-size:12px;color:var(--text3);flex:1;margin:0 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.tdrop-exch{font-size:10px;color:var(--text4);white-space:nowrap;}
+.tdrop-msg{padding:14px;font-size:12px;color:var(--text4);text-align:center;}
+
+/* ── TOAST ───────────────────────────────────────────────────── */
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--bg-3);border:var(--border2);border-radius:12px;padding:11px 20px;font-size:13px;color:var(--text2);opacity:0;transition:all .22s;pointer-events:none;z-index:300;white-space:nowrap;box-shadow:var(--shadow);}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ── SETTINGS ────────────────────────────────────────────────── */
+.settings-card{background:var(--bg-card);border:var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:14px;box-shadow:var(--shadow);}
+.settings-title{font-size:14px;font-weight:500;color:var(--text2);margin-bottom:5px;}
+.settings-desc{font-size:12px;color:var(--text4);line-height:1.6;margin-bottom:14px;}
+
+/* ── DESKTOP ONLY ────────────────────────────────────────────── */
+@media(min-width:681px){
+  .mob-nav{display:none!important;}
+  .modal-bg{align-items:center;}
+  .modal{border-radius:20px;max-width:440px;}
+  .modal-drag{display:none;}
+  .toast{bottom:24px;}
+}
+
+/* ── MOBILE ──────────────────────────────────────────────────── */
+.mob-nav{display:none;}
+@media(max-width:680px){
+  /* Layout */
+  .sidebar{display:none;}
+  .main{margin-left:0;padding:0 0 90px;}
+
+  /* Mobile header — compact sticky bar */
+  .mob-header{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:14px 18px 10px;
+    padding-top:calc(14px + env(safe-area-inset-top,0px));
+    background:var(--bg-base);
+    border-bottom:var(--border);
+    position:sticky;top:0;z-index:9;
+  }
+  .mob-header-title{font-family:'DM Serif Display',serif;font-size:20px;color:var(--text);}
+  .mob-header-actions{display:flex;gap:8px;}
+  .page-header{display:none;}
+
+  /* Content padding */
+  .tab-content-inner{padding:14px 16px;}
+
+  /* Bottom nav */
+  .mob-nav{
+    display:flex;position:fixed;bottom:0;left:0;right:0;
+    background:var(--bg-card);
+    border-top:var(--border);
+    z-index:20;
+    padding:8px 0;
+    padding-bottom:calc(8px + env(safe-area-inset-bottom,0px));
+  }
+  .mob-nav-btn{
+    flex:1;display:flex;flex-direction:column;align-items:center;
+    gap:3px;background:none;border:none;
+    color:var(--text4);font-size:9px;font-family:'DM Sans',sans-serif;
+    cursor:pointer;padding:4px 2px;transition:color .15s;
+  }
+  .mob-nav-btn.active{color:var(--blue);}
+  .mob-nav-btn svg{width:23px;height:23px;}
+
+  /* Cards & metrics */
+  .card{border-radius:14px;padding:16px;margin-bottom:12px;border-left:none;border-right:none;border-radius:0;box-shadow:none;margin-left:-16px;margin-right:-16px;padding-left:16px;padding-right:16px;}
+  .card-first{border-top:none;}
+  .metrics{grid-template-columns:1fr 1fr;gap:10px;margin-left:16px;margin-right:16px;margin-bottom:16px;width:calc(100% - 32px);}
+  .metric{border-radius:14px;padding:14px 15px;}
+  .metric-value{font-size:19px;}
+  .metric-trend{font-size:10px;}
+  .grid-2{grid-template-columns:1fr;gap:0;}
+
+  /* Charts — shorter on mobile */
+  .chart-wrap.h200{height:160px;}
+  .chart-wrap.h220{height:170px;}
+  .chart-wrap.h160{height:140px;}
+
+  /* Rows */
+  .row{padding:13px 0;}
+  .row-right{gap:6px;}
+  .btn-sm{padding:5px 10px;font-size:11px;}
+
+  /* Page titles handled by mob-header */
+  .page-title{font-size:20px;}
+  .page-sub{font-size:12px;}
+
+  /* Modal — slide up from bottom */
+  .modal-bg{align-items:flex-end;padding:0;}
+  .modal{border-radius:22px 22px 0 0;padding:10px 18px 28px;padding-bottom:calc(28px + env(safe-area-inset-bottom,0px));width:100%;max-height:94vh;}
+  .modal-footer .btn{flex:1;padding:13px;font-size:14px;justify-content:center;}
+  .modal-footer{gap:10px;margin-top:16px;}
+
+  /* Fields in modals */
+  .field input,.field select{font-size:16px;padding:13px 14px;}
+  .field-row{grid-template-columns:1fr 1fr;gap:8px;}
+
+  /* Toast — above nav */
+  .toast{bottom:calc(80px + env(safe-area-inset-bottom,0px));left:16px;right:16px;transform:translateY(8px);width:auto;text-align:center;}
+  .toast.show{transform:translateY(0);}
+
+  /* Settings */
+  .settings-card{border-radius:0;margin-left:-16px;margin-right:-16px;border-left:none;border-right:none;}
+}
+
+/* ── SCROLLBAR ───────────────────────────────────────────────── */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--bg-3);border-radius:2px;}
+</style>
+</head>
+<body>
+
+<!-- CONFIG BANNER (shown on first run) -->
+<div id="config-banner" class="show">
+  <div class="config-box">
+    <h2>Connect to Google Sheets</h2>
+    <p>To sync your data across all devices, paste your Google Sheets API Key and Spreadsheet ID below. Check the <strong>SETUP.txt</strong> file included in the download for step-by-step instructions.</p>
+    <label>Google Sheets API Key</label>
+    <input id="cfg-api-key" placeholder="AIzaSy...">
+    <label>Spreadsheet ID</label>
+    <input id="cfg-sheet-id" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74...">
+    <label>OAuth Client ID <span style="opacity:.7;font-weight:400;font-size:10px">(needed to save data)</span></label>
+    <input id="cfg-client-id" placeholder="123456789-xxxxx.apps.googleusercontent.com">
+    <button class="config-save" onclick="saveConfig()">Connect & Launch</button>
+    <p class="config-note">Your credentials are stored only on this device. Never shared.</p>
+    <p class="config-note" style="margin-top:8px"><a href="javascript:void(0)" onclick="skipConfig()" style="color:#4a7fcb;cursor:pointer">Skip for now — use local storage only</a></p>
+  </div>
+</div>
+
+<!-- SHELL -->
+<div class="shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="brand" style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div class="brand-name">Finance</div>
+        <div class="brand-sub">Personal Tracker</div>
+      </div>
+
+    </div>
+    <nav class="nav-section">
+      <div class="nav-label">Overview</div>
+      <button class="nav-btn active" onclick="showTab('dashboard',this)" data-tab="dashboard">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </button>
+      <div class="nav-label" style="margin-top:14px">Money</div>
+      <button class="nav-btn" onclick="showTab('accounts',this)" data-tab="accounts">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        Accounts
+      </button>
+      <button class="nav-btn" onclick="showTab('transactions',this)" data-tab="transactions">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        Transactions
+      </button>
+      <button class="nav-btn" onclick="showTab('budget',this)" data-tab="budget">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+        Budget
+      </button>
+      <div class="nav-label" style="margin-top:14px">Growth</div>
+      <button class="nav-btn" onclick="showTab('investments',this)" data-tab="investments">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+        Investments
+      </button>
+      <button class="nav-btn" onclick="showTab('goals',this)" data-tab="goals">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+        Goals
+      </button>
+      <div class="nav-label" style="margin-top:14px">System</div>
+      <button class="nav-btn" onclick="showTab('settings',this)" data-tab="settings">
+        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Settings
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="sync-btn" onclick="syncNow()" style="margin-bottom:6px">
+        <span class="sync-dot" id="sync-dot"></span>
+        <span id="sync-label">Synced</span>
+      </button>
+      <button id="gis-sidebar-btn" onclick="signInWithGoogle()"
+        style="width:100%;padding:8px 12px;background:var(--blue);border:none;border-radius:10px;color:#fff;font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .15s">
+        Sign in with Google
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- DASHBOARD -->
+    <div id="tab-dashboard" class="tab active">
+      <div class="mob-header">
+        <div><div class="mob-header-title">Dashboard</div></div>
+        <div class="mob-header-actions">
+          <button class="btn btn-primary btn-sm" onclick="openModal('tx-modal')">+ Add</button>
+          <button onclick="toggleTheme()" id="theme-btn" class="btn btn-sm" style="padding:6px 9px">🌙</button>
+        </div>
+      </div>
+      <div class="page-header">
+        <div><div class="page-title">Dashboard</div><div class="page-sub" id="dash-date"></div></div>
+        <div class="header-actions">
+          <button onclick="toggleTheme()" id="theme-btn-desk" class="btn btn-sm" style="padding:6px 9px">🌙</button>
+          <button class="btn btn-primary btn-sm" onclick="openModal('tx-modal')">+ Transaction</button>
+        </div>
+      </div>
+      <div class="tab-content-inner">
+      <div id="dash-bills-alert"></div>
+      <div class="metrics" id="dash-metrics"></div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Income vs Expenses</span><span id="dash-month-label" class="badge badge-gray"></span></div>
+          <div class="chart-wrap h200"><canvas id="chart-bar"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Spending Breakdown</span></div>
+          <div class="chart-wrap h200"><canvas id="chart-donut"></canvas></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Net Worth Trend</span></div>
+        <div class="chart-wrap h220"><canvas id="chart-networth"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Recent Transactions</span>
+          <button class="btn btn-sm" onclick="showTab('transactions',null)">View all</button>
+        </div>
+        <div id="dash-recent"></div>
+      </div>
+    </div><!-- tab-content-inner -->
+    </div>
+
+    <!-- ACCOUNTS -->
+    <div id="tab-accounts" class="tab">
+      <div class="mob-header">
+        <div class="mob-header-title">Accounts</div>
+        <button class="btn btn-primary btn-sm" onclick="openModal('acc-modal')">+ Add</button>
+      </div>
+      <div class="page-header">
+        <div><div class="page-title">Accounts</div><div class="page-sub">All your financial accounts</div></div>
+        <button class="btn btn-primary btn-sm" onclick="openModal('acc-modal')">+ Add Account</button>
+      </div>
+      <div class="tab-content-inner">
+      <div class="card" id="accounts-list"></div>
+      <div class="card" style="margin-top:18px">
+        <div class="card-header"><span class="card-title">Balance Distribution</span></div>
+        <div class="chart-wrap h160"><canvas id="chart-accounts-bar"></canvas></div>
+      </div>
+    </div>
+
+    <!-- TRANSACTIONS -->
+    <div id="tab-transactions" class="tab">
+      <div class="mob-header">
+        <div class="mob-header-title">Transactions</div>
+        <div class="mob-header-actions">
+          <button class="btn btn-sm" onclick="openModal('import-modal')">↑</button>
+          <button class="btn btn-primary btn-sm" onclick="openModal('tx-modal')">+ Add</button>
+        </div>
+      </div>
+      <div class="page-header">
+        <div><div class="page-title">Transactions</div><div class="page-sub">All income and expenses</div></div>
+        <div class="header-actions">
+          <button class="btn btn-sm" onclick="openModal('import-modal')">↑ Import</button>
+          <button class="btn btn-primary btn-sm" onclick="openModal('tx-modal')">+ Add</button>
+        </div>
+      </div>
+      <div class="tab-content-inner">
+      <div class="card" style="padding:14px 18px;margin-bottom:14px">
+        <div style="margin-bottom:10px">
+          <input id="f-search" oninput="renderTx()" placeholder="Search transactions..." style="width:100%;background:#0f1117;border:1px solid #2e3650;border-radius:8px;padding:8px 13px;color:#e8eaf0;font-size:13px;font-family:'DM Sans',sans-serif;">
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <select id="f-type" onchange="renderTx()" style="flex:1;min-width:110px;background:#0f1117;border:1px solid #2e3650;border-radius:8px;padding:7px 10px;color:#8b92a8;font-size:12px;font-family:'DM Sans',sans-serif;">
+            <option value="">All types</option><option value="income">Income</option><option value="expense">Expense</option><option value="transfer">Transfer</option><option value="bill">Bill Payment</option>
+          </select>
+          <select id="f-cat" onchange="renderTx()" style="flex:1;min-width:130px;background:#0f1117;border:1px solid #2e3650;border-radius:8px;padding:7px 10px;color:#8b92a8;font-size:12px;font-family:'DM Sans',sans-serif;">
+            <option value="">All categories</option>
+          </select>
+          <select id="f-acc" onchange="renderTx()" style="flex:1;min-width:130px;background:#0f1117;border:1px solid #2e3650;border-radius:8px;padding:7px 10px;color:#8b92a8;font-size:12px;font-family:'DM Sans',sans-serif;">
+            <option value="">All accounts</option>
+          </select>
+          <select id="f-month" onchange="renderTx()" style="flex:1;min-width:130px;background:#0f1117;border:1px solid #2e3650;border-radius:8px;padding:7px 10px;color:#8b92a8;font-size:12px;font-family:'DM Sans',sans-serif;">
+            <option value="">All months</option>
+          </select>
+        </div>
+        <div id="tx-summary" style="font-size:11px;color:#555e78;margin-top:10px"></div>
+      </div>
+      <div class="card" id="tx-list"></div>
+    </div>
+
+    <!-- BUDGET -->
+    <div id="tab-budget" class="tab">
+      <div class="mob-header">
+        <div class="mob-header-title">Budget</div>
+        <div class="mob-header-actions">
+          <select id="bud-month-sel-mob" onchange="document.getElementById('bud-month-sel').value=this.value;renderBudget()" style="background:var(--bg-2);border:var(--border2);border-radius:8px;padding:5px 8px;color:var(--text3);font-size:11px;font-family:'DM Sans',sans-serif;max-width:110px"></select>
+          <button class="btn btn-primary btn-sm" onclick="openBudgetModal()">+ Add</button>
+        </div>
+      </div>
+      <div class="page-header">
+        <div><div class="page-title">Budget</div><div class="page-sub">Monthly spending limits</div></div>
+        <div class="header-actions">
+          <select id="bud-month-sel" onchange="renderBudget()" style="background:#141927;border:1px solid #2e3650;border-radius:8px;padding:6px 10px;color:#8b92a8;font-size:12px;font-family:'DM Sans',sans-serif;"></select>
+          <button class="btn btn-primary btn-sm" onclick="openBudgetModal()">+ Set Budget</button>
+        </div>
+      </div>
+      <div class="tab-content-inner">
+      <div class="card" id="budget-bars"></div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Budget vs Actual</span></div>
+        <div class="chart-wrap h220"><canvas id="chart-budget"></canvas></div>
+      </div>
+    </div>
+
+    <!-- INVESTMENTS -->
+    <div id="tab-investments" class="tab">
+      <div class="mob-header">
+        <div class="mob-header-title">Investments</div>
+        <div class="mob-header-actions">
+          <button class="btn btn-sm" onclick="refreshPrices(true)" id="refresh-btn">↻</button>
+          <button class="btn btn-primary btn-sm" onclick="openModal('stk-modal')">+ Add</button>
+        </div>
+      </div>
+      <div class="page-header">
+        <div><div class="page-title">Investments</div><div class="page-sub">Stocks, ETFs, crypto — prices auto-update</div></div>
+        <div class="header-actions">
+          <button class="btn btn-sm" onclick="refreshPrices(true)" id="refresh-btn-desk">↻ Refresh</button>
+          <button class="btn btn-primary btn-sm" onclick="openModal('stk-modal')">+ Add Holding</button>
+        </div>
+      </div>
+      <div class="tab-content-inner">
+      <div id="price-status" style="display:none;font-size:12px;color:#555e78;margin-bottom:14px;display:flex;align-items:center;gap:8px">
+        <span id="price-status-dot" style="width:6px;height:6px;border-radius:50%;background:#EF9F27;display:inline-block"></span>
+        <span id="price-status-text">Fetching live prices...</span>
+      </div>
+      <div class="metrics" id="invest-metrics"></div>
+      <div class="card" id="stocks-list"></div>
+      <div class="grid-2" style="margin-top:18px">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Allocation</span></div>
+          <div class="chart-wrap h160"><canvas id="chart-alloc"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Return % per Holding</span></div>
+          <div class="chart-wrap h160"><canvas id="chart-returns"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GOALS -->
+    <div id="tab-goals" class="tab">
+      <div class="mob-header">
+        <div class="mob-header-title">Goals</div>
+        <button class="btn btn-primary btn-sm" onclick="openModal('goal-modal')">+ Add</button>
+      </div>
+      <div class="page-header">
+        <div><div class="page-title">Savings Goals</div><div class="page-sub">Track your targets</div></div>
+        <button class="btn btn-primary btn-sm" onclick="openModal('goal-modal')">+ Add Goal</button>
+      </div>
+      <div class="tab-content-inner">
+      <div id="goals-list"></div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Goals Progress</span></div>
+        <div class="chart-wrap h220"><canvas id="chart-goals"></canvas></div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div id="tab-settings" class="tab">
+      <div class="mob-header">
+        <div class="mob-header-title">Settings</div>
+      </div>
+      <div class="page-header">
+        <div><div class="page-title">Settings</div><div class="page-sub">App configuration & data</div></div>
+      </div>
+      <div class="tab-content-inner">
+
+      <div class="settings-card">
+        <div class="settings-title">Google Sheets Connection</div>
+        <div class="settings-desc">Your data syncs to a Google Sheet so it's available on all devices. Update your credentials here if needed.</div>
+        <div style="font-size:12px;color:#EF9F27;background:#2a1f0a;border:1px solid #4a3010;border-radius:8px;padding:10px 14px;margin-bottom:12px">
+          <strong>Important:</strong> For live stock prices, you need a tab called <strong>Prices</strong> in your Google Sheet.
+          Go to your Sheet, click the + button at the bottom, and name the new tab <strong>Prices</strong> exactly.
+          The app writes GOOGLEFINANCE() formulas there automatically when you refresh prices.
+        </div>
+        <div class="field"><label>API Key</label><input id="set-api-key" placeholder="AIzaSy..."></div>
+        <div class="field"><label>Spreadsheet ID</label><input id="set-sheet-id" placeholder="1BxiMVs0XRA..."></div>
+        <div class="field"><label>OAuth Client ID <span style="color:var(--text4);font-size:10px;font-weight:400">(required for saving)</span></label><input id="set-client-id" placeholder="123456789-xxxxx.apps.googleusercontent.com"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+          <button class="btn btn-primary btn-sm" onclick="updateConfig()">Save Credentials</button>
+          <button class="btn btn-sm" onclick="testConnection()">Test Connection</button>
+        </div>
+        <div style="margin-top:16px;padding:14px;background:var(--bg-2);border-radius:12px">
+          <div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:6px">Google Account</div>
+          <div id="gis-status" style="font-size:12px;color:var(--amber);margin-bottom:10px">Not signed in — changes saved locally only</div>
+          <button id="gis-sign-btn" class="btn btn-primary btn-sm" onclick="signInWithGoogle()">Sign in with Google</button>
+        </div>
+      </div>
+
+      <div class="settings-card">
+        <div class="settings-title">Google Sheets Sync</div>
+        <div class="settings-desc">Manually push your local data up to Google Sheets, or pull fresh data down from Google Sheets to this device. Use Push if you've made changes locally that haven't synced. Use Pull if another device has newer data.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" onclick="forcePush()">
+            ↑ Push all data to Sheets
+          </button>
+          <button class="btn btn-sm" onclick="forcePull()">
+            ↓ Pull all data from Sheets
+          </button>
+        </div>
+        <div id="manual-sync-status" style="font-size:11px;color:#555e78;margin-top:10px;min-height:16px"></div>
+      </div>
+
+      <div class="settings-card">
+        <div class="settings-title">Data Backup</div>
+        <div class="settings-desc">Export all your data as a JSON file. Save it to your OneDrive folder as a manual backup. To restore, use Import.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-sm" onclick="exportData()">Export backup (.json)</button>
+          <label class="btn btn-sm" style="cursor:pointer">Import backup <input type="file" accept=".json" onchange="importData(event)" style="display:none"></label>
+          <button class="btn btn-sm" onclick="exportCSV()">Export transactions (.csv)</button>
+        </div>
+      </div>
+
+      <div class="settings-card">
+        <div class="settings-title">Import Bank Statement</div>
+        <div class="settings-desc">Import transactions from your bank. Supports OFX/QFX files (TD, RBC, BMO, Scotiabank) and CSV files (Wealthsimple, EQ Bank). Duplicate transactions are automatically detected and skipped.</div>
+        <div style="font-size:12px;color:var(--text4);background:var(--bg-2);border-radius:8px;padding:10px 12px;margin-bottom:12px">
+          <strong style="color:var(--text3)">How to get your OFX file:</strong><br>
+          <span style="color:var(--text4)">TD: Online Banking → Accounts → Download → Microsoft Money (.ofx) &nbsp;·&nbsp;
+          RBC: Online Banking → Download Transactions → OFX &nbsp;·&nbsp;
+          BMO: Online Banking → Export → OFX format</span>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="openModal('import-modal')">↑ Import bank statement</button>
+      </div>
+
+      <div class="settings-card">
+        <div class="settings-title">Danger Zone</div>
+        <div class="settings-desc">Permanently delete all local data. This does not affect your Google Sheet.</div>
+        <button class="btn btn-danger btn-sm" onclick="clearAllData()">Clear all local data</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- MOBILE BOTTOM NAV -->
+<nav class="mob-nav">
+  <button class="mob-nav-btn active" onclick="showTab('dashboard',this)" data-tab="dashboard" data-tab="dashboard">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    Home
+  </button>
+  <button class="mob-nav-btn" onclick="showTab('transactions',this)" data-tab="transactions" data-tab="transactions">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+    Txns
+  </button>
+  <button class="mob-nav-btn" onclick="showTab('budget',this)" data-tab="budget" data-tab="budget">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+    Budget
+  </button>
+  <button class="mob-nav-btn" onclick="showTab('investments',this)" data-tab="investments" data-tab="investments">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+    Invest
+  </button>
+  <button class="mob-nav-btn" onclick="showTab('settings',this)" data-tab="settings" data-tab="settings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+    More
+  </button>
+</nav>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- Edit Transaction Modal -->
+<div class="modal-bg" id="edit-tx-modal">
+  <div class="modal">
+    <div class="modal-drag"></div>
+    <div class="modal-title">Edit Transaction</div>
+    <input type="hidden" id="edit-tx-id">
+    <div class="field-row">
+      <div class="field"><label>Type</label>
+        <select id="edit-tx-type">
+          <option value="expense">Expense</option>
+          <option value="income">Income</option>
+          <option value="bill">Bill Payment</option>
+        </select>
+      </div>
+      <div class="field"><label>Date</label><input id="edit-tx-date" type="date"></div>
+    </div>
+    <div class="field"><label>Description</label><input id="edit-tx-desc" placeholder="Description"></div>
+    <div class="field-row">
+      <div class="field"><label>Amount ($)</label><input id="edit-tx-amt" type="number" step="0.01"></div>
+      <div class="field"><label>Category</label><select id="edit-tx-cat"></select></div>
+    </div>
+    <div class="field"><label>Account</label><select id="edit-tx-acc"></select></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('edit-tx-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditTransaction()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import Bank Statement Modal -->
+<div class="modal-bg" id="import-modal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-drag"></div>
+    <div class="modal-title">Import Bank Statement</div>
+    <div class="field">
+      <label>Bank / Format</label>
+      <select id="import-bank">
+        <option value="td_ofx">TD Bank (OFX)</option>
+        <option value="rbc_ofx">RBC (OFX)</option>
+        <option value="bmo_ofx">BMO (OFX)</option>
+        <option value="scotiabank_ofx">Scotiabank (OFX)</option>
+        <option value="cibc_ofx">CIBC (OFX)</option>
+        <option value="wealthsimple_csv">Wealthsimple (CSV)</option>
+        <option value="eq_csv">EQ Bank (CSV)</option>
+        <option value="generic_ofx">Generic OFX / QFX</option>
+        <option value="generic_csv">Generic CSV</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Account to import into</label>
+      <select id="import-account"></select>
+    </div>
+    <div class="field">
+      <label>Select file (.ofx, .qfx, or .csv)</label>
+      <label class="btn" style="cursor:pointer;width:100%;justify-content:center;margin-top:4px">
+        Choose file
+        <input type="file" id="import-file" accept=".ofx,.qfx,.csv,.txt" onchange="previewImport()" style="display:none">
+      </label>
+      <div id="import-filename" style="font-size:11px;color:var(--text4);margin-top:6px;text-align:center"></div>
+    </div>
+    <div id="import-preview" style="display:none">
+      <div style="font-size:12px;color:var(--text3);margin-bottom:8px" id="import-summary"></div>
+      <div style="max-height:200px;overflow-y:auto;border:var(--border);border-radius:8px" id="import-preview-list"></div>
+      <div id="import-dup-warning" style="display:none;font-size:11px;color:var(--amber);margin-top:8px;padding:8px 10px;background:var(--amber-bg);border-radius:6px"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('import-modal');resetImport()">Cancel</button>
+      <button class="btn btn-primary" id="import-confirm-btn" onclick="confirmImport()" style="display:none">Import transactions</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODALS -->
+
+<!-- Edit Transaction Modal -->
+<div class="modal-bg" id="edit-tx-modal">
+  <div class="modal">
+    <div class="modal-drag"></div>
+    <div class="modal-title">Edit Transaction</div>
+    <input type="hidden" id="edit-tx-id">
+    <div class="field-row">
+      <div class="field"><label>Type</label>
+        <select id="edit-tx-type" onchange="updateEditTxCats()">
+          <option value="expense">Expense</option>
+          <option value="income">Income</option>
+          <option value="transfer">Transfer</option>
+          <option value="bill">Bill Payment</option>
+        </select>
+      </div>
+      <div class="field"><label>Date</label><input id="edit-tx-date" type="date"></div>
+    </div>
+    <div class="field"><label>Description</label><input id="edit-tx-desc" placeholder="Description"></div>
+    <div class="field-row">
+      <div class="field"><label>Amount ($)</label><input id="edit-tx-amt" type="number" step="0.01" placeholder="0.00"></div>
+      <div class="field"><label>Category</label><select id="edit-tx-cat"></select></div>
+    </div>
+    <div class="field"><label>Account</label><select id="edit-tx-acc"></select></div>
+    <div class="field" id="edit-tx-due-field" style="display:none">
+      <label>Due Date</label><input id="edit-tx-due" type="date">
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('edit-tx-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditTransaction()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Account -->
+<div class="modal-bg" id="acc-modal">
+  <div class="modal">
+    <div class="modal-drag"></div>
+    <div class="modal-title">Add Account</div>
+    <div class="field"><label>Account Name</label><input id="acc-name" placeholder="e.g. TD Chequing"></div>
+    <div class="field"><label>Type</label>
+      <select id="acc-type">
+        <option value="Chequing">Chequing</option>
+        <option value="Savings">Savings</option>
+        <option value="Credit Card">Credit Card</option>
+        <option value="Investment">Investment</option>
+        <option value="TFSA">TFSA</option>
+        <option value="RRSP">RRSP</option>
+        <option value="Loan">Loan</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+    <div class="field"><label>Current Balance (negative = debt)</label><input id="acc-bal" type="number" step="0.01" placeholder="0.00"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('acc-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="addAccount()">Add Account</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Transaction -->
+<div class="modal-bg" id="tx-modal">
+  <div class="modal">
+    <div class="modal-drag"></div>
+    <div class="modal-title">Add Transaction</div>
+    <div class="field-row">
+      <div class="field"><label>Type</label>
+        <select id="tx-type" onchange="updateTxCats()">
+          <option value="expense">Expense</option>
+          <option value="income">Income</option>
+          <option value="transfer">Transfer</option>
+          <option value="bill">Bill Payment</option>
+        </select>
+      </div>
+      <div class="field"><label>Date</label><input id="tx-date" type="date"></div>
+    </div>
+    <div class="field"><label>Description</label><input id="tx-desc" placeholder="e.g. Grocery run"></div>
+    <div class="field-row">
+      <div class="field"><label>Amount ($)</label><input id="tx-amt" type="number" step="0.01" placeholder="0.00"></div>
+      <div class="field" id="tx-cat-field"><label>Category</label><select id="tx-cat"></select></div>
+    </div>
+    <!-- Standard account field (expense / income / bill) -->
+    <div class="field" id="tx-acc-field"><label>Account</label><select id="tx-acc"></select></div>
+    <!-- Transfer: from + to accounts -->
+    <div id="tx-transfer-fields" style="display:none">
+      <div class="field-row">
+        <div class="field"><label>From Account</label><select id="tx-from-acc"></select></div>
+        <div class="field"><label>To Account</label><select id="tx-to-acc"></select></div>
+      </div>
+      <div style="font-size:11px;color:#555e78;margin-top:-6px;margin-bottom:10px">Transfers are excluded from income/expense totals — they are not counted as spending.</div>
+    </div>
+    <!-- Bill: due date field -->
+    <div class="field" id="tx-due-field" style="display:none">
+      <label>Due Date <small style="color:#555e78;font-weight:400">(optional)</small></label>
+      <input id="tx-due" type="date">
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('tx-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="addTransaction()">Add Transaction</button>
+    </div>
+  </div>
+</div>
+
+<!-- Set Budget -->
+<div class="modal-bg" id="bud-modal">
+  <div class="modal">
+    <div class="modal-drag"></div>
+    <div class="modal-title">Set Category Budget</div>
+    <div class="field">
+      <label>Category</label>
+      <select id="bud-cat" onchange="handleBudCatChange(this)">
+        <option value="Housing">Housing</option>
+        <option value="Food & Dining">Food & Dining</option>
+        <option value="Transport">Transport</option>
+        <option value="Entertainment">Entertainment</option>
+        <option value="Shopping">Shopping</option>
+        <option value="Health">Health</option>
+        <option value="Utilities">Utilities</option>
+        <option value="Subscriptions">Subscriptions</option>
+        <option value="Savings Transfer">Savings Transfer</option>
+        <option value="Kids & Family">Kids & Family</option>
+        <option value="Education">Education</option>
+        <option value="Travel">Travel</option>
+        <option value="Pets">Pets</option>
+        <option value="Gifts & Donations">Gifts & Donations</option>
+        <option value="Personal Care">Personal Care</option>
+        <option value="Other">Other</option>
+        <option value="__custom__">+ Custom category...</option>
+      </select>
+    </div>
+    <div class="field" id="bud-custom-field" style="display:none">
+      <label>Custom Category Name</label>
+      <input id="bud-custom-name" placeholder="e.g. Hockey Equipment, Date Nights...">
+    </div>
+    <div class="field">
+      <label>Monthly Limit ($)</label>
+      <input id="bud-amt" type="number" step="0.01" placeholder="0.00">
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('bud-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="addBudget()">Set Budget</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Stock -->
+<div class="modal-bg" id="stk-modal">
+  <div class="modal">
+    <div class="modal-drag"></div>
+    <div class="modal-title">Add Investment Holding</div>
+
+    <div class="field" style="position:relative">
+      <label>Search Stock, ETF or Crypto <span id="price-fetch-status" style="color:#1D9E75;font-size:10px;margin-left:6px"></span></label>
+      <input id="stk-search"
+        placeholder="Type name or ticker — e.g. Apple, VFV, BTC..."
+        autocomplete="off"
+        oninput="tickerSearch(this.value)"
+        onkeydown="tickerSearchKey(event)"
+        style="width:100%">
+      <div id="ticker-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;z-index:200;background:#1a1f2e;border:1px solid #2e3650;border-radius:8px;max-height:220px;overflow-y:auto;margin-top:2px;box-shadow:0 8px 24px rgba(0,0,0,.4)"></div>
+      <div style="font-size:11px;color:#3a4260;margin-top:5px">
+        If search doesn't work —
+        <a href="javascript:void(0)" onclick="useManualEntry()" style="color:#4a7fcb;text-decoration:none">enter ticker manually instead</a>
+      </div>
+      <!-- These stay hidden when search works; made visible by clearTickerSelection if needed -->
+      <input type="hidden" id="stk-ticker">
+      <input type="hidden" id="stk-name">
+      <div id="stk-selected" style="display:none;margin-top:8px;padding:8px 12px;background:#0f1117;border-radius:8px;border:1px solid #2e3650;align-items:center;justify-content:space-between">
+        <div>
+          <span id="stk-sel-ticker" style="font-size:13px;font-weight:500;color:#4a7fcb"></span>
+          <span id="stk-sel-name"   style="font-size:12px;color:#8b92a8;margin-left:8px"></span>
+          <span id="stk-sel-exch"   style="font-size:10px;color:#555e78;margin-left:6px"></span>
+        </div>
+        <button onclick="clearTickerSelection()" style="background:none;border:none;color:#555e78;cursor:pointer;font-size:16px;padding:0 4px">×</button>
+      </div>
+    </div>
+
+    <div id="stk-price-row" style="display:none;margin-bottom:12px">
+      <div id="stk-price-banner" style="padding:8px 12px;background:#0a2e1e;border-radius:8px;border:1px solid #0f4a30;font-size:12px;color:#1D9E75"></div>
+    </div>
+
+    <!-- Manual entry row — shown when user skips search -->
+    <div id="stk-manual-row" style="display:none">
+      <div class="field-row">
+        <div class="field"><label>Ticker Symbol</label><input id="stk-ticker-manual" placeholder="e.g. AAPL, VFV.TO" oninput="syncManualTicker(this.value)"></div>
+        <div class="field"><label>Company Name</label><input id="stk-name-manual" placeholder="e.g. Apple Inc." oninput="syncManualName(this.value)"></div>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field"><label>Shares / Units</label><input id="stk-shares" type="number" step="0.0001" placeholder="0"></div>
+      <div class="field"><label>Cost per Share ($)</label><input id="stk-cost" type="number" step="0.01" placeholder="0.00"></div>
+    </div>
+    <div class="field">
+      <label>Current Price ($) <small style="color:#555e78;font-weight:400"> — auto-filled on selection</small></label>
+      <input id="stk-price" type="number" step="0.01" placeholder="Auto-fetched on selection">
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('stk-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="addStock()">Add Holding</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Goal -->
+<div class="modal-bg" id="goal-modal">
+  <div class="modal">
+    <div class="modal-drag"></div>
+    <div class="modal-title">Add Savings Goal</div>
+    <div class="field"><label>Goal Name</label><input id="goal-name" placeholder="e.g. Emergency Fund"></div>
+    <div class="field-row">
+      <div class="field"><label>Target ($)</label><input id="goal-target" type="number" step="0.01" placeholder="0.00"></div>
+      <div class="field"><label>Saved So Far ($)</label><input id="goal-current" type="number" step="0.01" placeholder="0.00"></div>
+    </div>
+    <div class="field"><label>Target Date (optional)</label><input id="goal-date" type="date"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('goal-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="addGoal()">Add Goal</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// CONFIG & GOOGLE SHEETS
+// ═══════════════════════════════════════════════
+const SHEET_NAMES = {
+  accounts:     'Accounts',
+  transactions: 'Transactions',
+  budgets:      'Budgets',
+  stocks:       'Stocks',
+  goals:        'Goals',
+  prices:       'Prices'   // auto-managed tab for GoogleFinance() live prices
+};
+
+let CONFIG = { apiKey: '', sheetId: '', clientId: '' };
+
+function loadConfig() {
+  const saved = localStorage.getItem('ft_config');
+  if (saved) {
+    try { CONFIG = JSON.parse(saved); } catch(e) { CONFIG = { apiKey:'', sheetId:'' }; }
+  }
+  document.getElementById('set-api-key').value  = CONFIG.apiKey   || '';
+  document.getElementById('set-sheet-id').value = CONFIG.sheetId  || '';
+  const ciEl = document.getElementById('set-client-id');
+  if (ciEl) ciEl.value = CONFIG.clientId || '';
+  // Hide banner if: credentials exist, OR user previously clicked Skip
+  const skipped = localStorage.getItem('ft_skipped_config') === '1';
+  if (CONFIG.apiKey && CONFIG.sheetId || skipped) {
+    document.getElementById('config-banner').classList.remove('show');
+  }
+}
+
+function saveConfig() {
+  CONFIG.apiKey   = document.getElementById('cfg-api-key').value.trim();
+  CONFIG.sheetId  = document.getElementById('cfg-sheet-id').value.trim();
+  CONFIG.clientId = document.getElementById('cfg-client-id').value.trim();
+  if (!CONFIG.apiKey || !CONFIG.sheetId) { toast('Please fill in API key and Sheet ID'); return; }
+  localStorage.setItem('ft_config', JSON.stringify(CONFIG));
+  localStorage.removeItem('ft_skipped_config');
+  document.getElementById('config-banner').classList.remove('show');
+  if (CONFIG.clientId) { initGIS(); toast('Connected! Tap "Sign in with Google" to enable saving.'); }
+  else { toast('Connected in read-only mode. Add Client ID in Settings to enable saving.'); }
+  loadAllFromSheets();
+}
+
+function skipConfig() {
+  localStorage.setItem('ft_skipped_config', '1');
+  document.getElementById('config-banner').classList.remove('show');
+  toast('Running in local-only mode — connect Google Sheets anytime in Settings');
+}
+
+function updateConfig() {
+  CONFIG.apiKey   = document.getElementById('set-api-key').value.trim();
+  CONFIG.sheetId  = document.getElementById('set-sheet-id').value.trim();
+  CONFIG.clientId = (document.getElementById('set-client-id').value || '').trim();
+  localStorage.setItem('ft_config', JSON.stringify(CONFIG));
+  if (CONFIG.clientId) initGIS();
+  toast('Credentials saved');
+}
+
+async function testConnection() {
+  if (!CONFIG.apiKey || !CONFIG.sheetId) { toast('No credentials saved yet'); return; }
+  setSyncState('syncing', 'Testing...');
+  try {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.sheetId}?key=${CONFIG.apiKey}`;
+    const r = await fetch(url);
+    if (r.ok) { setSyncState('ok', 'Connected'); toast('Connection successful!'); }
+    else { setSyncState('error', 'Error'); toast('Connection failed — check your credentials'); }
+  } catch(e) { setSyncState('error', 'Error'); toast('Network error'); }
+}
+
+// ═══════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════
+let S = {
+  accounts: [],
+  transactions: [],
+  budgets: [],
+  stocks: [],
+  goals: []
+};
+
+const LSKEY = 'ft_data_v2';
+
+function saveLocal() {
+  invalidateDateCache(); // dates may have changed
+  localStorage.setItem(LSKEY, JSON.stringify(S));
+}
+
+function loadLocal() {
+  const d = localStorage.getItem(LSKEY);
+  if (d) S = { ...S, ...JSON.parse(d) };
+}
+
+// ═══════════════════════════════════════════════
+// GOOGLE SHEETS API
+// ═══════════════════════════════════════════════
+const BASE = 'https://sheets.googleapis.com/v4/spreadsheets';
+
+async function sheetsRead(range) {
+  if (!CONFIG.apiKey || !CONFIG.sheetId) return null;
+  try {
+    const r = await fetch(`${BASE}/${CONFIG.sheetId}/values/${range}?key=${CONFIG.apiKey}`);
+    if (!r.ok) return null;
+    const d = await r.json();
+    return d.values || [];
+  } catch(e) { return null; }
+}
+
+async function sheetsWrite(range, values, inputOption) {
+  if (!CONFIG.sheetId) return false;
+  const opt = inputOption || 'RAW';
+
+  // Prefer OAuth token (allows writes). Fall back to API key (read-only — writes will fail).
+  const token = getOAuthToken();
+  const headers = { 'Content-Type': 'application/json' };
+  let url;
+  if (token) {
+    url = `${BASE}/${CONFIG.sheetId}/values/${range}?valueInputOption=${opt}`;
+    headers['Authorization'] = `Bearer ${token}`;
+  } else {
+    // No token yet — prompt sign-in and return false
+    if (CONFIG.clientId) {
+      requestOAuthToken();
+      toast('Please sign in with Google to save data');
+    }
+    return false;
+  }
+
+  try {
+    const r = await fetch(url, { method: 'PUT', headers, body: JSON.stringify({ range, majorDimension: 'ROWS', values }) });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      console.error('Sheets write error:', err);
+      // Token may have expired — request a new one silently
+      if (r.status === 401) { requestOAuthToken(true); }
+    }
+    return r.ok;
+  } catch(e) { console.error('sheetsWrite network error:', e); return false; }
+}
+
+async function sheetsClear(sheetName) {
+  if (!CONFIG.apiKey || !CONFIG.sheetId) return;
+  try {
+    await fetch(
+      `${BASE}/${CONFIG.sheetId}/values/${sheetName}!A:Z:clear?key=${CONFIG.apiKey}`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' } }
+    );
+  } catch(e) {}
+}
+
+// ─── Load all sheets on startup ───
+async function loadAllFromSheets() {
+  if (!CONFIG.apiKey || !CONFIG.sheetId) return;
+  setSyncState('syncing', 'Loading...');
+  try {
+    // Safe helpers — guard every cell against undefined/NaN
+    const safeStr = (v, fallback='') => (v !== undefined && v !== null && String(v).trim() !== '') ? String(v).trim() : fallback;
+    const safeNum = (v, fallback=0) => { const n = parseFloat(v); return isFinite(n) ? n : fallback; };
+
+    // Accounts
+    const acc = await sheetsRead(`${SHEET_NAMES.accounts}!A2:D`);
+    if (acc && acc.length) S.accounts = acc
+      .filter(r => r && safeStr(r[0]) && safeStr(r[1]))
+      .map(r => ({ id: safeStr(r[0]), name: safeStr(r[1],'Unnamed'), type: safeStr(r[2],'Other'), balance: safeNum(r[3]) }));
+
+    // Transactions
+    const txs = await sheetsRead(`${SHEET_NAMES.transactions}!A2:G`);
+    if (txs && txs.length) S.transactions = txs
+      .filter(r => r && safeStr(r[0]) && safeStr(r[1]) && safeNum(r[4]) !== 0)
+      .map(r => ({ id: safeStr(r[0]), date: safeStr(r[1]), desc: safeStr(r[2],'(no description)'), type: safeStr(r[3],'expense'), amount: Math.abs(safeNum(r[4])), cat: safeStr(r[5],'Other'), account: safeStr(r[6],''), xferDir: safeStr(r[7]), xferRef: safeStr(r[8]), dueDate: safeStr(r[9]) }))
+      .sort((a,b) => b.date.localeCompare(a.date));
+
+    // Budgets
+    const bud = await sheetsRead(`${SHEET_NAMES.budgets}!A2:C`);
+    if (bud && bud.length) S.budgets = bud
+      .filter(r => r && safeStr(r[0]) && safeStr(r[1]) && safeNum(r[2]) > 0)
+      .map(r => ({ id: safeStr(r[0]), cat: safeStr(r[1]), amount: safeNum(r[2]) }));
+
+    // Stocks
+    const stk = await sheetsRead(`${SHEET_NAMES.stocks}!A2:F`);
+    if (stk && stk.length) S.stocks = stk
+      .filter(r => r && safeStr(r[0]) && safeStr(r[1]) && safeNum(r[3]) > 0)
+      .map(r => ({ id: safeStr(r[0]), ticker: safeStr(r[1]), name: safeStr(r[2],r[1]||'?'), shares: safeNum(r[3]), costPerShare: safeNum(r[4]), current: safeNum(r[5]) }));
+
+    // Goals
+    const gls = await sheetsRead(`${SHEET_NAMES.goals}!A2:E`);
+    if (gls && gls.length) S.goals = gls
+      .filter(r => r && safeStr(r[0]) && safeStr(r[1]) && safeNum(r[2]) > 0)
+      .map(r => ({ id: safeStr(r[0]), name: safeStr(r[1]), target: safeNum(r[2]), current: safeNum(r[3]), deadline: safeStr(r[4]) }));
+
+    saveLocal();
+    renderAll();
+    setSyncState('ok', 'Synced');
+  } catch(e) { setSyncState('error', 'Sync error'); }
+}
+
+// ─── Write full sheet ───
+async function pushToSheets(sheetName, headers, rows) {
+  const values = [headers, ...rows];
+  await sheetsWrite(`${sheetName}!A1`, values);
+}
+
+async function syncAccounts() { await pushToSheets(SHEET_NAMES.accounts, ['ID','Name','Type','Balance'], S.accounts.map(a => [a.id, a.name, a.type, a.balance])); }
+async function syncTransactions() { await pushToSheets(SHEET_NAMES.transactions, ['ID','Date','Description','Type','Amount','Category','Account','XferDir','XferRef','DueDate'], S.transactions.map(t => [t.id, t.date, t.desc, t.type, t.amount, t.cat, t.account, t.xferDir||'', t.xferRef||'', t.dueDate||''])); }
+async function syncBudgets() { await pushToSheets(SHEET_NAMES.budgets, ['ID','Category','Amount'], S.budgets.map(b => [b.id, b.cat, b.amount])); }
+async function syncStocks() { await pushToSheets(SHEET_NAMES.stocks, ['ID','Ticker','Name','Shares','CostPerShare','CurrentPrice'], S.stocks.map(s => [s.id, s.ticker, s.name, s.shares, s.costPerShare, s.current])); }
+
+function toggleBuyMore(i) {
+  const el = document.getElementById('buy-more-' + i);
+  if (!el) return;
+  const isOpen = el.style.display !== 'none';
+  // Close all others first
+  S.stocks.forEach((_, j) => {
+    const other = document.getElementById('buy-more-' + j);
+    if (other) other.style.display = 'none';
+  });
+  if (!isOpen) {
+    el.style.display = 'block';
+    // Pre-fill price with current market price
+    const priceInput = document.getElementById('bm-price-' + i);
+    if (priceInput && S.stocks[i]) priceInput.placeholder = S.stocks[i].current.toFixed(2);
+    const sharesInput = document.getElementById('bm-shares-' + i);
+    if (sharesInput) sharesInput.focus();
+  }
+}
+
+async function buyMore(i) {
+  const stock = S.stocks[i];
+  if (!stock) return;
+  const newShares = parseFloat(document.getElementById('bm-shares-' + i).value);
+  const priceInput = document.getElementById('bm-price-' + i);
+  // Use entered price, or fall back to current price if left blank
+  const pricePaid = parseFloat(priceInput.value) || stock.current;
+
+  if (!newShares || newShares <= 0) { toast('Enter a number of shares to add'); return; }
+
+  // Weighted average cost basis:
+  // newAvgCost = (existingShares * existingCost + newShares * pricePaid) / totalShares
+  const totalShares = stock.shares + newShares;
+  const newAvgCost  = ((stock.shares * stock.costPerShare) + (newShares * pricePaid)) / totalShares;
+
+  stock.shares       = Math.round(totalShares * 100000) / 100000; // avoid float drift
+  stock.costPerShare = Math.round(newAvgCost  * 10000)  / 10000;
+
+  saveLocal();
+  renderStocks();
+  drawCharts('investments');
+  setSyncState('syncing', 'Saving...');
+  await syncStocks();
+  setSyncState('ok', 'Synced');
+  toast(newShares + ' shares of ' + stock.ticker + ' added · new avg cost ' + fmt(stock.costPerShare));
+}
+async function syncGoals() { await pushToSheets(SHEET_NAMES.goals, ['ID','Name','Target','Current','Deadline'], S.goals.map(g => [g.id, g.name, g.target, g.current, g.deadline])); }
+
+async function syncNow() {
+  setSyncState('syncing', 'Syncing...');
+  await loadAllFromSheets();
+}
+
+function setSyncState(state, label) {
+  const dot = document.getElementById('sync-dot');
+  const lbl = document.getElementById('sync-label');
+  dot.className = 'sync-dot' + (state === 'syncing' ? ' syncing' : state === 'error' ? ' error' : '');
+  lbl.textContent = label;
+}
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+// ═══════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════
+const EXPENSE_CATS  = ['Housing','Food & Dining','Transport','Entertainment','Shopping','Health','Utilities','Subscriptions','Kids & Family','Education','Travel','Pets','Gifts & Donations','Personal Care','Other'];
+const INCOME_CATS   = ['Salary','Freelance','Investments','Rental','Business','Gift','Other'];
+const TRANSFER_CATS = ['Account Transfer','Savings Deposit','Investment Contribution','Debt Payment','Other Transfer'];
+const BILL_CATS     = ['Rent / Mortgage','Electricity','Gas','Water','Internet','Phone','Insurance','Car Payment','Subscription','Streaming','Gym','Other Bill'];
+const PALETTE = ['#4a7fcb','#1D9E75','#EF9F27','#E24B4A','#7F77DD','#D85A30','#5bb8a0','#D4537E','#639922','#8b5cf6'];
+
+function fmt(n) { return '$' + Math.abs(n).toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function fmtK(n) {
+  const sign = n < 0 ? '-' : '';
+  const abs  = Math.abs(n);
+  if (abs >= 1000000) return sign + '$' + (abs/1000000).toFixed(1) + 'M';
+  if (abs >= 1000)    return sign + '$' + (abs/1000 % 1 === 0 ? (abs/1000).toFixed(0) : (abs/1000).toFixed(1)) + 'k';
+  return sign + '$' + abs.toFixed(0);
+}
+
+// Pre-parsed date cache — rebuilt when state changes
+// Avoids creating new Date() objects inside hot filter loops
+let _txDateCache = null;
+function getTxDateCache() {
+  if (_txDateCache && _txDateCache.length === S.transactions.length) return _txDateCache;
+  _txDateCache = S.transactions.map(t => {
+    if (!t.date) return null;
+    const d = new Date(t.date + 'T00:00:00');
+    return isNaN(d) ? null : d;
+  });
+  return _txDateCache;
+}
+function invalidateDateCache() { _txDateCache = null; }
+
+function thisMonthTxs() {
+  const now = new Date(); const m = now.getMonth(); const y = now.getFullYear();
+  const dates = getTxDateCache();
+  return S.transactions.filter((t, i) => {
+    const d = dates[i];
+    return d && d.getMonth() === m && d.getFullYear() === y;
+  });
+}
+
+function monthTxs(m, y) {
+  const dates = getTxDateCache();
+  return S.transactions.filter((t, i) => {
+    const d = dates[i];
+    return d && d.getMonth() === m && d.getFullYear() === y;
+  });
+}
+
+function netWorth() {
+  return S.accounts.reduce((s, a) => s + a.balance, 0)
+       + S.stocks.reduce((s, st) => s + st.shares * st.current, 0);
+}
+
+// ═══════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════
+let activeTab = 'dashboard';
+function showTab(id, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.mob-nav-btn').forEach(b => b.classList.remove('active'));
+  if (btn) {
+    btn.classList.add('active');
+    const tabId = id;
+    // Sync mobile nav by data-tab attribute
+    document.querySelectorAll('.mob-nav-btn').forEach(b => { if (b.dataset.tab === tabId) b.classList.add('active'); });
+    // Sync sidebar nav by data-tab attribute (set on each nav-btn)
+    document.querySelectorAll('.nav-btn[data-tab]').forEach(b => { if (b.dataset.tab === tabId) b.classList.add('active'); });
+  }
+  activeTab = id;
+  setTimeout(() => drawCharts(id), 60);
+  if (id === 'investments') setTimeout(() => refreshPrices(false), 200);
+}
+
+// ═══════════════════════════════════════════════
+// MODALS
+// ═══════════════════════════════════════════════
+function openModal(id) {
+  if (id === 'tx-modal')     seedTxModal();
+  if (id === 'import-modal') { seedImportModal(); resetImport(); }
+  document.getElementById(id).classList.add('open');
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-bg').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); }));
+document.addEventListener('click', e => {
+  const dd  = document.getElementById('ticker-dropdown');
+  const inp = document.getElementById('stk-search');
+  if (dd && inp && !dd.contains(e.target) && e.target !== inp) dd.style.display = 'none';
+});
+
+function seedTxModal() {
+  updateTxCats();
+  document.getElementById('tx-date').value = new Date().toISOString().split('T')[0];
+  const accOpts = S.accounts.length ? S.accounts.map(a => `<option>${a.name}</option>`).join('') : '<option value="">No accounts yet</option>';
+  document.getElementById('tx-acc').innerHTML      = accOpts;
+  document.getElementById('tx-from-acc').innerHTML = accOpts;
+  document.getElementById('tx-to-acc').innerHTML   = accOpts;
+  // Pre-select a different "to" account if possible
+  if (S.accounts.length > 1) document.getElementById('tx-to-acc').selectedIndex = 1;
+}
+
+function updateTxCats() {
+  const type      = document.getElementById('tx-type').value;
+  const isXfer    = type === 'transfer';
+  const isBill    = type === 'bill';
+  const isExpense = type === 'expense';
+  const isIncome  = type === 'income';
+
+  // Show/hide account fields
+  document.getElementById('tx-acc-field').style.display       = isXfer ? 'none' : 'block';
+  document.getElementById('tx-transfer-fields').style.display = isXfer ? 'block' : 'none';
+  document.getElementById('tx-due-field').style.display       = isBill ? 'block' : 'none';
+
+  // Populate categories
+  let cats = isIncome ? INCOME_CATS : isXfer ? TRANSFER_CATS : isBill ? BILL_CATS : EXPENSE_CATS;
+  document.getElementById('tx-cat').innerHTML = cats.map(c => `<option>${c}</option>`).join('');
+
+  // Update description placeholder
+  const desc = document.getElementById('tx-desc');
+  if (isXfer)    desc.placeholder = 'e.g. Move savings to TFSA';
+  else if (isBill) desc.placeholder = 'e.g. Rogers Internet, Hydro One';
+  else if (isIncome) desc.placeholder = 'e.g. Paycheque, Client payment';
+  else desc.placeholder = 'e.g. Grocery run, Gas station';
+}
+
+// ═══════════════════════════════════════════════
+// ACCOUNTS
+// ═══════════════════════════════════════════════
+async function addAccount() {
+  const name = document.getElementById('acc-name').value.trim();
+  const type = document.getElementById('acc-type').value;
+  const rawBal = parseFloat(document.getElementById('acc-bal').value);
+  const balance = isFinite(rawBal) ? Math.round(rawBal * 100) / 100 : 0;
+  if (!name) { toast('Please enter a name'); return; }
+  S.accounts.push({ id: uid(), name, type, balance });
+  saveLocal(); closeModal('acc-modal');
+  ['acc-name','acc-bal'].forEach(id => document.getElementById(id).value = '');
+  renderAll();
+  setSyncState('syncing', 'Saving...');
+  await syncAccounts();
+  setSyncState('ok', 'Synced');
+  toast('Account added');
+}
+
+function renderAccounts() {
+  const el = document.getElementById('accounts-list');
+  if (!S.accounts.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">🏦</div>No accounts yet. Add your chequing, savings, and credit cards.</div>'; return; }
+  el.innerHTML = S.accounts.map((a, i) => `
+    <div class="row" id="acc-row-${i}">
+      <div class="row-left">
+        <div class="row-title">${a.name}</div>
+        <div class="row-sub"><span class="badge badge-${a.type === 'Credit Card' || a.type === 'Loan' ? 'red' : 'blue'}">${a.type}</span></div>
+      </div>
+      <div class="row-right" id="acc-right-${i}">
+        <span class="amount ${a.balance < 0 ? 'neg' : 'pos'}" style="cursor:pointer" title="Click to edit" onclick="editBalance(${i})">${a.balance < 0 ? '-' : ''}${fmt(a.balance)}</span>
+        <button class="btn btn-sm" style="padding:3px 9px;font-size:11px" onclick="editBalance(${i})">Edit</button>
+        <button class="del" onclick="deleteItem('accounts',${i},syncAccounts)">×</button>
+      </div>
+    </div>`).join('');
+}
+
+function editBalance(i) {
+  const a = S.accounts[i];
+  const rightEl = document.getElementById(`acc-right-${i}`);
+  // Replace the right side with an inline input + save/cancel
+  rightEl.innerHTML = `
+    <input id="bal-input-${i}" type="number" step="0.01" value="${a.balance}"
+      style="width:120px;background:#0f1117;border:1px solid #4a7fcb;border-radius:6px;
+             padding:5px 9px;color:#e8eaf0;font-size:13px;font-family:'DM Sans',sans-serif;"
+      onkeydown="if(event.key==='Enter')saveBalance(${i});if(event.key==='Escape')renderAccounts()">
+    <button class="btn btn-primary btn-sm" onclick="saveBalance(${i})">Save</button>
+    <button class="btn btn-sm" onclick="renderAccounts()">Cancel</button>`;
+  // Focus and select the input
+  setTimeout(() => {
+    const inp = document.getElementById(`bal-input-${i}`);
+    if (inp) { inp.focus(); inp.select(); }
+  }, 30);
+}
+
+async function saveBalance(i) {
+  const inp = document.getElementById(`bal-input-${i}`);
+  if (!inp) return;
+  const newBal = parseFloat(inp.value);
+  if (!isFinite(newBal)) { toast('Enter a valid number'); return; }
+  S.accounts[i].balance = Math.round(newBal * 100) / 100;
+  saveLocal();
+  renderAll();
+  setSyncState('syncing', 'Saving...');
+  await syncAccounts();
+  setSyncState('ok', 'Synced');
+  toast(`${S.accounts[i].name} updated to ${fmt(newBal)}`);
+}
+
+// ═══════════════════════════════════════════════
+// TRANSACTIONS
+// ═══════════════════════════════════════════════
+async function addTransaction() {
+  const desc = document.getElementById('tx-desc').value.trim();
+  const amt  = parseFloat(document.getElementById('tx-amt').value);
+  const type = document.getElementById('tx-type').value;
+  const cat  = document.getElementById('tx-cat').value;
+  const date = document.getElementById('tx-date').value;
+
+  if (!desc || !amt || !isFinite(amt) || amt <= 0) { toast('Enter a valid description and positive amount'); return; }
+
+  const roundedAmt = Math.round(amt * 100) / 100;
+
+  if (type === 'transfer') {
+    const fromAcc = document.getElementById('tx-from-acc').value;
+    const toAcc   = document.getElementById('tx-to-acc').value;
+    if (!fromAcc || !toAcc)       { toast('Select both accounts for the transfer'); return; }
+    if (fromAcc === toAcc)        { toast('From and To accounts must be different'); return; }
+
+    // Create two linked transaction records — one out, one in
+    const xferId = uid();
+    S.transactions.unshift({ id: uid(), date, desc, type: 'transfer', amount: roundedAmt, cat, account: fromAcc, xferRef: xferId, xferDir: 'out' });
+    S.transactions.unshift({ id: uid(), date, desc, type: 'transfer', amount: roundedAmt, cat, account: toAcc,   xferRef: xferId, xferDir: 'in'  });
+    toast('Transfer recorded between ' + fromAcc + ' and ' + toAcc);
+
+  } else if (type === 'bill') {
+    const acc    = document.getElementById('tx-acc').value;
+    const dueDate = document.getElementById('tx-due').value;
+    S.transactions.unshift({ id: uid(), date, desc, type: 'bill', amount: roundedAmt, cat, account: acc, dueDate: dueDate || '' });
+    toast('Bill payment saved');
+
+  } else {
+    const acc = document.getElementById('tx-acc').value;
+    S.transactions.unshift({ id: uid(), date, desc, type, amount: roundedAmt, cat, account: acc });
+    toast('Transaction saved');
+  }
+
+  saveLocal(); closeModal('tx-modal');
+  ['tx-desc','tx-amt','tx-due'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  renderAll();
+  setSyncState('syncing', 'Saving...');
+  await syncTransactions();
+  setSyncState('ok', 'Synced');
+}
+
+function renderTx() {
+  const tf  = document.getElementById('f-type').value;
+  const cf  = document.getElementById('f-cat').value;
+  const af  = document.getElementById('f-acc').value;
+  const mf  = document.getElementById('f-month').value;
+  const sf  = (document.getElementById('f-search').value || '').trim().toLowerCase();
+  let txs   = S.transactions;
+  if (tf)  txs = txs.filter(t => t.type === tf);
+  if (cf)  txs = txs.filter(t => t.cat === cf);
+  if (af)  txs = txs.filter(t => t.account === af);
+  if (mf)  txs = txs.filter(t => t.date && t.date.startsWith(mf));
+  if (sf)  txs = txs.filter(t =>
+    t.desc.toLowerCase().includes(sf) ||
+    t.cat.toLowerCase().includes(sf) ||
+    t.account.toLowerCase().includes(sf) ||
+    String(t.amount).includes(sf)
+  );
+
+  // Summary line — transfers excluded from totals (not real income/expense)
+  const totalInc   = txs.filter(t => t.type === 'income').reduce((s,t) => s+t.amount, 0);
+  const totalExp   = txs.filter(t => t.type === 'expense' || t.type === 'bill').reduce((s,t) => s+t.amount, 0);
+  const totalXfer  = txs.filter(t => t.type === 'transfer' && t.xferDir === 'out').reduce((s,t) => s+t.amount, 0);
+  const net        = totalInc - totalExp;
+  const summaryEl  = document.getElementById('tx-summary');
+  if (summaryEl) {
+    if (!txs.length) { summaryEl.textContent = ''; }
+    else {
+      let s = txs.length + ' transaction' + (txs.length>1?'s':'');
+      if (totalInc)  s += ' · Income '   + fmt(totalInc);
+      if (totalExp)  s += ' · Expenses '  + fmt(totalExp);
+      if (totalXfer) s += ' · Transfers ' + fmt(totalXfer);
+      if (totalInc || totalExp) s += ' · Net ' + (net >= 0 ? '+' : '') + fmt(net);
+      summaryEl.textContent = s;
+    }
+  }
+
+  const el = document.getElementById('tx-list');
+  if (!txs.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div>No transactions found.</div>'; return; }
+  el.innerHTML = txs.map((t) => {
+    let amtClass, amtPrefix, typeLabel;
+    if (t.type === 'income')   { amtClass = 'pos'; amtPrefix = '+'; typeLabel = ''; }
+    else if (t.type === 'transfer') {
+      amtClass  = 'neutral';
+      amtPrefix = t.xferDir === 'in' ? '→ in' : '← out';
+      typeLabel = '<span class="badge badge-blue" style="font-size:9px;margin-left:4px">Transfer</span>';
+    } else if (t.type === 'bill') {
+      amtClass  = 'neg'; amtPrefix = '−';
+      typeLabel = '<span class="badge badge-red" style="font-size:9px;margin-left:4px">Bill</span>';
+    } else {
+      amtClass = 'neg'; amtPrefix = '−'; typeLabel = '';
+    }
+    const subExtra = t.dueDate ? ' · due ' + t.dueDate : '';
+    return `<div class="row">
+      <div class="row-left">
+        <div class="row-title" style="display:flex;align-items:center;gap:4px">${t.desc}${typeLabel}</div>
+        <div class="row-sub">${t.cat} · ${t.account}${subExtra} · ${t.date}</div>
+      </div>
+      <div class="row-right">
+        <span class="amount ${amtClass}" style="font-size:12px">${amtPrefix} ${fmt(t.amount)}</span>
+        <button class="btn btn-sm" style="font-size:11px;padding:3px 8px" onclick="editTransaction('${t.id}')">Edit</button>
+        <button class="del" onclick="deleteItem('transactions','${t.id}',syncTransactions)">×</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Update filter dropdowns (preserve selections)
+  const cats   = [...new Set(S.transactions.map(t => t.cat))].sort();
+  const accs   = [...new Set(S.transactions.map(t => t.account))].filter(Boolean).sort();
+  const months = [...new Set(S.transactions.map(t => t.date ? t.date.slice(0,7) : ''))].filter(Boolean).sort().reverse();
+  const fc = document.getElementById('f-cat'); const fa = document.getElementById('f-acc'); const fm = document.getElementById('f-month');
+  const cv = fc.value; const av = fa.value; const mv = fm.value;
+  fc.innerHTML = '<option value="">All categories</option>' + cats.map(ct => `<option value="${ct}">${ct}</option>`).join('');
+  fa.innerHTML = '<option value="">All accounts</option>'   + accs.map(a  => `<option value="${a}">${a}</option>`).join('');
+  fm.innerHTML = '<option value="">All months</option>'     + months.map(m => {
+    const d = new Date(m + '-01T00:00:00');
+    const label = isNaN(d) ? m : d.toLocaleDateString('en-CA',{month:'long',year:'numeric'});
+    return `<option value="${m}">${label}</option>`;
+  }).join('');
+  fc.value = cv; fa.value = av; fm.value = mv;
+}
+
+// ═══════════════════════════════════════════════
+// BUDGET
+// ═══════════════════════════════════════════════
+function handleBudCatChange(sel) {
+  const customField = document.getElementById('bud-custom-field');
+  const customInput = document.getElementById('bud-custom-name');
+  if (sel.value === '__custom__') {
+    customField.style.display = 'block';
+    setTimeout(() => customInput.focus(), 30);
+  } else {
+    customField.style.display = 'none';
+    customInput.value = '';
+  }
+}
+
+function openBudgetModal(prefillCat, prefillAmt) {
+  const sel = document.getElementById('bud-cat');
+  const customField = document.getElementById('bud-custom-field');
+  const customInput = document.getElementById('bud-custom-name');
+  // Reset
+  customField.style.display = 'none';
+  customInput.value = '';
+  document.getElementById('bud-amt').value = prefillAmt || '';
+
+  if (prefillCat) {
+    // Check if it's a built-in option
+    const builtIn = Array.from(sel.options).find(o => o.value === prefillCat && o.value !== '__custom__');
+    if (builtIn) {
+      sel.value = prefillCat;
+    } else {
+      // It's a custom category — show the custom field pre-filled
+      sel.value = '__custom__';
+      customField.style.display = 'block';
+      customInput.value = prefillCat;
+    }
+  } else {
+    sel.value = 'Housing';
+  }
+  openModal('bud-modal');
+}
+
+async function addBudget() {
+  const sel = document.getElementById('bud-cat');
+  let cat = sel.value;
+  if (cat === '__custom__') {
+    cat = document.getElementById('bud-custom-name').value.trim();
+    if (!cat) { toast('Enter a category name'); return; }
+  }
+  const amt = parseFloat(document.getElementById('bud-amt').value);
+  if (!amt) { toast('Enter an amount'); return; }
+  const idx = S.budgets.findIndex(b => b.cat === cat);
+  if (idx >= 0) S.budgets[idx].amount = amt;
+  else S.budgets.push({ id: uid(), cat, amount: amt });
+  saveLocal(); closeModal('bud-modal');
+  document.getElementById('bud-amt').value = '';
+  document.getElementById('bud-custom-name').value = '';
+  document.getElementById('bud-custom-field').style.display = 'none';
+  renderAll();
+  setSyncState('syncing', 'Saving...');
+  await syncBudgets();
+  setSyncState('ok', 'Synced');
+  toast('"' + cat + '" budget set');
+}
+
+function populateBudgetMonths() {
+  const now = new Date();
+  const opts = [];
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const val = d.toISOString().slice(0,7);
+    const label = d.toLocaleDateString('en-CA',{month:'long',year:'numeric'});
+    opts.push(`<option value="${val}"${i===0?' selected':''}>${label}</option>`);
+  }
+  const html = opts.join('');
+  // Sync both desktop and mobile selectors
+  ['bud-month-sel','bud-month-sel-mob'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (sel) { sel.innerHTML = html; }
+  });
+}
+
+function renderBudget() {
+  populateBudgetMonths();
+  const sel = document.getElementById('bud-month-sel');
+  const selectedMonth = sel ? sel.value : new Date().toISOString().slice(0,7);
+  const [bY, bM] = selectedMonth.split('-').map(Number);
+  const el = document.getElementById('budget-bars');
+  if (!S.budgets.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📊</div>No budgets set yet. Add a monthly limit for each spending category.</div>'; return; }
+  const isCurrentMonth = bM - 1 === new Date().getMonth() && bY === new Date().getFullYear();
+  el.innerHTML = S.budgets.map((b, i) => {
+    const spent = monthTxs(bM - 1, bY).filter(t => t.type === 'expense' && t.cat === b.cat).reduce((s, t) => s + t.amount, 0);
+    const pct = Math.min((spent / b.amount) * 100, 100);
+    const color = pct > 90 ? '#E24B4A' : pct > 70 ? '#EF9F27' : '#1D9E75';
+    const remaining = Math.max(b.amount - spent, 0);
+    return `<div class="prog-row" style="position:relative">
+      <div class="prog-header">
+        <span class="prog-label">${b.cat}</span>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="prog-amounts">${fmt(spent)} <span style="color:#3a4260">/ ${fmt(b.amount)}</span>
+            <span style="color:${color};margin-left:6px;font-size:11px">${remaining > 0 ? fmt(remaining) + ' left' : 'Over budget!'}</span>
+          </span>
+          <button class="btn btn-sm" style="font-size:10px;padding:2px 7px" onclick="openBudgetModal('${b.cat}','${b.amount}')" title="Edit">Edit</button>
+          <button class="del" onclick="deleteItem('budgets',${i},syncBudgets)" title="Delete">×</button>
+        </div>
+      </div>
+      <div class="prog-bg"><div class="prog-fill" style="width:${pct.toFixed(1)}%;background:${color}"></div></div>
+    </div>`;
+  }).join('') + `<div style="text-align:right;margin-top:14px"><button class="btn btn-sm" onclick="openBudgetModal()">+ Add Category</button></div>`;
+}
+
+// ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════════
+// LIVE PRICE FETCHING
+// ═══════════════════════════════════════════════
+let lastPriceRefresh = null;
+let priceCache = {}; // ticker -> { price, name, change, changePct, timestamp }
+
+// ─── proxy wrappers ────────────────────────────────────────────────────────
+// We try multiple CORS proxies in order — if one is down the next is tried.
+// allorigins wraps the response in {contents:'...'}, corsproxy returns raw.
+async function proxyFetch(targetUrl, timeoutMs) {
+  const proxies = [
+    { url: 'https://api.allorigins.win/get?url=' + encodeURIComponent(targetUrl), unwrap: d => JSON.parse(d.contents) },
+    { url: 'https://corsproxy.io/?' + encodeURIComponent(targetUrl),             unwrap: d => d },
+    { url: 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(targetUrl), unwrap: d => d },
+  ];
+  for (const p of proxies) {
+    try {
+      const r = await fetch(p.url, { signal: AbortSignal.timeout(timeoutMs || 7000) });
+      if (!r.ok) continue;
+      const raw = await r.json();
+      return p.unwrap(raw);
+    } catch(e) {}
+  }
+  return null;
+}
+
+async function fetchPrice(ticker) {
+  // Try bare ticker plus Canadian exchange suffixes
+  const variants = [ticker];
+  if (!ticker.includes('.')) {
+    variants.push(ticker + '.TO');  // TSX
+    variants.push(ticker + '.V');   // TSX Venture
+    variants.push(ticker + '.CN');  // NEO
+  }
+
+  function parseYahoo(d, originalTicker) {
+    const meta = d && d.chart && d.chart.result && d.chart.result[0] && d.chart.result[0].meta;
+    if (!meta || !meta.regularMarketPrice) return null;
+    return {
+      price:      meta.regularMarketPrice,
+      name:       meta.longName || meta.shortName || originalTicker,
+      change:     meta.regularMarketPrice - (meta.previousClose || meta.regularMarketPrice),
+      changePct:  meta.previousClose ? ((meta.regularMarketPrice - meta.previousClose) / meta.previousClose * 100) : 0,
+      currency:   meta.currency    || 'USD',
+      exchange:   meta.exchangeName || '',
+      resolvedTicker: meta.symbol  || originalTicker,
+      timestamp:  new Date()
+    };
+  }
+
+  for (const variant of variants) {
+    // Use query2 — slightly more permissive than query1 for browser requests
+    const yahooUrl = 'https://query2.finance.yahoo.com/v8/finance/chart/' + variant + '?interval=1d&range=5d';
+
+    // Attempt 1: direct (works if Yahoo relaxes CORS for your network/browser)
+    try {
+      const r = await fetch(yahooUrl, { signal: AbortSignal.timeout(4000), headers: { 'Accept': 'application/json' } });
+      if (r.ok) {
+        const d = await r.json();
+        const result = parseYahoo(d, ticker);
+        if (result) { if (variant !== ticker) priceCache[ticker + '__resolvedAs'] = variant; return result; }
+      }
+    } catch(e) {}
+
+    // Attempt 2: via rotating CORS proxies
+    const d = await proxyFetch(yahooUrl, 8000);
+    if (d) {
+      const result = parseYahoo(d, ticker);
+      if (result) { if (variant !== ticker) priceCache[ticker + '__resolvedAs'] = variant; return result; }
+    }
+  }
+  return null;
+}
+
+// ═══════════════════════════════════════════════
+// GOOGLE FINANCE PRICE ENGINE
+// ═══════════════════════════════════════════════
+// How it works:
+//   1. Write a Prices sheet tab with =GOOGLEFINANCE() formulas for each ticker
+//   2. Wait ~3s for Google Sheets to evaluate the formulas
+//   3. Read the results back (price, name, % change)
+//   4. Update holdings and re-render
+//
+// Google updates GOOGLEFINANCE() every 20 min during market hours.
+// Supports NYSE, NASDAQ, TSX (.TO), TSX-V (.V), crypto, and more.
+// No API key, no proxy, no rate limit beyond your Sheets quota.
+
+async function buildPricesSheet() {
+  // Write header + one row per holding with GOOGLEFINANCE formulas
+  if (!S.stocks.length) return false;
+  if (!CONFIG.apiKey || !CONFIG.sheetId) return false;
+
+  const header = [['Ticker','Price','Name','Change%','Currency','LastUpdated']];
+  const rows   = S.stocks.map(s => [
+    s.ticker,
+    `=IFERROR(GOOGLEFINANCE("${s.ticker}","price"),"N/A")`,
+    `=IFERROR(GOOGLEFINANCE("${s.ticker}","name"),"${s.name}")`,
+    `=IFERROR(GOOGLEFINANCE("${s.ticker}","changepct"),"N/A")`,
+    `=IFERROR(GOOGLEFINANCE("${s.ticker}","currency"),"N/A")`,
+    `=NOW()`
+  ]);
+
+  const ok = await sheetsWrite(
+    `${SHEET_NAMES.prices}!A1`,
+    [...header, ...rows],
+    'USER_ENTERED'   // must be USER_ENTERED so Google evaluates the formulas
+  );
+  return ok;
+}
+
+async function readPricesSheet() {
+  // Read back the evaluated values — skip header row
+  const rows = await sheetsRead(`${SHEET_NAMES.prices}!A2:F`);
+  if (!rows || !rows.length) return {};
+
+  const result = {};
+  for (const r of rows) {
+    const ticker  = (r[0] || '').toString().trim();
+    const price   = parseFloat(r[1]);
+    const name    = (r[2] || '').toString().trim();
+    const chgPct  = parseFloat(r[3]);
+    const currency= (r[4] || 'USD').toString().trim();
+    if (!ticker || !isFinite(price) || price <= 0) continue;
+    result[ticker] = {
+      price,
+      name:      name || ticker,
+      changePct: isFinite(chgPct) ? chgPct : 0,
+      change:    0,    // we only get %, not absolute — fine for display
+      currency:  currency !== 'N/A' ? currency : 'USD',
+      exchange:  '',
+      timestamp: new Date()
+    };
+  }
+  return result;
+}
+
+async function refreshPrices(manual = false) {
+  if (!S.stocks.length) return;
+  if (!manual && lastPriceRefresh && (Date.now() - lastPriceRefresh) < 5 * 60 * 1000) return;
+
+  const statusEl  = document.getElementById('price-status');
+  const statusDot = document.getElementById('price-status-dot');
+  const statusTxt = document.getElementById('price-status-text');
+  const refreshBtn= document.getElementById('refresh-btn');
+
+  if (statusEl)  statusEl.style.display = 'flex';
+  if (statusDot) statusDot.style.background = '#EF9F27';
+  if (refreshBtn) refreshBtn.textContent = '↻ Updating...';
+
+  // ── Path A: Google Sheets connected → use GOOGLEFINANCE() ──────────────
+  if (CONFIG.apiKey && CONFIG.sheetId) {
+    if (statusTxt) statusTxt.textContent = `Writing GOOGLEFINANCE formulas to your Sheet...`;
+
+    const wrote = await buildPricesSheet();
+    if (!wrote) {
+      if (statusTxt) statusTxt.textContent = 'Could not write to Prices sheet — check credentials';
+      if (statusDot) statusDot.style.background = '#E24B4A';
+      if (refreshBtn) refreshBtn.textContent = '↻ Refresh';
+      return;
+    }
+
+    // Wait for Google to evaluate the formulas (3 seconds is usually enough)
+    if (statusTxt) statusTxt.textContent = 'Waiting for Google Finance to calculate prices...';
+    await new Promise(res => setTimeout(res, 3500));
+
+    if (statusTxt) statusTxt.textContent = 'Reading prices from your Sheet...';
+    const prices = await readPricesSheet();
+    const tickers = Object.keys(prices);
+
+    let updated = 0, failed = 0;
+    for (const stock of S.stocks) {
+      const data = prices[stock.ticker];
+      if (data && data.price > 0) {
+        priceCache[stock.ticker] = data;
+        stock.current = data.price;
+        if (!stock.name || stock.name === stock.ticker) stock.name = data.name;
+        updated++;
+      } else {
+        failed++;
+      }
+    }
+
+    lastPriceRefresh = Date.now();
+    saveLocal();
+    setSyncState('syncing', 'Saving...');
+    await syncStocks();
+    setSyncState('ok', 'Synced');
+
+    const now = new Date().toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit' });
+    if (statusDot) statusDot.style.background = updated === 0 ? '#E24B4A' : '#1D9E75';
+    if (statusTxt) {
+      if (failed === 0)        statusTxt.textContent = `All ${updated} prices updated via Google Finance · ${now}`;
+      else if (updated === 0)  statusTxt.textContent = `Prices unavailable — market may be closed, or add a "Prices" tab to your Sheet`;
+      else                     statusTxt.textContent = `${updated} updated, ${failed} unavailable · ${now}`;
+    }
+
+  // ── Path B: No Sheets connection → fall back to proxy attempts ──────────
+  } else {
+    if (statusTxt) statusTxt.textContent = `No Google Sheets connected — trying direct fetch...`;
+    let updated = 0, failed = 0;
+    for (const stock of S.stocks) {
+      const data = await fetchPrice(stock.ticker);
+      if (data) {
+        priceCache[stock.ticker] = data;
+        stock.current = data.price;
+        updated++;
+      } else { failed++; }
+    }
+    lastPriceRefresh = Date.now();
+    saveLocal();
+    const now = new Date().toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit' });
+    if (statusDot) statusDot.style.background = updated === 0 ? '#E24B4A' : '#1D9E75';
+    if (statusTxt) statusTxt.textContent = updated === 0
+      ? 'Could not fetch prices — connect Google Sheets in Settings for reliable prices'
+      : `${updated} updated · ${now}`;
+  }
+
+  if (refreshBtn) refreshBtn.textContent = '↻ Refresh';
+  renderStocks();
+  drawCharts('investments');
+}
+
+// For the modal: look up price while user is adding a holding
+// ═══════════════════════════════════════════════
+// TICKER SEARCH
+// ═══════════════════════════════════════════════
+let tickerSearchTimer  = null;
+let tickerDropFocusIdx = -1;
+let tickerResults      = [];
+
+async function tickerSearch(query) {
+  query = (query || '').trim();
+  clearTimeout(tickerSearchTimer);
+  const dd = document.getElementById('ticker-dropdown');
+  if (query.length < 1) { dd.style.display = 'none'; tickerResults = []; return; }
+
+  tickerSearchTimer = setTimeout(async () => {
+    dd.style.display = 'block';
+    dd.innerHTML = '<div class="tdrop-msg">Searching...</div>';
+    tickerDropFocusIdx = -1;
+
+    const searchUrl = 'https://query2.finance.yahoo.com/v1/finance/search?q=' + encodeURIComponent(query) + '&quotesCount=8&newsCount=0&listsCount=0';
+    let quotes = [];
+
+    // Try direct first
+    try {
+      const r = await fetch(searchUrl, { signal: AbortSignal.timeout(4000), headers: { 'Accept': 'application/json' } });
+      if (r.ok) {
+        const d = await r.json();
+        quotes = (d && d.quotes ? d.quotes : []).filter(q =>
+          q.symbol && q.quoteType &&
+          ['EQUITY','ETF','MUTUALFUND','CRYPTOCURRENCY','INDEX'].includes(q.quoteType)
+        );
+      }
+    } catch(e) {}
+
+    // If direct failed, try proxies
+    if (!quotes.length) {
+      const d = await proxyFetch(searchUrl, 8000);
+      if (d && d.quotes) {
+        quotes = d.quotes.filter(q =>
+          q.symbol && q.quoteType &&
+          ['EQUITY','ETF','MUTUALFUND','CRYPTOCURRENCY','INDEX'].includes(q.quoteType)
+        );
+      }
+    }
+
+    tickerResults = quotes;
+
+    if (!quotes.length) {
+      dd.innerHTML = '<div class="tdrop-msg">No results — try a different spelling, or skip search and type the ticker + price manually below</div>';
+      return;
+    }
+
+    dd.innerHTML = quotes.map((q, i) => {
+      const name = q.longname || q.shortname || q.symbol;
+      const exch = q.exchDisp || q.exchange || '';
+      const type = q.typeDisp || q.quoteType || '';
+      return `<div class="tdrop-item" data-idx="${i}"
+        onmousedown="selectTicker(${i})"
+        onmouseover="focusDropItem(${i})">
+        <span class="tdrop-ticker">${q.symbol}</span>
+        <span class="tdrop-name">${name}</span>
+        <span class="tdrop-exch">${exch}${type ? ' · ' + type : ''}</span>
+      </div>`;
+    }).join('');
+  }, 300);
+}
+
+function focusDropItem(idx) {
+  tickerDropFocusIdx = idx;
+  document.querySelectorAll('.tdrop-item').forEach((el, i) => el.classList.toggle('focused', i === idx));
+}
+
+function tickerSearchKey(e) {
+  const items = document.querySelectorAll('.tdrop-item');
+  if (!items.length) return;
+  if (e.key === 'ArrowDown') { e.preventDefault(); tickerDropFocusIdx = Math.min(tickerDropFocusIdx + 1, items.length - 1); focusDropItem(tickerDropFocusIdx); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); tickerDropFocusIdx = Math.max(tickerDropFocusIdx - 1, 0); focusDropItem(tickerDropFocusIdx); }
+  else if (e.key === 'Enter') { e.preventDefault(); if (tickerDropFocusIdx >= 0) selectTicker(tickerDropFocusIdx); else if (tickerResults.length === 1) selectTicker(0); }
+  else if (e.key === 'Escape') { document.getElementById('ticker-dropdown').style.display = 'none'; }
+}
+
+async function selectTicker(idx) {
+  const q = tickerResults[idx];
+  if (!q) return;
+
+  document.getElementById('ticker-dropdown').style.display = 'none';
+  document.getElementById('stk-ticker').value = q.symbol;
+  document.getElementById('stk-name').value   = q.longname || q.shortname || q.symbol;
+  document.getElementById('stk-search').value = '';
+
+  // Show selected pill
+  const selBox = document.getElementById('stk-selected');
+  selBox.style.display = 'flex';
+  document.getElementById('stk-sel-ticker').textContent = q.symbol;
+  document.getElementById('stk-sel-name').textContent   = q.longname || q.shortname || '';
+  document.getElementById('stk-sel-exch').textContent   = q.exchDisp || q.exchange || '';
+
+  // Fetch live price — use Google Finance sheet if connected, else proxy
+  const statusEl = document.getElementById('price-fetch-status');
+  const priceRow    = document.getElementById('stk-price-row');
+  const priceBanner = document.getElementById('stk-price-banner');
+
+  statusEl.textContent = 'Fetching price...';
+  statusEl.style.color = '#EF9F27';
+
+  let data = null;
+
+  if (CONFIG.apiKey && CONFIG.sheetId) {
+    // Write a single-ticker price lookup to the Prices sheet
+    statusEl.textContent = 'Looking up via Google Finance...';
+    const tempRows = [[
+      q.symbol,
+      `=IFERROR(GOOGLEFINANCE("${q.symbol}","price"),"N/A")`,
+      `=IFERROR(GOOGLEFINANCE("${q.symbol}","name"),"${q.longname||q.symbol}")`,
+      `=IFERROR(GOOGLEFINANCE("${q.symbol}","changepct"),"N/A")`,
+      `=IFERROR(GOOGLEFINANCE("${q.symbol}","currency"),"N/A")`,
+      `=NOW()`
+    ]];
+    await sheetsWrite(`${SHEET_NAMES.prices}!A1`, [['Ticker','Price','Name','Change%','Currency','LastUpdated'], ...tempRows], 'USER_ENTERED');
+    await new Promise(res => setTimeout(res, 3000)); // wait for formula evaluation
+    const prices = await readPricesSheet();
+    data = prices[q.symbol] || null;
+  }
+
+  // Fallback to proxy if no sheets or sheets lookup failed
+  if (!data) {
+    statusEl.textContent = 'Trying direct fetch...';
+    data = await fetchPrice(q.symbol);
+  }
+
+  if (data) {
+    document.getElementById('stk-price').value = data.price.toFixed(2);
+    if (!document.getElementById('stk-cost').value) {
+      document.getElementById('stk-cost').value = data.price.toFixed(2);
+    }
+    statusEl.textContent = '✓ Price fetched via ' + (CONFIG.apiKey ? 'Google Finance' : 'market data');
+    statusEl.style.color = '#1D9E75';
+    priceRow.style.display = 'block';
+    const chgSign = data.changePct >= 0 ? '+' : '';
+    priceBanner.textContent = q.symbol + ' · $' + data.price.toFixed(2) + ' · ' + chgSign + data.changePct.toFixed(2) + '% today' + (data.currency && data.currency !== 'USD' ? ' · ' + data.currency : '');
+    setTimeout(() => document.getElementById('stk-shares').focus(), 100);
+  } else {
+    statusEl.textContent = 'Could not fetch — enter price manually below';
+    statusEl.style.color = '#E24B4A';
+    priceRow.style.display = 'none';
+    setTimeout(() => document.getElementById('stk-price').focus(), 100);
+  }
+}
+
+function clearTickerSelection() {
+  ['stk-ticker','stk-name','stk-ticker-manual','stk-name-manual','stk-price','stk-cost','stk-search'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById('stk-selected').style.display   = 'none';
+  document.getElementById('stk-price-row').style.display  = 'none';
+  document.getElementById('stk-manual-row').style.display = 'none';
+  document.getElementById('ticker-dropdown').style.display = 'none';
+  document.getElementById('price-fetch-status').textContent = '';
+  tickerResults = []; tickerDropFocusIdx = -1;
+  document.getElementById('stk-search').focus();
+}
+
+// When user types manually, keep hidden fields in sync
+function syncManualTicker(val) {
+  document.getElementById('stk-ticker').value = val.trim().toUpperCase();
+}
+function syncManualName(val) {
+  document.getElementById('stk-name').value = val.trim();
+}
+
+// Show manual entry fields — called if user wants to bypass search
+function useManualEntry() {
+  document.getElementById('stk-manual-row').style.display = 'block';
+  document.getElementById('ticker-dropdown').style.display = 'none';
+  setTimeout(() => document.getElementById('stk-ticker-manual').focus(), 50);
+}
+
+function clearPriceFetch() {
+  const el = document.getElementById('price-fetch-status');
+  if (el) el.textContent = '';
+}
+
+// ═══════════════════════════════════════════════
+// STOCKS
+// ═══════════════════════════════════════════════
+async function addStock() {
+  const ticker = document.getElementById('stk-ticker').value.trim().toUpperCase();
+  const name   = document.getElementById('stk-name').value.trim();
+  const shares = parseFloat(document.getElementById('stk-shares').value);
+  const cost   = parseFloat(document.getElementById('stk-cost').value);
+  let   price  = parseFloat(document.getElementById('stk-price').value);
+
+  if (!ticker || !shares || !cost) { toast('Ticker, shares and cost are required'); return; }
+
+  // If no price entered, try Google Finance first then proxy
+  if (!price) {
+    toast('Looking up current price...');
+    let data = null;
+    if (CONFIG.apiKey && CONFIG.sheetId) {
+      await sheetsWrite(`${SHEET_NAMES.prices}!A1`,
+        [['Ticker','Price','Name','Change%','Currency','LastUpdated'],
+         [ticker, `=IFERROR(GOOGLEFINANCE("${ticker}","price"),"N/A")`,
+          `=IFERROR(GOOGLEFINANCE("${ticker}","name"),"${ticker}")`,
+          `=IFERROR(GOOGLEFINANCE("${ticker}","changepct"),"N/A")`,
+          `=IFERROR(GOOGLEFINANCE("${ticker}","currency"),"N/A")`,`=NOW()`]],
+        'USER_ENTERED');
+      await new Promise(res => setTimeout(res, 3000));
+      const prices = await readPricesSheet();
+      data = prices[ticker] || null;
+    }
+    if (!data) data = await fetchPrice(ticker);
+    if (data) { price = data.price; priceCache[ticker] = data; }
+    else { toast('Could not fetch price — please enter it manually in the price field'); return; }
+  }
+
+  S.stocks.push({ id: uid(), ticker, name: name || ticker, shares, costPerShare: cost, current: price });
+  saveLocal(); closeModal('stk-modal');
+  ['stk-ticker','stk-name','stk-ticker-manual','stk-name-manual','stk-shares','stk-cost','stk-price','stk-search'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  document.getElementById('price-fetch-status').textContent = '';
+  document.getElementById('stk-selected').style.display   = 'none';
+  document.getElementById('stk-price-row').style.display  = 'none';
+  document.getElementById('stk-manual-row').style.display = 'none';
+  document.getElementById('ticker-dropdown').style.display = 'none';
+  tickerResults = []; tickerDropFocusIdx = -1;
+  renderAll();
+  setSyncState('syncing', 'Saving...');
+  await syncStocks();
+  setSyncState('ok', 'Synced');
+  toast('Holding added');
+}
+
+function renderStocks() {
+  const el = document.getElementById('stocks-list');
+  if (!S.stocks.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">📈</div>No holdings yet. Add your stocks, ETFs, or crypto.</div>';
+    return;
+  }
+
+  el.innerHTML = S.stocks.map((s, i) => {
+    const val      = s.shares * s.current;
+    const cost     = s.shares * s.costPerShare;
+    const gain     = val - cost;
+    const pct      = cost > 0 ? ((gain / cost) * 100).toFixed(1) : '0.0';
+    const cache    = priceCache[s.ticker];
+    const todayChg = cache ? `${cache.changePct >= 0 ? '+' : ''}${cache.changePct.toFixed(2)}% today` : '';
+    const exch     = cache && cache.exchange ? cache.exchange : '';
+    const curr     = cache && cache.currency ? cache.currency : '';
+
+    return `
+      <div class="row" id="stk-row-${i}" style="flex-direction:column;align-items:stretch;gap:0">
+        <div style="display:flex;justify-content:space-between;align-items:center;width:100%">
+          <div class="row-left">
+            <div class="row-title" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+              <span class="badge badge-blue">${s.ticker}</span> ${s.name}
+              ${todayChg ? `<span class="badge ${cache.changePct >= 0 ? 'badge-green' : 'badge-red'}" style="font-size:9px">${todayChg}</span>` : ''}
+              ${exch ? `<span class="badge badge-gray" style="font-size:9px">${exch}</span>` : ''}
+            </div>
+            <div class="row-sub">${s.shares} units &middot; avg cost ${fmt(s.costPerShare)} ${curr} &middot; current ${fmt(s.current)} ${curr}</div>
+          </div>
+          <div class="row-right">
+            <div style="text-align:right">
+              <div class="amount neutral">${fmt(val)}</div>
+              <div class="chg ${gain >= 0 ? 'up' : 'dn'}">${gain >= 0 ? '+' : ''}${fmtK(gain)} (${pct}% total)</div>
+            </div>
+            <button class="btn btn-sm" style="font-size:11px;padding:3px 8px" onclick="toggleBuyMore(${i})">+ Buy more</button>
+            <button class="del" onclick="deleteItem('stocks',${i},syncStocks)">×</button>
+          </div>
+        </div>
+        <div id="buy-more-${i}" style="display:none;margin-top:10px;padding:12px;background:#0f1117;border-radius:8px;border:1px solid #2e3650">
+          <div style="font-size:12px;color:#8b92a8;margin-bottom:8px;font-weight:500">Buy more ${s.ticker} — weighted avg cost will be recalculated</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+            <div style="flex:1;min-width:90px">
+              <div style="font-size:10px;color:#555e78;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Shares to add</div>
+              <input id="bm-shares-${i}" type="number" step="0.0001" placeholder="0"
+                style="width:100%;background:#141927;border:1px solid #2e3650;border-radius:6px;padding:6px 9px;color:#e8eaf0;font-size:13px;font-family:inherit">
+            </div>
+            <div style="flex:1;min-width:90px">
+              <div style="font-size:10px;color:#555e78;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Price paid ($)</div>
+              <input id="bm-price-${i}" type="number" step="0.01" placeholder="${s.current.toFixed(2)}"
+                style="width:100%;background:#141927;border:1px solid #2e3650;border-radius:6px;padding:6px 9px;color:#e8eaf0;font-size:13px;font-family:inherit">
+              <div style="font-size:10px;color:#3a4260;margin-top:3px">Leave blank to use current price</div>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="buyMore(${i})">Confirm</button>
+            <button class="btn btn-sm" onclick="toggleBuyMore(${i})">Cancel</button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  const portVal  = S.stocks.reduce((s, st) => s + st.shares * st.current, 0);
+  const portCost = S.stocks.reduce((s, st) => s + st.shares * st.costPerShare, 0);
+  const portGain = portVal - portCost;
+  document.getElementById('invest-metrics').innerHTML = `
+    <div class="metric blue"><div class="metric-label">Portfolio Value</div><div class="metric-value">${fmtK(portVal)}</div></div>
+    <div class="metric ${portGain >= 0 ? 'green' : 'red'}"><div class="metric-label">Total Gain / Loss</div><div class="metric-value ${portGain >= 0 ? 'pos' : 'neg'}">${portGain >= 0 ? '+' : ''}${fmtK(portGain)}</div></div>
+    <div class="metric amber"><div class="metric-label">Return %</div><div class="metric-value ${portGain >= 0 ? 'pos' : 'neg'}">${portCost > 0 ? ((portGain/portCost)*100).toFixed(1) + '%' : '—'}</div></div>
+    <div class="metric"><div class="metric-label">Holdings</div><div class="metric-value">${S.stocks.length}</div></div>`;
+}
+
+// ═══════════════════════════════════════════════
+// GOALS
+// ═══════════════════════════════════════════════
+function openGoalContrib(i) {
+  // Close all others
+  S.goals.forEach((_, j) => {
+    const el = document.getElementById('goal-contrib-' + j);
+    if (el) el.style.display = 'none';
+  });
+  const el = document.getElementById('goal-contrib-' + i);
+  if (el) {
+    el.style.display = 'block';
+    setTimeout(() => { const inp = document.getElementById('gc-amt-' + i); if (inp) inp.focus(); }, 30);
+  }
+}
+
+function closeGoalContrib(i) {
+  const el = document.getElementById('goal-contrib-' + i);
+  if (el) el.style.display = 'none';
+  const inp = document.getElementById('gc-amt-' + i);
+  if (inp) inp.value = '';
+}
+
+async function saveGoalContrib(i) {
+  const inp = document.getElementById('gc-amt-' + i);
+  if (!inp) return;
+  const amt = parseFloat(inp.value);
+  if (!isFinite(amt) || amt <= 0) { toast('Enter a valid amount'); return; }
+  const goal = S.goals[i];
+  if (!goal) return;
+  goal.current = Math.round((goal.current + amt) * 100) / 100;
+  if (goal.current > goal.target) goal.current = goal.target; // cap at 100%
+  saveLocal();
+  renderGoals();
+  drawCharts('goals');
+  setSyncState('syncing', 'Saving...');
+  await syncGoals();
+  setSyncState('ok', 'Synced');
+  toast(fmt(amt) + ' added to "' + goal.name + '" · ' + Math.round((goal.current/goal.target)*100) + '% complete');
+}
+
+async function addGoal() {
+  const name    = document.getElementById('goal-name').value.trim();
+  const target  = parseFloat(document.getElementById('goal-target').value);
+  const current = parseFloat(document.getElementById('goal-current').value) || 0;
+  const deadline= document.getElementById('goal-date').value;
+  if (!name || !target) { toast('Name and target required'); return; }
+  S.goals.push({ id: uid(), name, target, current, deadline });
+  saveLocal(); closeModal('goal-modal');
+  ['goal-name','goal-target','goal-current','goal-date'].forEach(id => document.getElementById(id).value = '');
+  renderAll();
+  setSyncState('syncing', 'Saving...');
+  await syncGoals();
+  setSyncState('ok', 'Synced');
+  toast('Goal added');
+}
+
+function renderGoals() {
+  const el = document.getElementById('goals-list');
+  if (!S.goals.length) { el.innerHTML = '<div class="card"><div class="empty"><div class="empty-icon">🎯</div>No goals yet. Set a savings target to start tracking.</div></div>'; return; }
+  el.innerHTML = S.goals.map((g, i) => {
+    const pct = Math.min((g.current / g.target) * 100, 100);
+    const color = PALETTE[i % PALETTE.length];
+    const rem = g.target - g.current;
+    return `<div class="card" style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+        <div>
+          <div style="font-size:14px;font-weight:500;color:#c5cad8">${g.name}</div>
+          <div style="font-size:11px;color:#555e78;margin-top:2px">${g.deadline ? 'Target: ' + g.deadline : 'No deadline set'}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:13px;color:#8b92a8">${fmt(g.current)} <span style="color:#3a4260">/ ${fmt(g.target)}</span></span>
+          <button class="btn btn-sm" style="font-size:11px;padding:3px 9px" onclick="openGoalContrib(${i})">+ Add</button>
+          <button class="del" onclick="deleteItem('goals',${i},syncGoals)">×</button>
+        </div>
+      </div>
+      <div class="prog-bg"><div class="prog-fill" style="width:${pct.toFixed(1)}%;background:${color}"></div></div>
+      <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:#3a4260">
+        <span>${pct.toFixed(0)}% complete</span>
+        <span>${fmt(Math.max(rem,0))} remaining</span>
+      </div>
+      <div id="goal-contrib-${i}" style="display:none;margin-top:12px;padding:12px;background:#0f1117;border-radius:8px;border:1px solid #2e3650">
+        <div style="font-size:12px;color:#8b92a8;margin-bottom:8px">Add a contribution to "${g.name}"</div>
+        <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+          <div style="flex:1;min-width:120px">
+            <div style="font-size:10px;color:#555e78;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Amount ($)</div>
+            <input id="gc-amt-${i}" type="number" step="0.01" placeholder="0.00"
+              style="width:100%;background:#141927;border:1px solid #2e3650;border-radius:6px;padding:6px 9px;color:#e8eaf0;font-size:13px;font-family:'DM Sans',sans-serif"
+              onkeydown="if(event.key==='Enter')saveGoalContrib(${i})">
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="saveGoalContrib(${i})">Save</button>
+          <button class="btn btn-sm" onclick="closeGoalContrib(${i})">Cancel</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════
+// DELETE
+// ═══════════════════════════════════════════════
+async function deleteItem(col, idOrIdx, syncFn) {
+  // Find item to show its name in confirmation
+  let idx;
+  if (typeof idOrIdx === 'string') {
+    idx = S[col].findIndex(item => item.id === idOrIdx);
+  } else {
+    idx = idOrIdx;
+  }
+  if (idx === -1 || idx >= S[col].length) { toast('Item not found'); return; }
+  const item = S[col][idx];
+  const label = item.name || item.desc || item.ticker || item.cat || 'this item';
+  if (!confirm('Delete "' + label + '"? This cannot be undone.')) return;
+  S[col].splice(idx, 1);
+  saveLocal();
+  renderAll();
+  if (syncFn) { setSyncState('syncing', 'Saving...'); await syncFn(); setSyncState('ok', 'Synced'); }
+  toast('"' + label + '" deleted');
+}
+
+// ═══════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════
+function renderDash() {
+  const now = new Date();
+  document.getElementById('dash-date').textContent = now.toLocaleDateString('en-CA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  document.getElementById('dash-month-label').textContent = now.toLocaleDateString('en-CA', { month: 'long', year: 'numeric' });
+
+  const txm = thisMonthTxs();
+  const inc = txm.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const exp = txm.filter(t => t.type === 'expense' || t.type === 'bill').reduce((s, t) => s + t.amount, 0);
+  const save = inc - exp;
+  const nw = netWorth();
+
+  const savingsRate = inc > 0 ? Math.round((save / inc) * 100) : 0;
+  const srColor = savingsRate >= 20 ? 'pos' : savingsRate >= 10 ? '' : 'neg';
+  const srTip = savingsRate >= 20 ? 'Excellent (goal: 20%+)' : savingsRate >= 10 ? 'Good (goal: 20%+)' : savingsRate > 0 ? 'Low — aim for 20%' : 'Spending exceeds income';
+  document.getElementById('dash-metrics').innerHTML = `
+    <div class="metric blue"><div class="metric-label">Net Worth</div><div class="metric-value ${nw >= 0 ? 'pos' : 'neg'}">${fmtK(nw)}</div><div class="metric-trend">Accounts + portfolio</div></div>
+    <div class="metric green"><div class="metric-label">Monthly Income</div><div class="metric-value pos">${fmtK(inc)}</div><div class="metric-trend">${now.toLocaleDateString('en-CA',{month:'short'})}</div></div>
+    <div class="metric red"><div class="metric-label">Monthly Expenses</div><div class="metric-value neg">${fmtK(exp)}</div><div class="metric-trend">${now.toLocaleDateString('en-CA',{month:'short'})}</div></div>
+    <div class="metric ${save >= 0 ? 'green' : 'red'}"><div class="metric-label">Net Saving</div><div class="metric-value ${save >= 0 ? 'pos' : 'neg'}">${save >= 0 ? '+' : ''}${fmtK(save)}</div><div class="metric-trend">Income − Expenses</div></div>
+    <div class="metric ${savingsRate >= 20 ? 'green' : savingsRate >= 10 ? 'amber' : 'red'}"><div class="metric-label">Savings Rate</div><div class="metric-value ${srColor}">${savingsRate}%</div><div class="metric-trend">${srTip}</div></div>`;
+
+  // Bill alerts
+  renderBillAlerts();
+
+  // Recent txns
+  const el = document.getElementById('dash-recent');
+  const recent = S.transactions.slice(0, 6);
+  if (!recent.length) { el.innerHTML = '<div class="empty">No transactions yet.</div>'; return; }
+  el.innerHTML = recent.map(t => {
+    let amtClass, amtPrefix;
+    if (t.type === 'income')            { amtClass = 'pos';     amtPrefix = '+'; }
+    else if (t.type === 'transfer')     { amtClass = 'neutral'; amtPrefix = t.xferDir === 'in' ? '→' : '←'; }
+    else                                { amtClass = 'neg';     amtPrefix = '−'; }
+    const badge = t.type === 'transfer' ? ' <span class="badge badge-blue" style="font-size:9px">Transfer</span>'
+                : t.type === 'bill'     ? ' <span class="badge badge-red"  style="font-size:9px">Bill</span>'
+                : '';
+    return `<div class="row">
+      <div class="row-left">
+        <div class="row-title" style="display:flex;align-items:center;gap:4px">${t.desc}${badge}</div>
+        <div class="row-sub">${t.cat} · ${t.date}</div>
+      </div>
+      <span class="amount ${amtClass}">${amtPrefix} ${fmt(t.amount)}</span>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════
+// CHARTS
+// ═══════════════════════════════════════════════
+const charts = {};
+function kill(id) { if (charts[id]) { charts[id].destroy(); delete charts[id]; } }
+
+function chartColors() {
+  const light = document.body.classList.contains('light');
+  return {
+    text: light ? '#5a606e' : '#555e78',
+    grid: light ? '#e2e5ea' : '#1a1f2e',
+  };
+}
+
+function drawCharts(tab) {
+  if (tab === 'dashboard') { drawBar(); drawDonut(); drawNetWorth(); }
+  if (tab === 'accounts') { drawAccountsBar(); }
+  if (tab === 'budget') { drawBudgetChart(); }
+  if (tab === 'investments') { drawAlloc(); drawReturns(); }
+  if (tab === 'goals') { drawGoalsChart(); }
+}
+
+function last6Months() {
+  const now = new Date(); const labels = []; const months = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    labels.push(d.toLocaleDateString('en-CA', { month: 'short' }));
+    months.push({ m: d.getMonth(), y: d.getFullYear() });
+  }
+  return { labels, months };
+}
+
+function drawBar() {
+  kill('bar');
+  const { labels, months } = last6Months();
+  const inc = months.map(({ m, y }) => monthTxs(m,y).filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0));
+  const exp = months.map(({ m, y }) => monthTxs(m,y).filter(t => t.type === 'expense' || t.type === 'bill').reduce((s, t) => s + t.amount, 0));
+  const ctx = document.getElementById('chart-bar'); if (!ctx) return;
+  charts['bar'] = new Chart(ctx, {
+    type: 'bar',
+    data: { labels, datasets: [
+      { label: 'Income', data: inc, backgroundColor: '#1D9E75', borderRadius: 5, borderSkipped: false },
+      { label: 'Expenses', data: exp, backgroundColor: '#E24B4A', borderRadius: 5, borderSkipped: false }
+    ]},
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { x: { grid: { display: false }, ticks: { color: chartColors().text, font: { size: 11 } } },
+                y: { beginAtZero:true, grid: { color: chartColors().grid }, ticks: { color: chartColors().text, font: { size: 11 }, callback: v => v===0?'$0':fmtK(v), maxTicksLimit:6 } } } }
+  });
+}
+
+function drawDonut() {
+  kill('donut');
+  const cats = {};
+  S.transactions.filter(t => t.type === 'expense' || t.type === 'bill').forEach(t => cats[t.cat] = (cats[t.cat] || 0) + t.amount);
+  if (!Object.keys(cats).length) return;
+  const labels = Object.keys(cats); const data = Object.values(cats);
+  const ctx = document.getElementById('chart-donut'); if (!ctx) return;
+  charts['donut'] = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data, backgroundColor: PALETTE.slice(0, labels.length), borderWidth: 0, hoverOffset: 4 }] },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '68%',
+      plugins: { legend: { position: 'right', labels: { color: chartColors().text, font: { size: 11 }, boxWidth: 9, padding: 8 } } } }
+  });
+}
+
+function drawNetWorth() {
+  kill('nw');
+  const { labels, months } = last6Months();
+  const currentNW = netWorth();
+  // Build real historical net worth by working backwards from today's value
+  // Each month's NW = currentNW minus cumulative net transactions after that month
+  // Single pass: compute net value of each transaction, sort by date
+  const txNetValues = S.transactions
+    .map(t => {
+      if (t.type === 'transfer') return null;
+      const d = new Date((t.date||'') + 'T00:00:00');
+      if (isNaN(d)) return null;
+      return { d, net: t.type === 'income' ? t.amount : -t.amount };
+    })
+    .filter(Boolean);
+  const data = months.map(({ m, y }) => {
+    const cutoff = new Date(y, m + 1, 1);
+    const laterNet = txNetValues
+      .filter(v => v.d >= cutoff)
+      .reduce((s, v) => s + v.net, 0);
+    return Math.round(currentNW - laterNet);
+  });
+  const ctx = document.getElementById('chart-networth'); if (!ctx) return;
+  charts['nw'] = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets: [{ label: 'Net Worth', data, borderColor: '#4a7fcb', backgroundColor: 'rgba(74,127,203,.08)', fill: true, tension: .4, pointRadius: 4, pointBackgroundColor: '#4a7fcb', pointBorderColor: '#0f1117', pointBorderWidth: 2 }] },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { x: { grid: { display: false }, ticks: { color: chartColors().text, font: { size: 11 } } },
+                y: { beginAtZero:false, grid: { color: chartColors().grid }, ticks: { color: chartColors().text, font: { size: 11 }, callback: v => fmtK(v), maxTicksLimit:5 } } } }
+  });
+}
+
+function drawAccountsBar() {
+  kill('acc-bar');
+  const pos = S.accounts.filter(a => a.balance > 0);
+  if (!pos.length) return;
+  const ctx = document.getElementById('chart-accounts-bar'); if (!ctx) return;
+  charts['acc-bar'] = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: pos.map(a => a.name), datasets: [{ data: pos.map(a => a.balance), backgroundColor: PALETTE, borderRadius: 5, borderSkipped: false, borderWidth: 0 }] },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { x: { grid: { display: false }, ticks: { color: chartColors().text, font: { size: 11 } } },
+                y: { beginAtZero:true, grid: { color: chartColors().grid }, ticks: { color: chartColors().text, font: { size: 11 }, callback: v => fmtK(v), maxTicksLimit:5 } } } }
+  });
+}
+
+function drawBudgetChart() {
+  kill('bud');
+  if (!S.budgets.length) return;
+  const sel = document.getElementById('bud-month-sel');
+  const selectedMonth = sel ? sel.value : new Date().toISOString().slice(0,7);
+  const [bY, bM] = selectedMonth.split('-').map(Number);
+  const spent = S.budgets.map(b => monthTxs(bM - 1, bY).filter(t => (t.type === 'expense' || t.type === 'bill') && t.cat === b.cat).reduce((s, t) => s + t.amount, 0));
+  const ctx = document.getElementById('chart-budget'); if (!ctx) return;
+  charts['bud'] = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: S.budgets.map(b => b.cat), datasets: [
+      { label: 'Budget', data: S.budgets.map(b => b.amount), backgroundColor: 'rgba(74,127,203,.2)', borderRadius: 5, borderSkipped: false },
+      { label: 'Spent', data: spent, backgroundColor: '#E24B4A', borderRadius: 5, borderSkipped: false }
+    ]},
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: chartColors().text, font: { size: 11 }, boxWidth: 9 } } },
+      scales: { x: { grid: { display: false }, ticks: { color: chartColors().text, font: { size: 11 } } },
+                y: { grid: { color: chartColors().grid }, ticks: { color: chartColors().text, font: { size: 11 }, callback: v => fmtK(v) } } } }
+  });
+}
+
+function drawAlloc() {
+  kill('alloc');
+  if (!S.stocks.length) return;
+  const ctx = document.getElementById('chart-alloc'); if (!ctx) return;
+  charts['alloc'] = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels: S.stocks.map(s => s.ticker), datasets: [{ data: S.stocks.map(s => s.shares * s.current), backgroundColor: PALETTE, borderWidth: 0, hoverOffset: 4 }] },
+    options: { responsive: true, maintainAspectRatio: false, cutout: '60%',
+      plugins: { legend: { position: 'right', labels: { color: chartColors().text, font: { size: 11 }, boxWidth: 9 } } } }
+  });
+}
+
+function drawReturns() {
+  kill('ret');
+  if (!S.stocks.length) return;
+  const gains = S.stocks.map(s => parseFloat((((s.current - s.costPerShare) / s.costPerShare) * 100).toFixed(1)));
+  const ctx = document.getElementById('chart-returns'); if (!ctx) return;
+  charts['ret'] = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: S.stocks.map(s => s.ticker), datasets: [{ data: gains, backgroundColor: gains.map(g => g >= 0 ? '#1D9E75' : '#E24B4A'), borderRadius: 5, borderSkipped: false, borderWidth: 0 }] },
+    options: { responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { x: { grid: { display: false }, ticks: { color: chartColors().text, font: { size: 11 } } },
+                y: { grid: { color: chartColors().grid }, ticks: { color: chartColors().text, font: { size: 11 }, callback: v => v + '%' } } } }
+  });
+}
+
+function drawGoalsChart() {
+  kill('goals');
+  if (!S.goals.length) return;
+  const ctx = document.getElementById('chart-goals'); if (!ctx) return;
+  charts['goals'] = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: S.goals.map(g => g.name), datasets: [
+      { label: 'Saved', data: S.goals.map(g => g.current), backgroundColor: PALETTE.slice(0, S.goals.length), borderRadius: 5, borderSkipped: false },
+      { label: 'Remaining', data: S.goals.map(g => Math.max(g.target - g.current, 0)), backgroundColor: 'rgba(255,255,255,.05)', borderRadius: 5, borderSkipped: false }
+    ]},
+    options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+      plugins: { legend: { labels: { color: chartColors().text, font: { size: 11 }, boxWidth: 9 } } },
+      scales: {
+        x: { stacked: true, grid: { color: chartColors().grid }, ticks: { color: chartColors().text, font: { size: 11 }, callback: v => fmtK(v) } },
+        y: { stacked: true, grid: { display: false }, ticks: { color: chartColors().text, font: { size: 11 } } }
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════
+// RENDER ALL
+// ═══════════════════════════════════════════════
+function renderAll() {
+  // Only render the sections visible in the current tab + dashboard metrics
+  renderDash();
+  if (activeTab === 'accounts')      renderAccounts();
+  if (activeTab === 'transactions')  renderTx();
+  if (activeTab === 'budget')        renderBudget();
+  if (activeTab === 'investments')   renderStocks();
+  if (activeTab === 'goals')         renderGoals();
+  // Always render accounts list (used by tx modal) and recent txns (dashboard)
+  if (activeTab !== 'accounts')      renderAccounts();
+  // Redraw only the active chart
+  drawCharts(activeTab);
+}
+
+// ═══════════════════════════════════════════════
+// EXPORT / IMPORT
+// ═══════════════════════════════════════════════
+function exportData() {
+  const blob = new Blob([JSON.stringify(S, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `finances-backup-${new Date().toISOString().split('T')[0]}.json`;
+  a.click(); toast('Backup exported — save it to your OneDrive folder');
+}
+
+function importData(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      S = { ...S, ...data };
+      saveLocal(); renderAll();
+      toast('Data imported successfully');
+      if (CONFIG.apiKey) {
+        setSyncState('syncing', 'Pushing...');
+        await Promise.all([syncAccounts(), syncTransactions(), syncBudgets(), syncStocks(), syncGoals()]);
+        setSyncState('ok', 'Synced');
+      }
+    } catch(err) { toast('Import failed — invalid file'); }
+  };
+  reader.readAsText(file);
+}
+
+async function forcePush() {
+  const statusEl = document.getElementById('manual-sync-status');
+  if (!CONFIG.apiKey || !CONFIG.sheetId) {
+    if (statusEl) statusEl.textContent = 'No Google Sheets credentials saved. Add them above first.';
+    toast('No credentials — add your API key and Sheet ID first'); return;
+  }
+  if (statusEl) statusEl.textContent = 'Pushing all local data to Google Sheets...';
+  setSyncState('syncing', 'Pushing...');
+  try {
+    await Promise.all([
+      syncAccounts(),
+      syncTransactions(),
+      syncBudgets(),
+      syncStocks(),
+      syncGoals()
+    ]);
+    setSyncState('ok', 'Synced');
+    const now = new Date().toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit' });
+    if (statusEl) statusEl.textContent = `✓ All data pushed to Google Sheets · ${now}`;
+    toast('All data pushed to Google Sheets');
+  } catch(e) {
+    setSyncState('error', 'Error');
+    if (statusEl) statusEl.textContent = 'Push failed — check your connection and credentials';
+    toast('Push failed');
+  }
+}
+
+async function forcePull() {
+  const statusEl = document.getElementById('manual-sync-status');
+  if (!CONFIG.apiKey || !CONFIG.sheetId) {
+    if (statusEl) statusEl.textContent = 'No Google Sheets credentials saved. Add them above first.';
+    toast('No credentials — add your API key and Sheet ID first'); return;
+  }
+  if (!confirm('This will replace all local data with what\'s in your Google Sheet. Any unsynced local changes will be lost. Continue?')) return;
+  if (statusEl) statusEl.textContent = 'Pulling all data from Google Sheets...';
+  setSyncState('syncing', 'Pulling...');
+  try {
+    await loadAllFromSheets();
+    const now = new Date().toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit' });
+    if (statusEl) statusEl.textContent = `✓ All data pulled from Google Sheets · ${now}`;
+    toast('Data pulled from Google Sheets');
+  } catch(e) {
+    setSyncState('error', 'Error');
+    if (statusEl) statusEl.textContent = 'Pull failed — check your connection and credentials';
+    toast('Pull failed');
+  }
+}
+
+function clearAllData() {
+  if (!confirm('This will delete all local data. Your Google Sheet is unaffected. Continue?')) return;
+  S = { accounts: [], transactions: [], budgets: [], stocks: [], goals: [] };
+  saveLocal(); renderAll(); toast('Local data cleared');
+}
+
+
+// ═══════════════════════════════════════════════
+// GOOGLE IDENTITY SERVICES — OAUTH
+// ═══════════════════════════════════════════════
+// Uses the GIS token client (implicit flow) — no server needed.
+// Works from any domain including GitHub Pages.
+// Token lasts 1 hour; we request a new one silently when it expires.
+
+let gisClient      = null;
+let oauthToken     = null;
+let tokenExpiresAt = 0;
+
+const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
+
+function initGIS() {
+  if (!CONFIG.clientId || typeof google === 'undefined') return;
+  try {
+    gisClient = google.accounts.oauth2.initTokenClient({
+      client_id: CONFIG.clientId,
+      scope:     SCOPES,
+      callback:  handleTokenResponse,
+      error_callback: e => {
+        console.error('GIS error:', e);
+        setSyncState('error', 'Auth error');
+        toast('Google sign-in failed — check your Client ID');
+      }
+    });
+    // Try to get token immediately without popup (will work if already authorised)
+    requestOAuthToken(true);
+    updateAuthUI();
+  } catch(e) {
+    console.error('initGIS failed:', e);
+  }
+}
+
+function handleTokenResponse(response) {
+  if (response.error) {
+    console.error('Token error:', response.error);
+    oauthToken = null; tokenExpiresAt = 0;
+    updateAuthUI();
+    return;
+  }
+  oauthToken     = response.access_token;
+  tokenExpiresAt = Date.now() + (response.expires_in - 60) * 1000; // 60s buffer
+  updateAuthUI();
+  setSyncState('ok', 'Signed in');
+  toast('Signed in — your data will now sync to Google Sheets');
+  // Trigger a full sync now that we can write
+  loadAllFromSheets();
+}
+
+function requestOAuthToken(silent) {
+  if (!gisClient) return;
+  try {
+    if (silent) {
+      // prompt:'' means try without popup — works if user already granted access
+      gisClient.requestAccessToken({ prompt: '' });
+    } else {
+      // Show the Google account picker
+      gisClient.requestAccessToken({ prompt: 'consent' });
+    }
+  } catch(e) { console.error('requestOAuthToken error:', e); }
+}
+
+function getOAuthToken() {
+  if (oauthToken && Date.now() < tokenExpiresAt) return oauthToken;
+  if (oauthToken && Date.now() >= tokenExpiresAt) {
+    // Expired — request silently in background
+    oauthToken = null;
+    requestOAuthToken(true);
+  }
+  return null;
+}
+
+function signInWithGoogle() {
+  if (!CONFIG.clientId) {
+    toast('Add your OAuth Client ID in Settings first');
+    showTab('settings', document.querySelector('[data-tab="settings"]'));
+    return;
+  }
+  if (!gisClient) {
+    // GIS script may still be loading
+    if (typeof google !== 'undefined') initGIS();
+    else { toast('Google sign-in is loading, try again in a moment'); return; }
+  }
+  requestOAuthToken(false);
+}
+
+function signOut() {
+  if (oauthToken) {
+    google.accounts.oauth2.revoke(oauthToken, () => {
+      oauthToken = null; tokenExpiresAt = 0;
+      updateAuthUI();
+      setSyncState('ok', 'Signed out');
+      toast('Signed out');
+    });
+  } else {
+    oauthToken = null; tokenExpiresAt = 0;
+    updateAuthUI();
+  }
+}
+
+function isSignedIn() {
+  return oauthToken && Date.now() < tokenExpiresAt;
+}
+
+function updateAuthUI() {
+  const signedIn = isSignedIn();
+  const btn  = document.getElementById('gis-sign-btn');
+  const info = document.getElementById('gis-status');
+  if (btn)  btn.textContent  = signedIn ? 'Sign out' : 'Sign in with Google';
+  if (btn)  btn.className    = signedIn ? 'btn btn-sm btn-danger' : 'btn btn-primary btn-sm';
+  if (btn)  btn.onclick      = signedIn ? signOut : signInWithGoogle;
+  if (info) info.textContent = signedIn ? '✓ Signed in — saves are syncing to Google Sheets'
+                                        : 'Not signed in — changes saved locally only';
+  if (info) info.style.color = signedIn ? 'var(--green)' : 'var(--amber)';
+
+  // Update sidebar button
+  const sideBtn = document.getElementById('gis-sidebar-btn');
+  if (sideBtn) {
+    sideBtn.textContent = signedIn ? '✓ Signed in' : 'Sign in with Google';
+    sideBtn.style.background = signedIn ? 'var(--green)' : 'var(--blue)';
+    sideBtn.onclick = signedIn ? signOut : signInWithGoogle;
+  }
+
+  // Also update sync dot
+  if (signedIn) setSyncState('ok', 'Signed in');
+}
+
+// GIS library calls this when loaded
+window.gisLoaded = () => { if (CONFIG.clientId) initGIS(); };
+
+// ═══════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2800);
+}
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+loadTheme();
+loadConfig();
+loadLocal();
+renderAll();
+setTimeout(() => { if (CONFIG.clientId && typeof google !== 'undefined') initGIS(); }, 1200);
+if (CONFIG.apiKey && CONFIG.sheetId) {
+  // Show subtle loading indicator while pulling latest data from Sheets
+  setSyncState('syncing', 'Loading latest data...');
+  loadAllFromSheets().then(() => {
+    // Date cache may be stale after sheet pull
+    invalidateDateCache();
+    renderAll();
+  });
+}
+
+// ═══════════════════════════════════════════════
+// DARK / LIGHT THEME
+// ═══════════════════════════════════════════════
+function toggleTheme() {
+  const isLight = document.body.classList.toggle('light');
+  localStorage.setItem('ft_theme', isLight ? 'light' : 'dark');
+  const icon = isLight ? '🌙' : '☀️';
+  ['theme-btn','theme-btn-desk'].forEach(id => { const b = document.getElementById(id); if (b) b.textContent = icon; });
+  drawCharts(activeTab);
+}
+
+function loadTheme() {
+  const saved = localStorage.getItem('ft_theme');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const useDark = saved ? saved === 'dark' : prefersDark;
+  if (!useDark) document.body.classList.add('light');
+  const icon = useDark ? '🌙' : '☀️';
+  ['theme-btn','theme-btn-desk'].forEach(id => { const b = document.getElementById(id); if (b) b.textContent = icon; });
+}
+
+// ═══════════════════════════════════════════════
+// BILL DUE DATE ALERTS
+// ═══════════════════════════════════════════════
+function renderBillAlerts() {
+  const el = document.getElementById('dash-bills-alert');
+  if (!el) return;
+
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const in7 = new Date(today); in7.setDate(today.getDate() + 7);
+  const in30 = new Date(today); in30.setDate(today.getDate() + 30);
+
+  // Find bills with due dates in the next 30 days that haven't been paid
+  const upcoming = S.transactions
+    .filter(t => t.type === 'bill' && t.dueDate)
+    .map(t => {
+      const due = new Date(t.dueDate + 'T00:00:00');
+      return { ...t, dueObj: due };
+    })
+    .filter(t => !isNaN(t.dueObj) && t.dueObj >= today && t.dueObj <= in30)
+    .sort((a, b) => a.dueObj - b.dueObj);
+
+  if (!upcoming.length) { el.innerHTML = ''; return; }
+
+  const items = upcoming.map(t => {
+    const daysLeft = Math.round((t.dueObj - today) / 86400000);
+    const urgency  = daysLeft <= 2 ? 'red' : daysLeft <= 7 ? 'amber' : 'blue';
+    const label    = daysLeft === 0 ? 'Due today' : daysLeft === 1 ? 'Due tomorrow' : `Due in ${daysLeft} days`;
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:var(--border)">
+      <div>
+        <span style="font-size:13px;color:var(--text2)">${t.desc}</span>
+        <span class="badge badge-${urgency}" style="margin-left:8px;font-size:9px">${label}</span>
+      </div>
+      <span style="font-size:13px;font-weight:500;color:var(--${urgency})">${fmt(t.amount)}</span>
+    </div>`;
+  }).join('');
+
+  const overdue = upcoming.filter(t => t.dueObj < today).length;
+  const urgent  = upcoming.filter(t => { const d = Math.round((t.dueObj-today)/86400000); return d>=0 && d<=2; }).length;
+
+  el.innerHTML = `<div class="card" style="margin-bottom:18px;border-left:3px solid var(--${urgent||overdue?'red':'amber'})">
+    <div class="card-header" style="margin-bottom:10px">
+      <span class="card-title">📅 Upcoming Bills</span>
+      <span class="badge badge-${urgent||overdue?'red':'amber'}">${upcoming.length} due this month</span>
+    </div>
+    ${items}
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════
+// EDIT TRANSACTION
+// ═══════════════════════════════════════════════
+function editTransaction(id) {
+  const tx = S.transactions.find(t => t.id === id);
+  if (!tx) return;
+
+  // Populate the edit modal
+  document.getElementById('edit-tx-id').value    = id;
+  document.getElementById('edit-tx-date').value  = tx.date || '';
+  document.getElementById('edit-tx-desc').value  = tx.desc || '';
+  document.getElementById('edit-tx-amt').value   = tx.amount || '';
+  document.getElementById('edit-tx-type').value  = tx.type || 'expense';
+
+  // Populate account dropdown
+  const accOpts = S.accounts.map(a => `<option${a.name===tx.account?' selected':''}>${a.name}</option>`).join('');
+  document.getElementById('edit-tx-acc').innerHTML = accOpts;
+
+  // Populate categories based on type
+  updateEditTxCats(tx.type, tx.cat);
+
+  // Show/hide due date
+  document.getElementById('edit-tx-due-field').style.display = tx.type === 'bill' ? 'block' : 'none';
+  document.getElementById('edit-tx-due').value = tx.dueDate || '';
+
+  openModal('edit-tx-modal');
+}
+
+function updateEditTxCats(type, selectedCat) {
+  type = type || document.getElementById('edit-tx-type').value;
+  let cats = type === 'income' ? INCOME_CATS
+           : type === 'transfer' ? TRANSFER_CATS
+           : type === 'bill' ? BILL_CATS
+           : EXPENSE_CATS;
+  document.getElementById('edit-tx-cat').innerHTML =
+    cats.map(c => `<option${c===selectedCat?' selected':''}>${c}</option>`).join('');
+  document.getElementById('edit-tx-due-field').style.display =
+    type === 'bill' ? 'block' : 'none';
+}
+
+async function saveEditTransaction() {
+  const id      = document.getElementById('edit-tx-id').value;
+  const date    = document.getElementById('edit-tx-date').value;
+  const desc    = document.getElementById('edit-tx-desc').value.trim();
+  const amt     = parseFloat(document.getElementById('edit-tx-amt').value);
+  const type    = document.getElementById('edit-tx-type').value;
+  const cat     = document.getElementById('edit-tx-cat').value;
+  const account = document.getElementById('edit-tx-acc').value;
+  const dueDate = document.getElementById('edit-tx-due').value;
+
+  if (!desc || !amt || !isFinite(amt) || amt <= 0) { toast('Description and valid amount required'); return; }
+
+  const idx = S.transactions.findIndex(t => t.id === id);
+  if (idx === -1) { toast('Transaction not found'); return; }
+
+  S.transactions[idx] = {
+    ...S.transactions[idx],
+    date, desc, type, amount: Math.round(amt * 100) / 100,
+    cat, account, dueDate: dueDate || ''
+  };
+
+  invalidateDateCache();
+  saveLocal();
+  closeModal('edit-tx-modal');
+  renderAll();
+  setSyncState('syncing', 'Saving...');
+  await syncTransactions();
+  setSyncState('ok', 'Synced');
+  toast('Transaction updated');
+}
+
+// ═══════════════════════════════════════════════
+// OFX / CSV IMPORT
+// ═══════════════════════════════════════════════
+let pendingImportTxs   = []; // parsed, not yet committed
+let duplicateCount     = 0;
+
+function resetImport() {
+  pendingImportTxs = []; duplicateCount = 0;
+  document.getElementById('import-preview').style.display    = 'none';
+  document.getElementById('import-confirm-btn').style.display = 'none';
+  document.getElementById('import-filename').textContent     = '';
+  document.getElementById('import-summary').textContent      = '';
+  document.getElementById('import-preview-list').innerHTML   = '';
+  document.getElementById('import-dup-warning').style.display= 'none';
+  const fi = document.getElementById('import-file');
+  if (fi) fi.value = '';
+}
+
+function previewImport() {
+  const fi   = document.getElementById('import-file');
+  const bank = document.getElementById('import-bank').value;
+  if (!fi.files.length) return;
+  const file = fi.files[0];
+  document.getElementById('import-filename').textContent = file.name;
+
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const content = ev.target.result;
+      const isOFX   = bank.includes('ofx') || file.name.toLowerCase().match(/\.(ofx|qfx)$/);
+      const parsed  = isOFX ? parseOFX(content, bank) : parseCSV(content, bank);
+
+      if (!parsed.length) {
+        toast('No transactions found — check the file format');
+        return;
+      }
+
+      // Duplicate detection — hash on date+amount+desc
+      const existingHashes = new Set(
+        S.transactions.map(t => `${t.date}|${t.amount}|${t.desc.toLowerCase().trim()}`)
+      );
+
+      let dupes = 0;
+      pendingImportTxs = parsed.map(t => {
+        const hash = `${t.date}|${t.amount}|${t.desc.toLowerCase().trim()}`;
+        const isDup = existingHashes.has(hash);
+        if (isDup) dupes++;
+        return { ...t, isDuplicate: isDup };
+      });
+      duplicateCount = dupes;
+
+      const newCount = pendingImportTxs.filter(t => !t.isDuplicate).length;
+      renderImportPreview(newCount, dupes);
+    } catch(e) {
+      console.error('Import parse error:', e);
+      toast('Could not parse file — try a different format');
+    }
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function renderImportPreview(newCount, dupes) {
+  document.getElementById('import-preview').style.display = 'block';
+  document.getElementById('import-summary').textContent =
+    `Found ${pendingImportTxs.length} transactions · ${newCount} new · ${dupes} duplicates (will be skipped)`;
+
+  const listEl = document.getElementById('import-preview-list');
+  listEl.innerHTML = pendingImportTxs.slice(0, 50).map(t => {
+    const color = t.isDuplicate ? 'var(--text4)' : t.type === 'income' ? 'var(--green)' : 'var(--red)';
+    const strike = t.isDuplicate ? 'text-decoration:line-through;opacity:.45' : '';
+    return `<div style="display:flex;justify-content:space-between;padding:7px 12px;border-bottom:var(--border);font-size:12px;${strike}">
+      <span style="color:var(--text2);flex:1;margin-right:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.desc}</span>
+      <span style="color:var(--text4);margin-right:12px;white-space:nowrap">${t.date}</span>
+      <span style="color:${color};white-space:nowrap;font-weight:500">${t.type==='income'?'+':'−'}${fmt(t.amount)}</span>
+    </div>`;
+  }).join('');
+
+  if (pendingImportTxs.length > 50) {
+    listEl.innerHTML += `<div style="padding:8px 12px;font-size:11px;color:var(--text4)">...and ${pendingImportTxs.length-50} more</div>`;
+  }
+
+  if (dupes > 0) {
+    const w = document.getElementById('import-dup-warning');
+    w.style.display = 'block';
+    w.textContent   = `${dupes} duplicate transaction${dupes>1?'s':''} detected and will be skipped automatically.`;
+  }
+
+  const btn = document.getElementById('import-confirm-btn');
+  btn.style.display  = newCount > 0 ? 'inline-flex' : 'none';
+  btn.textContent    = `Import ${newCount} transaction${newCount!==1?'s':''}`;
+}
+
+async function confirmImport() {
+  const account  = document.getElementById('import-account').value;
+  const toImport = pendingImportTxs.filter(t => !t.isDuplicate);
+
+  if (!toImport.length) { toast('No new transactions to import'); return; }
+
+  // Assign account and id
+  const newTxs = toImport.map(t => ({
+    ...t,
+    id:      uid(),
+    account: account || t.account || ''
+  }));
+
+  // Prepend — most recent first
+  S.transactions = [...newTxs, ...S.transactions]
+    .sort((a, b) => b.date.localeCompare(a.date));
+
+  invalidateDateCache();
+  saveLocal();
+  closeModal('import-modal');
+  resetImport();
+  renderAll();
+  setSyncState('syncing', 'Saving...');
+  await syncTransactions();
+  setSyncState('ok', 'Synced');
+  toast(`${newTxs.length} transactions imported`);
+}
+
+// ── OFX Parser ──────────────────────────────────────────────────────────────
+// OFX is a semi-XML format. We parse it with regex — proper XML parsers
+// fail on malformed OFX (which most banks produce).
+function parseOFX(content, bank) {
+  const txs = [];
+
+  // Find all STMTTRN blocks
+  const blockRe = /<STMTTRN>([\s\S]*?)<\/STMTTRN>/gi;
+  let match;
+
+  while ((match = blockRe.exec(content)) !== null) {
+    const block = match[1];
+
+    const get = tag => {
+      const m = new RegExp(`<${tag}>([^<\r\n]+)`, 'i').exec(block);
+      return m ? m[1].trim() : '';
+    };
+
+    const dtposted = get('DTPOSTED'); // format: 20240115 or 20240115120000
+    const date     = ofxDateToISO(dtposted);
+    if (!date) continue;
+
+    const rawAmt   = parseFloat(get('TRNAMT'));
+    if (!isFinite(rawAmt)) continue;
+
+    const amount   = Math.abs(rawAmt);
+    const type     = rawAmt >= 0 ? 'income' : 'expense';
+
+    // Clean up description — OFX has MEMO and NAME, pick the more useful one
+    const name     = get('NAME');
+    const memo     = get('MEMO');
+    const desc     = cleanOFXDesc(memo || name || 'Transaction');
+
+    // Auto-categorise from description
+    const cat      = autoCategory(desc, type);
+
+    txs.push({ date, desc, type, amount, cat, account: '' });
+  }
+
+  // Fallback: some OFX files use SGML-style (no closing tags)
+  if (!txs.length) {
+    const lines = content.split(/[\r\n]+/);
+    let current = null;
+    for (const line of lines) {
+      const l = line.trim();
+      if (l === '<STMTTRN>') { current = {}; continue; }
+      if (l === '</STMTTRN>' && current) {
+        if (current.date && current.amount !== undefined) {
+          txs.push({
+            date:    current.date,
+            desc:    cleanOFXDesc(current.memo || current.name || 'Transaction'),
+            type:    current.amount >= 0 ? 'income' : 'expense',
+            amount:  Math.abs(current.amount),
+            cat:     autoCategory(current.memo || current.name || '', current.amount >= 0 ? 'income' : 'expense'),
+            account: ''
+          });
+        }
+        current = null; continue;
+      }
+      if (!current) continue;
+      const kv = l.match(/^<([^>]+)>(.+)$/);
+      if (!kv) continue;
+      const [, tag, val] = kv;
+      if (tag === 'DTPOSTED')  current.date   = ofxDateToISO(val.trim());
+      if (tag === 'TRNAMT')    current.amount  = parseFloat(val.trim());
+      if (tag === 'NAME')      current.name    = val.trim();
+      if (tag === 'MEMO')      current.memo    = val.trim();
+    }
+  }
+
+  return txs;
+}
+
+function ofxDateToISO(dt) {
+  if (!dt) return '';
+  // Formats: 20240115, 20240115120000, 20240115120000.000[-5:EST]
+  const clean = dt.replace(/[.\[].*/,'').trim();
+  if (clean.length < 8) return '';
+  const y = clean.slice(0,4);
+  const m = clean.slice(4,6);
+  const d = clean.slice(6,8);
+  const date = new Date(`${y}-${m}-${d}T00:00:00`);
+  if (isNaN(date)) return '';
+  return `${y}-${m}-${d}`;
+}
+
+function cleanOFXDesc(raw) {
+  return raw
+    .replace(/\s+/g, ' ')                      // collapse whitespace
+    .replace(/[*#&]+/g, '')                     // strip noise chars
+    .replace(/\b\d{4,}\b/g, '')               // strip long numbers (card digits)
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+    .slice(0, 60);                              // cap length
+}
+
+// ── CSV Parser ──────────────────────────────────────────────────────────────
+function parseCSV(content, bank) {
+  // Fix encoding artifacts
+  content = content.replace(/\xef\xbb\xbf/g, '').trim(); // strip BOM
+
+  const lines  = content.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) return [];
+
+  // Bank-specific column maps
+  // Each map: { dateCol, descCol, amtCol, debitCol, creditCol, skipRows, dateFormat }
+  const BANK_MAPS = {
+    wealthsimple_csv: { dateCol:0, descCol:1, amtCol:4, skipRows:1, dateFormat:'iso' },
+    eq_csv:           { dateCol:0, descCol:2, debitCol:3, creditCol:4, skipRows:1, dateFormat:'iso' },
+    generic_csv:      { dateCol:0, descCol:1, amtCol:2, skipRows:1, dateFormat:'auto' },
+  };
+
+  const map = BANK_MAPS[bank] || BANK_MAPS.generic_csv;
+
+  // Find actual header row (skip account info lines at top)
+  let headerIdx = map.skipRows - 1;
+  for (let i = 0; i < Math.min(10, lines.length); i++) {
+    const lower = lines[i].toLowerCase();
+    if (lower.includes('date') && (lower.includes('amount') || lower.includes('debit') || lower.includes('description'))) {
+      headerIdx = i;
+      break;
+    }
+  }
+
+  const txs = [];
+  for (let i = headerIdx + 1; i < lines.length; i++) {
+    const cols = parseCSVLine(lines[i]);
+    if (cols.length < 2) continue;
+
+    const rawDate = (cols[map.dateCol] || '').trim().replace(/"/g, '');
+    const date    = parseCSVDate(rawDate);
+    if (!date) continue;
+
+    const desc    = (cols[map.descCol] || '').trim().replace(/"/g, '').replace(/\s+/g,' ');
+    if (!desc) continue;
+
+    let amount, type;
+    if (map.debitCol !== undefined && map.creditCol !== undefined) {
+      // Separate debit/credit columns
+      const debit  = parseFloat((cols[map.debitCol]  || '').replace(/[$,'"]/g,''));
+      const credit = parseFloat((cols[map.creditCol] || '').replace(/[$,'"]/g,''));
+      if (isFinite(credit) && credit > 0) { amount = credit; type = 'income'; }
+      else if (isFinite(debit) && debit > 0) { amount = debit; type = 'expense'; }
+      else continue;
+    } else {
+      const raw = parseFloat((cols[map.amtCol] || '').replace(/[$,'"]/g,''));
+      if (!isFinite(raw)) continue;
+      amount = Math.abs(raw);
+      type   = raw >= 0 ? 'income' : 'expense';
+    }
+
+    if (amount <= 0) continue;
+    txs.push({ date, desc, type, amount: Math.round(amount*100)/100, cat: autoCategory(desc, type), account: '' });
+  }
+
+  return txs;
+}
+
+function parseCSVLine(line) {
+  // Handles quoted fields with commas inside
+  const result = []; let cur = ''; let inQuote = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { inQuote = !inQuote; continue; }
+    if (ch === ',' && !inQuote) { result.push(cur); cur = ''; continue; }
+    cur += ch;
+  }
+  result.push(cur);
+  return result;
+}
+
+function parseCSVDate(raw) {
+  if (!raw) return '';
+  // Try ISO: 2024-01-15
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  // Try MM/DD/YYYY
+  const mdy = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (mdy) return `${mdy[3]}-${mdy[1].padStart(2,'0')}-${mdy[2].padStart(2,'0')}`;
+  // Try DD/MM/YYYY
+  const dmy = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (dmy) {
+    const d = new Date(`${dmy[3]}-${dmy[2].padStart(2,'0')}-${dmy[1].padStart(2,'0')}T00:00:00`);
+    if (!isNaN(d)) return `${dmy[3]}-${dmy[2].padStart(2,'0')}-${dmy[1].padStart(2,'0')}`;
+  }
+  // Try Jan 15, 2024
+  const d = new Date(raw);
+  if (!isNaN(d)) return d.toISOString().slice(0,10);
+  return '';
+}
+
+// ── Auto-categoriser ────────────────────────────────────────────────────────
+// Maps common transaction descriptions to categories
+function autoCategory(desc, type) {
+  if (type === 'income') return 'Other';
+  const d = desc.toLowerCase();
+  if (d.match(/groceries|sobeys|loblaws|metro|food basics|freshco|walmart|costco|superstore/)) return 'Food & Dining';
+  if (d.match(/restaurant|mcdonald|tim hortons|starbucks|pizza|sushi|burger|cafe|donut|coffee|kfc|subway/)) return 'Food & Dining';
+  if (d.match(/uber eats|skip the dishes|doordash|grubhub/)) return 'Food & Dining';
+  if (d.match(/gas station|petro|esso|shell|husky|sunoco|canadian tire fuel/)) return 'Transport';
+  if (d.match(/uber|lyft|taxi|parking|transit|presto|ttc|oc transpo/)) return 'Transport';
+  if (d.match(/netflix|spotify|apple.*sub|google.*play|amazon prime|disney|youtube premium|crave|cbc gem/)) return 'Subscriptions';
+  if (d.match(/hydro|electricity|gas bill|water bill|enbridge|direct energy/)) return 'Utilities';
+  if (d.match(/rogers|bell|telus|fido|koodo|virgin mobile|freedom mobile|shaw|videotron/)) return 'Utilities';
+  if (d.match(/rent|mortgage|condo fee|property tax/)) return 'Housing';
+  if (d.match(/amazon|ebay|etsy|best buy|ikea|home depot|canadian tire|shoppers/)) return 'Shopping';
+  if (d.match(/pharmacy|drug store|medical|dental|doctor|hospital|clinic|vision|eye/)) return 'Health';
+  if (d.match(/gym|fitness|yoga|sport|swimming|hockey|soccer/)) return 'Health';
+  if (d.match(/insurance|intact|belair|desjardins|sun life|manulife|great-west/)) return 'Health';
+  if (d.match(/movie|cinema|theatre|concert|event|ticketmaster|stubhub/)) return 'Entertainment';
+  if (d.match(/bar|pub|nightclub|casino/)) return 'Entertainment';
+  if (d.match(/school|tuition|university|college|course/)) return 'Education';
+  if (d.match(/transfer|e-transfer|interac/)) return 'Account Transfer';
+  if (d.match(/credit card|card payment|visa|mastercard|amex/)) return 'Other';
+  return 'Other';
+}
+
+// ── Seed import account dropdown ─────────────────────────────────────────────
+function seedImportModal() {
+  const sel = document.getElementById('import-account');
+  if (!sel) return;
+  sel.innerHTML = S.accounts.length
+    ? S.accounts.map(a => `<option>${a.name}</option>`).join('')
+    : '<option value="">No accounts — add one first</option>';
+}
+
+</script>
+</body>
+</html>
