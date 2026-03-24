@@ -237,12 +237,13 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
   }
   .mob-nav-btn{
     flex:1;display:flex;flex-direction:column;align-items:center;
-    gap:3px;background:none;border:none;
+    gap:2px;background:none;border:none;
     color:var(--text4);font-size:9px;font-family:'DM Sans',sans-serif;
-    cursor:pointer;padding:4px 2px;transition:color .15s;
+    cursor:pointer;padding:6px 1px;transition:color .15s;min-width:0;
   }
   .mob-nav-btn.active{color:var(--blue);}
-  .mob-nav-btn svg{width:23px;height:23px;}
+  .mob-nav-btn svg{width:21px;height:21px;flex-shrink:0;}
+  .mob-nav-btn span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
 
   /* Cards & metrics */
   .card{border-radius:14px;padding:16px;margin-bottom:12px;border-left:none;border-right:none;border-radius:0;box-shadow:none;margin-left:-16px;margin-right:-16px;padding-left:16px;padding-right:16px;}
@@ -289,6 +290,35 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
 ::-webkit-scrollbar{width:4px;}
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:var(--bg-3);border-radius:2px;}
+
+/* ── FILTER BAR ──────────────────────────────────────────────── */
+.filter-bar-input{width:100%;background:var(--bg-2);border:var(--border);border-radius:8px;padding:9px 13px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;}
+.filter-bar-input:focus{outline:none;border-color:var(--blue);}
+.filter-bar-input::placeholder{color:var(--text4);}
+.filter-selects{display:flex;gap:8px;flex-wrap:wrap;}
+.filter-bar-select{flex:1;min-width:120px;background:var(--bg-2);border:var(--border);border-radius:8px;padding:7px 28px 7px 10px;color:var(--text3);font-size:12px;font-family:'DM Sans',sans-serif;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238892aa' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;cursor:pointer;}
+.filter-bar-select:focus{outline:none;border-color:var(--blue);}
+.filter-bar-select option{background:var(--bg-2);color:var(--text);}
+#tx-summary{font-size:11px;color:var(--text5);margin-top:10px;}
+
+/* ── MORE SHEET (mobile) ─────────────────────────────────────── */
+.more-sheet-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:19;}
+.more-sheet-bg.open{display:block;}
+.more-sheet{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--bg-card);border:var(--border2);border-radius:22px 22px 0 0;z-index:20;padding:12px 16px;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px));}
+.more-sheet.open{display:block;}
+.more-sheet-drag{width:36px;height:4px;background:var(--bg-3);border-radius:2px;margin:0 auto 16px;}
+.more-sheet-label{font-size:11px;color:var(--text5);text-transform:uppercase;letter-spacing:.1em;padding:0 8px 8px;font-weight:500;}
+.more-sheet-btn{display:flex;align-items:center;gap:14px;width:100%;padding:14px 8px;background:none;border:none;color:var(--text2);font-size:15px;font-family:'DM Sans',sans-serif;border-radius:12px;cursor:pointer;text-align:left;transition:background .15s;border-bottom:var(--border);}
+.more-sheet-btn:last-child{border-bottom:none;}
+.more-sheet-btn:active{background:var(--bg-2);}
+.more-sheet-icon{width:36px;height:36px;border-radius:10px;background:var(--bg-2);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.more-sheet-icon svg{width:18px;height:18px;color:var(--text3);}
+
+@media(max-width:680px){
+  .del{padding:9px 11px;font-size:17px;}
+  .filter-selects{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .filter-selects .filter-bar-select{min-width:0;width:100%;}
+}
 </style>
 </head>
 <body>
@@ -449,25 +479,25 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
         </div>
       </div>
       <div class="tab-content-inner">
-      <div class="card" style="padding:14px 18px;margin-bottom:14px">
+      <div class="card" style="padding:14px 16px;margin-bottom:14px">
         <div style="margin-bottom:10px">
-          <input id="f-search" oninput="renderTx()" placeholder="Search transactions..." style="width:100%;background:#0f1117;border:1px solid #2e3650;border-radius:8px;padding:8px 13px;color:#e8eaf0;font-size:13px;font-family:'DM Sans',sans-serif;">
+          <input id="f-search" oninput="renderTx()" placeholder="Search transactions..." class="filter-bar-input">
         </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <select id="f-type" onchange="renderTx()" style="flex:1;min-width:110px;background:#0f1117;border:1px solid #2e3650;border-radius:8px;padding:7px 10px;color:#8b92a8;font-size:12px;font-family:'DM Sans',sans-serif;">
+        <div class="filter-selects">
+          <select id="f-type" onchange="renderTx()" class="filter-bar-select">
             <option value="">All types</option><option value="income">Income</option><option value="expense">Expense</option><option value="transfer">Transfer</option><option value="bill">Bill Payment</option>
           </select>
-          <select id="f-cat" onchange="renderTx()" style="flex:1;min-width:130px;background:#0f1117;border:1px solid #2e3650;border-radius:8px;padding:7px 10px;color:#8b92a8;font-size:12px;font-family:'DM Sans',sans-serif;">
+          <select id="f-cat" onchange="renderTx()" class="filter-bar-select">
             <option value="">All categories</option>
           </select>
-          <select id="f-acc" onchange="renderTx()" style="flex:1;min-width:130px;background:#0f1117;border:1px solid #2e3650;border-radius:8px;padding:7px 10px;color:#8b92a8;font-size:12px;font-family:'DM Sans',sans-serif;">
+          <select id="f-acc" onchange="renderTx()" class="filter-bar-select">
             <option value="">All accounts</option>
           </select>
-          <select id="f-month" onchange="renderTx()" style="flex:1;min-width:130px;background:#0f1117;border:1px solid #2e3650;border-radius:8px;padding:7px 10px;color:#8b92a8;font-size:12px;font-family:'DM Sans',sans-serif;">
+          <select id="f-month" onchange="renderTx()" class="filter-bar-select">
             <option value="">All months</option>
           </select>
         </div>
-        <div id="tx-summary" style="font-size:11px;color:#555e78;margin-top:10px"></div>
+        <div id="tx-summary"></div>
       </div>
       <div class="card" id="tx-list"></div>
     </div>
@@ -629,27 +659,46 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
 
 <!-- MOBILE BOTTOM NAV -->
 <nav class="mob-nav">
-  <button class="mob-nav-btn active" onclick="showTab('dashboard',this)" data-tab="dashboard" data-tab="dashboard">
+  <button class="mob-nav-btn active" onclick="showTab('dashboard',this)" data-tab="dashboard">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
     Home
   </button>
-  <button class="mob-nav-btn" onclick="showTab('transactions',this)" data-tab="transactions" data-tab="transactions">
+  <button class="mob-nav-btn" onclick="showTab('accounts',this)" data-tab="accounts">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+    Accounts
+  </button>
+  <button class="mob-nav-btn" onclick="showTab('transactions',this)" data-tab="transactions">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
     Txns
   </button>
-  <button class="mob-nav-btn" onclick="showTab('budget',this)" data-tab="budget" data-tab="budget">
+  <button class="mob-nav-btn" onclick="showTab('budget',this)" data-tab="budget">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
     Budget
   </button>
-  <button class="mob-nav-btn" onclick="showTab('investments',this)" data-tab="investments" data-tab="investments">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
-    Invest
+  <button class="mob-nav-btn" onclick="showTab('goals',this)" data-tab="goals">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+    Goals
   </button>
-  <button class="mob-nav-btn" onclick="showTab('settings',this)" data-tab="settings" data-tab="settings">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+  <button class="mob-nav-btn" id="more-nav-btn" onclick="openMoreSheet()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="5" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="19" cy="12" r="1.5" fill="currentColor"/></svg>
     More
   </button>
 </nav>
+
+<!-- MORE SHEET -->
+<div class="more-sheet-bg" id="more-sheet-bg" onclick="closeMoreSheet()"></div>
+<div class="more-sheet" id="more-sheet">
+  <div class="more-sheet-drag"></div>
+  <div class="more-sheet-label">More</div>
+  <button class="more-sheet-btn" onclick="closeMoreSheet();showTab('investments',document.querySelector('[data-tab=investments]'))">
+    <div class="more-sheet-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg></div>
+    Investments
+  </button>
+  <button class="more-sheet-btn" onclick="closeMoreSheet();showTab('settings',document.querySelector('[data-tab=settings]'))">
+    <div class="more-sheet-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
+    Settings
+  </button>
+</div>
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
@@ -1291,6 +1340,22 @@ function showTab(id, btn) {
   activeTab = id;
   setTimeout(() => drawCharts(id), 60);
   if (id === 'investments') setTimeout(() => refreshPrices(false), 200);
+  // Keep "More" button active when viewing a "more" tab
+  const moreBtn = document.getElementById('more-nav-btn');
+  if (moreBtn && (id === 'investments' || id === 'settings')) moreBtn.classList.add('active');
+}
+
+function openMoreSheet() {
+  document.getElementById('more-sheet-bg').classList.add('open');
+  document.getElementById('more-sheet').classList.add('open');
+  document.getElementById('more-nav-btn').classList.add('active');
+}
+function closeMoreSheet() {
+  document.getElementById('more-sheet-bg').classList.remove('open');
+  document.getElementById('more-sheet').classList.remove('open');
+  // Keep active highlight only if currently on invest/settings
+  const cur = document.querySelector('#tab-investments.active, #tab-settings.active');
+  if (!cur) document.getElementById('more-nav-btn').classList.remove('active');
 }
 
 // ═══════════════════════════════════════════════
