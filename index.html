@@ -10,7 +10,7 @@
 /* ── CONFIG BANNER ───────────────────────────────────────────── */
 #config-banner{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:999;align-items:center;justify-content:center;padding:20px;}
 #config-banner.show{display:flex;}
-.config-box{background:var(--bg-2);border:var(--border2);border-radius:20px;padding:28px;width:100%;max-width:440px;}
+.config-box{background:var(--bg-2);border:var(--border2);border-radius:20px;padding:24px;width:100%;max-width:440px;max-height:90vh;overflow-y:auto;}
 .config-box h2{color:var(--text);font-size:18px;font-weight:500;margin-bottom:6px;}
 .config-box p{color:var(--text3);font-size:13px;line-height:1.6;margin-bottom:18px;}
 .config-box label{display:block;color:var(--text3);font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px;}
@@ -185,7 +185,7 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
 .tdrop-msg{padding:14px;font-size:12px;color:var(--text4);text-align:center;}
 
 /* ── TOAST ───────────────────────────────────────────────────── */
-.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--bg-3);border:var(--border2);border-radius:12px;padding:11px 20px;font-size:13px;color:var(--text2);opacity:0;transition:all .22s;pointer-events:none;z-index:300;white-space:nowrap;box-shadow:var(--shadow);}
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--bg-3);border:var(--border2);border-radius:12px;padding:11px 20px;font-size:13px;color:var(--text2);opacity:0;transition:all .22s;pointer-events:none;z-index:1000;white-space:nowrap;box-shadow:var(--shadow);}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
 /* ── SETTINGS ────────────────────────────────────────────────── */
@@ -326,16 +326,16 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
 <div id="config-banner" class="show">
   <div class="config-box">
     <h2>Connect to Google Sheets</h2>
-    <p>To sync your data across all devices, paste your Google Sheets API Key and Spreadsheet ID below. Check the <strong>SETUP.txt</strong> file included in the download for step-by-step instructions.</p>
+    <p>Paste your Google Sheets credentials below to sync across devices. Or skip and use the app locally.</p>
+    <a href="javascript:void(0)" onclick="skipConfig()" style="display:block;text-align:center;color:var(--blue);font-size:13px;margin-bottom:16px;padding:8px;background:var(--bg-3);border-radius:8px;text-decoration:none">Skip for now — use local storage only</a>
     <label>Google Sheets API Key</label>
     <input id="cfg-api-key" placeholder="AIzaSy...">
     <label>Spreadsheet ID</label>
     <input id="cfg-sheet-id" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74...">
-    <label>Apps Script URL <span style="opacity:.7;font-weight:400;font-size:10px">(for saving data — see Setup Guide)</span></label>
+    <label>Apps Script URL <span style="opacity:.7;font-weight:400;font-size:10px">(for saving — see Setup Guide)</span></label>
     <input id="cfg-script-url" placeholder="https://script.google.com/macros/s/.../exec">
     <button class="config-save" onclick="saveConfig()">Connect & Launch</button>
     <p class="config-note">Your credentials are stored only on this device. Never shared.</p>
-    <p class="config-note" style="margin-top:8px"><a href="javascript:void(0)" onclick="skipConfig()" style="color:#4a7fcb;cursor:pointer">Skip for now — use local storage only</a></p>
   </div>
 </div>
 
@@ -647,7 +647,8 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
         <div class="settings-desc">Permanently delete all local data. This does not affect your Google Sheet.</div>
         <button class="btn btn-danger btn-sm" onclick="clearAllData()">Clear all local data</button>
       </div>
-    </div>
+      </div><!-- /tab-content-inner -->
+    </div><!-- /tab-settings -->
 
   </main>
 </div>
@@ -1009,16 +1010,25 @@ const SHEET_NAMES = {
 let CONFIG = { apiKey: '', sheetId: '', scriptUrl: '' };
 
 function loadConfig() {
+  // Check skip flag FIRST — before anything else can crash
+  const skipped = localStorage.getItem('ft_skipped_config') === '1';
+  if (skipped) {
+    document.getElementById('config-banner').classList.remove('show');
+  }
+
   const saved = localStorage.getItem('ft_config');
   if (saved) {
-    try { CONFIG = JSON.parse(saved); } catch(e) { CONFIG = { apiKey:'', sheetId:'' }; }
+    try { CONFIG = JSON.parse(saved); } catch(e) { CONFIG = { apiKey:'', sheetId:'', scriptUrl:'' }; }
   }
-  document.getElementById('set-api-key').value  = CONFIG.apiKey   || '';
-  document.getElementById('set-sheet-id').value = CONFIG.sheetId  || '';
-  const suEl = document.getElementById('set-script-url');
-  if (suEl) suEl.value = CONFIG.scriptUrl || '';
-  const skipped = localStorage.getItem('ft_skipped_config') === '1';
-  if ((CONFIG.apiKey && CONFIG.sheetId) || skipped) {
+
+  // Null-safe population of settings fields
+  const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+  setVal('set-api-key',    CONFIG.apiKey);
+  setVal('set-sheet-id',   CONFIG.sheetId);
+  setVal('set-script-url', CONFIG.scriptUrl);
+
+  // Also hide banner if credentials are saved
+  if (CONFIG.apiKey && CONFIG.sheetId) {
     document.getElementById('config-banner').classList.remove('show');
   }
 }
@@ -1037,9 +1047,13 @@ function saveConfig() {
 }
 
 function skipConfig() {
-  localStorage.setItem('ft_skipped_config', '1');
-  document.getElementById('config-banner').classList.remove('show');
-  toast('Running in local-only mode — connect Google Sheets anytime in Settings');
+  try {
+    localStorage.setItem('ft_skipped_config', '1');
+  } catch(e) { /* localStorage may be blocked in some browsers */ }
+  const banner = document.getElementById('config-banner');
+  if (banner) banner.classList.remove('show');
+  // Small delay so user sees banner close before toast appears
+  setTimeout(() => toast('Using local storage — add Google Sheets in Settings anytime'), 100);
 }
 
 function updateConfig() {
