@@ -1388,7 +1388,10 @@ async function loadAllFromSheets() {
     const acc = await sheetsRead(`${SHEET_NAMES.accounts}!A2:D`);
     if (acc && acc.length) S.accounts = acc
       .filter(r => r && safeStr(r[0]) && safeStr(r[1]))
-      .map(r => ({ id: safeStr(r[0]), name: safeStr(r[1],'Unnamed'), type: safeStr(r[2],'Other'), balance: safeNum(r[3]) }));
+      .map(r => {
+        const type = safeStr(r[2],'Other');
+        return { id: safeStr(r[0]), name: safeStr(r[1],'Unnamed'), type, balance: normalizeAccountBalance(type, safeNum(r[3])) };
+      });
 
     // Transactions
     const txs = await sheetsRead(`${SHEET_NAMES.transactions}!A2:K`);
@@ -1511,6 +1514,13 @@ function fmtK(n) {
   if (abs >= 1000000) return sign + '$' + (abs/1000000).toFixed(1) + 'M';
   if (abs >= 1000)    return sign + '$' + (abs/1000 % 1 === 0 ? (abs/1000).toFixed(0) : (abs/1000).toFixed(1)) + 'k';
   return sign + '$' + abs.toFixed(0);
+}
+function isLiabilityType(type) {
+  return type === 'Credit Card' || type === 'Loan';
+}
+function normalizeAccountBalance(type, balance) {
+  const rounded = Math.round((isFinite(balance) ? balance : 0) * 100) / 100;
+  return isLiabilityType(type) && rounded > 0 ? -rounded : rounded;
 }
 
 // Pre-parsed date cache — rebuilt when state changes
@@ -1664,7 +1674,7 @@ async function addAccount() {
   const name = document.getElementById('acc-name').value.trim();
   const type = document.getElementById('acc-type').value;
   const rawBal = parseFloat(document.getElementById('acc-bal').value);
-  const balance = isFinite(rawBal) ? Math.round(rawBal * 100) / 100 : 0;
+  const balance = normalizeAccountBalance(type, rawBal);
   if (!name) { toast('Please enter a name'); return; }
   S.accounts.push({ id: uid(), name, type, balance });
   saveLocal(); closeModal('acc-modal');
@@ -1716,13 +1726,14 @@ async function saveBalance(i) {
   if (!inp) return;
   const newBal = parseFloat(inp.value);
   if (!isFinite(newBal)) { toast('Enter a valid number'); return; }
-  S.accounts[i].balance = Math.round(newBal * 100) / 100;
+  const normalized = normalizeAccountBalance(S.accounts[i].type, newBal);
+  S.accounts[i].balance = normalized;
   saveLocal();
   renderAll();
   setSyncState('syncing', 'Saving...');
   await syncAccounts();
   setSyncState('ok', 'Synced');
-  toast(`${S.accounts[i].name} updated to ${fmt(newBal)}`);
+  toast(`${S.accounts[i].name} updated to ${normalized < 0 ? '-' : ''}${fmt(normalized)}`);
 }
 
 // ═══════════════════════════════════════════════
@@ -2632,6 +2643,7 @@ function renderDash() {
   const inc = txm.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
   const exp = txm.filter(t => t.type === 'expense' || t.type === 'bill').reduce((s, t) => s + t.amount, 0);
   const save = inc - exp;
+  const accountBalance = S.accounts.reduce((s, a) => s + a.balance, 0);
   const nw = netWorth();
 
   const savingsRate = inc > 0 ? Math.round((save / inc) * 100) : 0;
@@ -2639,6 +2651,7 @@ function renderDash() {
   const srTip = savingsRate >= 20 ? 'Excellent (goal: 20%+)' : savingsRate >= 10 ? 'Good (goal: 20%+)' : savingsRate > 0 ? 'Low — aim for 20%' : 'Spending exceeds income';
   document.getElementById('dash-metrics').innerHTML = `
     <div class="metric blue"><div class="metric-label">Net Worth</div><div class="metric-value ${nw >= 0 ? 'pos' : 'neg'}">${fmtK(nw)}</div><div class="metric-trend">Accounts + portfolio</div></div>
+    <div class="metric ${accountBalance >= 0 ? 'blue' : 'red'}"><div class="metric-label">Account Balance</div><div class="metric-value ${accountBalance >= 0 ? 'pos' : 'neg'}">${fmtK(accountBalance)}</div><div class="metric-trend">All cash + debt accounts</div></div>
     <div class="metric green"><div class="metric-label">Monthly Income</div><div class="metric-value pos">${fmtK(inc)}</div><div class="metric-trend">${now.toLocaleDateString('en-CA',{month:'short'})}</div></div>
     <div class="metric red"><div class="metric-label">Monthly Expenses</div><div class="metric-value neg">${fmtK(exp)}</div><div class="metric-trend">${now.toLocaleDateString('en-CA',{month:'short'})}</div></div>
     <div class="metric ${save >= 0 ? 'green' : 'red'}"><div class="metric-label">Net Saving</div><div class="metric-value ${save >= 0 ? 'pos' : 'neg'}">${save >= 0 ? '+' : ''}${fmtK(save)}</div><div class="metric-trend">Income − Expenses</div></div>
