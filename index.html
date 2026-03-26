@@ -460,9 +460,15 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
       </div>
       <div class="tab-content-inner">
       <div class="card" id="accounts-list"></div>
-      <div class="card" style="margin-top:18px">
-        <div class="card-header"><span class="card-title">Balance Distribution</span></div>
-        <div class="chart-wrap h160"><canvas id="chart-accounts-bar"></canvas></div>
+      <div class="grid-2" style="margin-top:18px">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Balance Distribution (Bar)</span></div>
+          <div class="chart-wrap h160"><canvas id="chart-accounts-bar"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Balance Distribution (Pie)</span></div>
+          <div class="chart-wrap h160"><canvas id="chart-accounts-pie"></canvas></div>
+        </div>
       </div>
       </div><!-- /tab-content-inner -->
     </div><!-- /tab-accounts -->
@@ -2648,7 +2654,7 @@ function chartColors() {
 
 function drawCharts(tab) {
   if (tab === 'dashboard') { drawBar(); drawDonut(); drawNetWorth(); }
-  if (tab === 'accounts') { drawAccountsBar(); }
+  if (tab === 'accounts') { drawAccountsBar(); drawAccountsPie(); }
   if (tab === 'budget') { drawBudgetChart(); }
   if (tab === 'investments') { drawAlloc(); drawReturns(); }
   if (tab === 'goals') { drawGoalsChart(); }
@@ -2691,9 +2697,9 @@ function drawDonut() {
   const labels = Object.keys(cats); const data = Object.values(cats);
   const ctx = document.getElementById('chart-donut'); if (!ctx) return;
   charts['donut'] = new Chart(ctx, {
-    type: 'doughnut',
+    type: 'pie',
     data: { labels, datasets: [{ data, backgroundColor: PALETTE.slice(0, labels.length), borderWidth: 0, hoverOffset: 4 }] },
-    options: { responsive: true, maintainAspectRatio: false, cutout: '68%',
+    options: { responsive: true, maintainAspectRatio: false,
       plugins: { legend: { position: 'right', labels: { color: chartColors().text, font: { size: 11 }, boxWidth: 9, padding: 8 } } } }
   });
 }
@@ -2743,6 +2749,24 @@ function drawAccountsBar() {
       plugins: { legend: { display: false } },
       scales: { x: { grid: { display: false }, ticks: { color: chartColors().text, font: { size: 11 } } },
                 y: { beginAtZero:true, grid: { color: chartColors().grid }, ticks: { color: chartColors().text, font: { size: 11 }, callback: v => fmtK(v), maxTicksLimit:5 } } } }
+  });
+}
+
+function drawAccountsPie() {
+  kill('acc-pie');
+  const pos = S.accounts.filter(a => a.balance > 0);
+  if (!pos.length) return;
+  const ctx = document.getElementById('chart-accounts-pie'); if (!ctx) return;
+  charts['acc-pie'] = new Chart(ctx, {
+    type: 'pie',
+    data: {
+      labels: pos.map(a => a.name),
+      datasets: [{ data: pos.map(a => a.balance), backgroundColor: PALETTE.slice(0, pos.length), borderWidth: 0, hoverOffset: 4 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'right', labels: { color: chartColors().text, font: { size: 11 }, boxWidth: 9, padding: 8 } } }
+    }
   });
 }
 
