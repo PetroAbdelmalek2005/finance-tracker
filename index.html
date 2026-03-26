@@ -644,9 +644,7 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
         <div class="settings-title">Google Sheets Connection</div>
         <div class="settings-desc">Your data syncs to a Google Sheet so it's available on all devices. Update your credentials here if needed.</div>
         <div style="font-size:12px;color:#EF9F27;background:#2a1f0a;border:1px solid #4a3010;border-radius:8px;padding:10px 14px;margin-bottom:12px">
-          <strong>Important:</strong> For live stock prices, you need a tab called <strong>Prices</strong> in your Google Sheet.
-          Go to your Sheet, click the + button at the bottom, and name the new tab <strong>Prices</strong> exactly.
-          The app writes GOOGLEFINANCE() formulas there automatically when you refresh prices.
+          <strong>First-time setup:</strong> After saving credentials, click <strong>Initialize Sheet Tabs</strong> to create all required tabs (Accounts, Transactions, Budgets, etc.) automatically. If you update the Apps Script code, <strong>Deploy → New version</strong> (not "Manage deployments").
         </div>
         <div class="field"><label>API Key</label><input id="set-api-key" placeholder="AIzaSy..."></div>
         <div class="field"><label>Spreadsheet ID</label><input id="set-sheet-id" placeholder="1BxiMVs0XRA..."></div>
@@ -655,6 +653,7 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
           <button class="btn btn-primary btn-sm" onclick="updateConfig()">Save Credentials</button>
           <button class="btn btn-sm" onclick="testConnection()">Test Connection</button>
           <button class="btn btn-sm" onclick="runConnectionDiagnostics()">Run Diagnostics</button>
+          <button class="btn btn-sm" onclick="initializeSheets()" id="btn-init-sheets" title="Create all required sheet tabs (Accounts, Transactions, etc.) in your Google Sheet">Initialize Sheet Tabs</button>
         </div>
         <div id="conn-diagnostics" style="display:none;margin-top:10px;padding:10px 12px;background:var(--bg-2);border:var(--border2);border-radius:10px;font-size:11px;line-height:1.6;color:var(--text3);white-space:pre-wrap"></div>
         <div style="margin-top:14px;padding:12px 14px;background:var(--blue-bg);border-radius:10px;font-size:12px;color:var(--blue);line-height:1.6">
@@ -1258,14 +1257,32 @@ async function runConnectionDiagnostics() {
   }
 
   if (!readOk && canReadViaScript()) {
-    const scriptData = await sheetsRead(`${SHEET_NAMES.accounts}!A1:A1`);
-    if (scriptData) {
-      lines.push('Read test (Apps Script): PASS');
-      readOk = true;
-      readUrl = `${CONFIG.scriptUrl} [action=read]`;
-    } else {
-      lines.push('Read test (Apps Script): FAIL');
-      if (!readErr) readErr = 'Apps Script read failed';
+    try {
+      const scriptRes = await fetch(CONFIG.scriptUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action: 'read', range: `${SHEET_NAMES.accounts}!A1:A1`, sheetId: CONFIG.sheetId })
+      });
+      const scriptData = await scriptRes.json().catch(() => ({}));
+      if (scriptData.status === 'ok') {
+        lines.push('Read test (Apps Script): PASS');
+        readOk = true;
+        readUrl = `${CONFIG.scriptUrl} [action=read]`;
+      } else {
+        const errMsg = scriptData.message || 'Unknown error';
+        lines.push('Read test (Apps Script): FAIL');
+        lines.push(`Apps Script error: ${errMsg}`);
+        if (errMsg.includes('Unsupported action')) {
+          lines.push('Hint: Your deployed Apps Script is outdated. Copy the latest code below and redeploy as a new version.');
+        } else if (errMsg.toLowerCase().includes('no sheet') || errMsg.toLowerCase().includes('not found') || errMsg.toLowerCase().includes('coordinates')) {
+          lines.push('Hint: Sheet tabs are missing. Click "Initialize Sheet Tabs" to create them automatically.');
+        } else {
+          lines.push('Hint: Check Apps Script is deployed as Web App → Execute as: Me → Access: Anyone.');
+        }
+      }
+    } catch(e) {
+      lines.push('Read test (Apps Script): FAIL (network error)');
+      lines.push(`Error: ${e.message}`);
     }
   }
 
@@ -1283,6 +1300,36 @@ async function runConnectionDiagnostics() {
   lines.push(`Read endpoint: ${readUrl}`);
   lines.push(`Write endpoint: ${CONFIG.scriptUrl || '(not set)'}`);
   box.textContent = lines.join('\n');
+}
+
+async function initializeSheets() {
+  pullConfigFromSettingsForm();
+  if (!CONFIG.scriptUrl || !CONFIG.sheetId) {
+    toast('Save your Apps Script URL and Sheet ID first.');
+    return;
+  }
+  const btn = document.getElementById('btn-init-sheets');
+  if (btn) btn.disabled = true;
+  toast('Creating sheet tabs…');
+  try {
+    const r = await fetch(CONFIG.scriptUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'init', sheetId: CONFIG.sheetId })
+    });
+    const d = await r.json().catch(() => ({}));
+    if (d.status === 'ok') {
+      const created = (d.created || []);
+      toast(created.length ? `Created tabs: ${created.join(', ')}` : 'All sheet tabs already exist.');
+    } else if (d.message && d.message.includes('Unsupported action')) {
+      toast('Your Apps Script is outdated — copy the latest code and redeploy as a new version.');
+    } else {
+      toast('Init failed: ' + (d.message || 'Unknown error'));
+    }
+  } catch(e) {
+    toast('Network error: ' + e.message);
+  }
+  if (btn) btn.disabled = false;
 }
 
 // ═══════════════════════════════════════════════
@@ -1448,7 +1495,7 @@ async function loadAllFromSheets() {
     saveLocal();
     renderAll();
     setSyncState('ok', 'Synced');
-  } catch(e) { setSyncState('error', 'Sync error'); }
+  } catch(e) { setSyncState('error', 'Sync error'); renderAll(); }
 }
 
 // ─── Write full sheet ───
@@ -1840,8 +1887,6 @@ function renderTx() {
   const cf  = document.getElementById('f-cat').value;
   const af  = document.getElementById('f-acc').value;
   const monthSel = document.getElementById('f-month');
-  const defaultMonth = new Date().toISOString().slice(0,7);
-  if (!monthSel.value && monthSel.dataset.userSet !== '1') monthSel.value = defaultMonth;
   const mf  = monthSel.value;
   const sf  = (document.getElementById('f-search').value || '').trim().toLowerCase();
   let txs   = S.transactions;
@@ -3297,33 +3342,59 @@ const APPS_SCRIPT_CODE = `
 // Paste this into: Google Sheet → Extensions → Apps Script → Save → Deploy as Web App
 // Execute as: Me | Who has access: Anyone
 
+function getOrCreateSheet(ss, name) {
+  var sheet = ss.getSheetByName(name);
+  if (!sheet) sheet = ss.insertSheet(name);
+  return sheet;
+}
+
 function doPost(e) {
   try {
-    const data     = JSON.parse(e.postData.contents);
-    const ss       = SpreadsheetApp.openById(data.sheetId);
-    const action   = data.action || 'write';
-    const range    = data.range;
+    var data    = JSON.parse(e.postData.contents);
+    var ss      = SpreadsheetApp.openById(data.sheetId);
+    var action  = data.action || 'write';
+    var range   = data.range;
 
     if (action === 'read') {
-      const values = ss.getRange(range).getValues();
+      // Return empty gracefully if the tab doesn't exist yet
+      var sheetName = range.split('!')[0];
+      var sheet = ss.getSheetByName(sheetName);
+      if (!sheet) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'ok', values: [] }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      var values = ss.getRange(range).getValues();
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok', values: values }))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
     if (action === 'write') {
-      const values   = data.values;
-      const inputOpt = data.inputOption || 'RAW';
-      const sheet    = ss.getRange(range);
+      // Auto-create tab if missing so first push always works
+      var sheetName = range.split('!')[0];
+      getOrCreateSheet(ss, sheetName);
+      var inputOpt = data.inputOption || 'RAW';
+      var sheet = ss.getRange(range);
       if (inputOpt === 'USER_ENTERED') {
-        sheet.setValues(values);
+        sheet.setValues(data.values);
       } else {
-        sheet.setValues(values);
+        sheet.setValues(data.values);
       }
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'Unsupported action' }))
+    if (action === 'init') {
+      // Create all required tabs at once — safe to call multiple times
+      var needed = ['Accounts', 'Transactions', 'Budgets', 'Stocks', 'Goals', 'Prices'];
+      var created = [];
+      needed.forEach(function(name) {
+        if (!ss.getSheetByName(name)) { ss.insertSheet(name); created.push(name); }
+      });
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', created: created }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'Unsupported action: ' + action }))
       .setMimeType(ContentService.MimeType.JSON);
   } catch(err) {
     return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: err.toString() }))
