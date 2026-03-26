@@ -1035,6 +1035,9 @@ const SHEET_NAMES = {
 };
 
 let CONFIG = { apiKey: '', sheetId: '', scriptUrl: '' };
+function canReadViaApi() { return !!(CONFIG.apiKey && CONFIG.sheetId); }
+function canReadViaScript() { return !!(CONFIG.scriptUrl && CONFIG.sheetId); }
+function canReadRemotely() { return canReadViaApi() || canReadViaScript(); }
 
 function loadConfig() {
   // Check skip flag FIRST — before anything else can crash
@@ -1055,7 +1058,7 @@ function loadConfig() {
   setVal('set-script-url', CONFIG.scriptUrl);
 
   // Also hide banner if credentials are saved
-  if (CONFIG.apiKey && CONFIG.sheetId) {
+  if (canReadRemotely()) {
     document.getElementById('config-banner').classList.remove('show');
   }
 }
@@ -1064,12 +1067,15 @@ function saveConfig() {
   CONFIG.apiKey    = document.getElementById('cfg-api-key').value.trim();
   CONFIG.sheetId   = document.getElementById('cfg-sheet-id').value.trim();
   CONFIG.scriptUrl = document.getElementById('cfg-script-url').value.trim();
-  if (!CONFIG.apiKey || !CONFIG.sheetId) { toast('Please fill in API key and Sheet ID'); return; }
+  if (!CONFIG.sheetId || (!CONFIG.apiKey && !CONFIG.scriptUrl)) {
+    toast('Provide Sheet ID plus either API key (direct read) or Apps Script URL');
+    return;
+  }
   localStorage.setItem('ft_config', JSON.stringify(CONFIG));
   localStorage.removeItem('ft_skipped_config');
   document.getElementById('config-banner').classList.remove('show');
-  if (CONFIG.scriptUrl) { toast('Connected! Loading your data...'); }
-  else { toast('Connected read-only. Add Apps Script URL in Settings to enable saving.'); }
+  if (canReadViaScript()) { toast('Connected via Apps Script. Loading your data...'); }
+  else { toast('Connected read-only via API key. Add Apps Script URL to enable writing.'); }
   loadAllFromSheets();
 }
 
@@ -1104,31 +1110,51 @@ function pullConfigFromSettingsForm() {
 
 async function testConnection() {
   pullConfigFromSettingsForm();
-  if (!CONFIG.apiKey || !CONFIG.sheetId) { toast('No credentials saved yet'); return; }
+  if (!CONFIG.sheetId || (!CONFIG.apiKey && !CONFIG.scriptUrl)) {
+    toast('No credentials saved yet');
+    return;
+  }
   setSyncState('syncing', 'Testing...');
   try {
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(CONFIG.sheetId)}?key=${encodeURIComponent(CONFIG.apiKey)}`;
-    const r = await fetch(url);
-    if (r.ok) {
-      if (CONFIG.scriptUrl) {
-        const marker = `FT_WRITE_TEST ${new Date().toISOString()}`;
-        const writeOk = await sheetsWrite(`${SHEET_NAMES.accounts}!Z1`, [[marker]], 'RAW');
-        if (writeOk) {
-          setSyncState('ok', 'Connected');
-          toast('Read + write tests passed');
-        } else {
-          setSyncState('error', 'Write failed');
-          toast('Read passed, but write failed. Check Apps Script URL/deployment access.');
-        }
+    let readOk = false;
+    let readMsg = '';
+
+    if (canReadViaApi()) {
+      const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(CONFIG.sheetId)}?key=${encodeURIComponent(CONFIG.apiKey)}`;
+      const r = await fetch(url);
+      if (r.ok) {
+        readOk = true;
       } else {
-        setSyncState('ok', 'Read-only');
-        toast('Read works. Add Apps Script URL for push/write.');
+        const details = await r.json().catch(() => ({}));
+        readMsg = (((details || {}).error || {}).message || 'Direct read failed');
+      }
+    }
+
+    if (!readOk && canReadViaScript()) {
+      const probe = await sheetsRead(`${SHEET_NAMES.accounts}!A1:A1`);
+      if (probe) readOk = true;
+      else readMsg = readMsg || 'Script read failed';
+    }
+
+    if (!readOk) {
+      setSyncState('error', 'Error');
+      toast(readMsg || 'Connection failed — check Sheet ID + API key/script settings');
+      return;
+    }
+
+    if (CONFIG.scriptUrl) {
+      const marker = `FT_WRITE_TEST ${new Date().toISOString()}`;
+      const writeOk = await sheetsWrite(`${SHEET_NAMES.accounts}!Z1`, [[marker]], 'RAW');
+      if (writeOk) {
+        setSyncState('ok', 'Connected');
+        toast('Read + write tests passed');
+      } else {
+        setSyncState('error', 'Write failed');
+        toast('Read passed, but write failed. Check Apps Script URL/deployment access.');
       }
     } else {
-      const details = await r.json().catch(() => ({}));
-      const msg = (((details || {}).error || {}).message || 'Connection failed — check API key, Sheet ID, and API restrictions');
-      setSyncState('error', 'Error');
-      toast(msg);
+      setSyncState('ok', 'Read-only');
+      toast('Read works. Add Apps Script URL for push/write.');
     }
   } catch(e) { setSyncState('error', 'Error'); toast('Network error'); }
 }
@@ -1147,25 +1173,40 @@ async function runConnectionDiagnostics() {
   lines.push(`Sheet ID set: ${CONFIG.sheetId ? 'yes' : 'no'}`);
   lines.push(`Apps Script URL set: ${CONFIG.scriptUrl ? 'yes' : 'no'}`);
 
-  if (!CONFIG.apiKey || !CONFIG.sheetId) {
-    lines.push('Read test: skipped (missing API key or Sheet ID)');
-    box.textContent = lines.join('\n');
-    return;
+  let readUrl = '(not tested)';
+  let readOk = false;
+  let readErr = '';
+
+  if (canReadViaApi()) {
+    readUrl = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(CONFIG.sheetId)}?key=${encodeURIComponent(CONFIG.apiKey)}`;
+    try {
+      const readRes = await fetch(readUrl);
+      if (readRes.ok) {
+        lines.push(`Read test (Sheets API): PASS (${readRes.status})`);
+        readOk = true;
+      } else {
+        const d = await readRes.json().catch(() => ({}));
+        readErr = (((d || {}).error || {}).message || 'Unknown error');
+        lines.push(`Read test (Sheets API): FAIL (${readRes.status})`);
+        lines.push(`Read error (Sheets API): ${readErr}`);
+      }
+    } catch (e) {
+      lines.push('Read test (Sheets API): FAIL (network/CORS error)');
+    }
+  } else {
+    lines.push('Read test (Sheets API): SKIPPED (missing API key)');
   }
 
-  const readUrl = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(CONFIG.sheetId)}?key=${encodeURIComponent(CONFIG.apiKey)}`;
-  try {
-    const readRes = await fetch(readUrl);
-    if (readRes.ok) {
-      lines.push(`Read test: PASS (${readRes.status})`);
+  if (!readOk && canReadViaScript()) {
+    const scriptData = await sheetsRead(`${SHEET_NAMES.accounts}!A1:A1`);
+    if (scriptData) {
+      lines.push('Read test (Apps Script): PASS');
+      readOk = true;
+      readUrl = `${CONFIG.scriptUrl} [action=read]`;
     } else {
-      const d = await readRes.json().catch(() => ({}));
-      const msg = (((d || {}).error || {}).message || 'Unknown error');
-      lines.push(`Read test: FAIL (${readRes.status})`);
-      lines.push(`Read error: ${msg}`);
+      lines.push('Read test (Apps Script): FAIL');
+      if (!readErr) readErr = 'Apps Script read failed';
     }
-  } catch (e) {
-    lines.push('Read test: FAIL (network/CORS error)');
   }
 
   if (!CONFIG.scriptUrl) {
@@ -1247,12 +1288,27 @@ function getGoalLinkedNet(goal) {
 const BASE = 'https://sheets.googleapis.com/v4/spreadsheets';
 
 async function sheetsRead(range) {
-  if (!CONFIG.apiKey || !CONFIG.sheetId) return null;
+  if (!CONFIG.sheetId) return null;
+  if (canReadViaApi()) {
+    try {
+      const r = await fetch(`${BASE}/${CONFIG.sheetId}/values/${range}?key=${CONFIG.apiKey}`);
+      if (r.ok) {
+        const d = await r.json();
+        return d.values || [];
+      }
+    } catch(e) {}
+  }
+  if (!canReadViaScript()) return null;
   try {
-    const r = await fetch(`${BASE}/${CONFIG.sheetId}/values/${range}?key=${CONFIG.apiKey}`);
+    const r = await fetch(CONFIG.scriptUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action:'read', range, sheetId:CONFIG.sheetId })
+    });
     if (!r.ok) return null;
-    const d = await r.json();
-    return d.values || [];
+    const d = await r.json().catch(() => ({}));
+    if (d.status !== 'ok') return null;
+    return Array.isArray(d.values) ? d.values : [];
   } catch(e) { return null; }
 }
 
@@ -1284,7 +1340,7 @@ async function sheetsClear(sheetName) {
 
 // ─── Load all sheets on startup ───
 async function loadAllFromSheets() {
-  if (!CONFIG.apiKey || !CONFIG.sheetId) return;
+  if (!canReadRemotely()) return;
   setSyncState('syncing', 'Loading...');
   try {
     // Safe helpers — guard every cell against undefined/NaN
@@ -2813,9 +2869,9 @@ function importData(e) {
 async function forcePush() {
   pullConfigFromSettingsForm();
   const statusEl = document.getElementById('manual-sync-status');
-  if (!CONFIG.apiKey || !CONFIG.sheetId) {
-    if (statusEl) statusEl.textContent = 'No Google Sheets credentials saved. Add them above first.';
-    toast('No credentials — add your API key and Sheet ID first'); return;
+  if (!CONFIG.sheetId) {
+    if (statusEl) statusEl.textContent = 'No Sheet ID saved. Add it above first.';
+    toast('No credentials — add your Sheet ID first'); return;
   }
   if (!CONFIG.scriptUrl) {
     setSyncState('error', 'Write not set');
@@ -2848,9 +2904,9 @@ async function forcePush() {
 async function forcePull() {
   pullConfigFromSettingsForm();
   const statusEl = document.getElementById('manual-sync-status');
-  if (!CONFIG.apiKey || !CONFIG.sheetId) {
-    if (statusEl) statusEl.textContent = 'No Google Sheets credentials saved. Add them above first.';
-    toast('No credentials — add your API key and Sheet ID first'); return;
+  if (!canReadRemotely()) {
+    if (statusEl) statusEl.textContent = 'No read credentials saved. Add Sheet ID + API key or Apps Script URL first.';
+    toast('No read credentials — add Sheet ID plus API key or Apps Script URL first'); return;
   }
   if (!confirm('This will replace all local data with what\'s in your Google Sheet. Any unsynced local changes will be lost. Continue?')) return;
   if (statusEl) statusEl.textContent = 'Pulling all data from Google Sheets...';
@@ -2888,17 +2944,29 @@ function doPost(e) {
   try {
     const data     = JSON.parse(e.postData.contents);
     const ss       = SpreadsheetApp.openById(data.sheetId);
+    const action   = data.action || 'write';
     const range    = data.range;
-    const values   = data.values;
-    const inputOpt = data.inputOption || 'RAW';
 
-    const sheet    = ss.getRange(range);
-    if (inputOpt === 'USER_ENTERED') {
-      sheet.setValues(values);
-    } else {
-      sheet.setValues(values);
+    if (action === 'read') {
+      const values = ss.getRange(range).getValues();
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', values: values }))
+        .setMimeType(ContentService.MimeType.JSON);
     }
-    return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
+
+    if (action === 'write') {
+      const values   = data.values;
+      const inputOpt = data.inputOption || 'RAW';
+      const sheet    = ss.getRange(range);
+      if (inputOpt === 'USER_ENTERED') {
+        sheet.setValues(values);
+      } else {
+        sheet.setValues(values);
+      }
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'Unsupported action' }))
       .setMimeType(ContentService.MimeType.JSON);
   } catch(err) {
     return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: err.toString() }))
@@ -2996,7 +3064,7 @@ loadTheme();
 loadConfig();
 loadLocal();
 renderAll();
-if (CONFIG.apiKey && CONFIG.sheetId) {
+if (canReadRemotely()) {
   // Show subtle loading indicator while pulling latest data from Sheets
   setSyncState('syncing', 'Loading latest data...');
   loadAllFromSheets().then(() => {
