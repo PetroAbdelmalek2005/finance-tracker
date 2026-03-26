@@ -1040,10 +1040,20 @@ const SHEET_NAMES = {
   prices:       'Prices'   // auto-managed tab for GoogleFinance() live prices
 };
 
-let CONFIG = { apiKey: '', sheetId: '', scriptUrl: '' };
+let CONFIG = { apiKey: '', sheetId: '', scriptUrl: '', forceScriptRead: false };
 function canReadViaApi() { return !!(CONFIG.apiKey && CONFIG.sheetId); }
 function canReadViaScript() { return !!(CONFIG.scriptUrl && CONFIG.sheetId); }
 function canReadRemotely() { return canReadViaApi() || canReadViaScript(); }
+function scriptPreferred() { return !!(CONFIG.forceScriptRead && canReadViaScript()); }
+function normalizeScriptUrl(url) {
+  const clean = (url || '').trim();
+  if (!clean) return '';
+  if (clean.includes('/exec') || clean.includes('/dev')) return clean;
+  return clean.replace(/\/+$/, '') + '/exec';
+}
+function persistConfig() {
+  localStorage.setItem('ft_config', JSON.stringify(CONFIG));
+}
 
 function loadConfig() {
   // Check skip flag FIRST — before anything else can crash
@@ -1054,8 +1064,10 @@ function loadConfig() {
 
   const saved = localStorage.getItem('ft_config');
   if (saved) {
-    try { CONFIG = JSON.parse(saved); } catch(e) { CONFIG = { apiKey:'', sheetId:'', scriptUrl:'' }; }
+    try { CONFIG = { ...CONFIG, ...JSON.parse(saved) }; } catch(e) { CONFIG = { apiKey:'', sheetId:'', scriptUrl:'', forceScriptRead:false }; }
   }
+  CONFIG.scriptUrl = normalizeScriptUrl(CONFIG.scriptUrl);
+  CONFIG.forceScriptRead = !!CONFIG.forceScriptRead;
 
   // Null-safe population of settings fields
   const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
@@ -1072,12 +1084,13 @@ function loadConfig() {
 function saveConfig() {
   CONFIG.apiKey    = document.getElementById('cfg-api-key').value.trim();
   CONFIG.sheetId   = document.getElementById('cfg-sheet-id').value.trim();
-  CONFIG.scriptUrl = document.getElementById('cfg-script-url').value.trim();
+  CONFIG.scriptUrl = normalizeScriptUrl(document.getElementById('cfg-script-url').value);
+  CONFIG.forceScriptRead = false;
   if (!CONFIG.sheetId || (!CONFIG.apiKey && !CONFIG.scriptUrl)) {
     toast('Provide Sheet ID plus either API key (direct read) or Apps Script URL');
     return;
   }
-  localStorage.setItem('ft_config', JSON.stringify(CONFIG));
+  persistConfig();
   localStorage.removeItem('ft_skipped_config');
   document.getElementById('config-banner').classList.remove('show');
   if (canReadViaScript()) { toast('Connected via Apps Script. Loading your data...'); }
@@ -1098,8 +1111,10 @@ function skipConfig() {
 function updateConfig() {
   CONFIG.apiKey   = document.getElementById('set-api-key').value.trim();
   CONFIG.sheetId  = document.getElementById('set-sheet-id').value.trim();
-  CONFIG.scriptUrl = (document.getElementById('set-script-url').value || '').trim();
-  localStorage.setItem('ft_config', JSON.stringify(CONFIG));
+  CONFIG.scriptUrl = normalizeScriptUrl((document.getElementById('set-script-url').value || '').trim());
+  if (!CONFIG.apiKey) CONFIG.forceScriptRead = true;
+  if (!CONFIG.scriptUrl) CONFIG.forceScriptRead = false;
+  persistConfig();
   toast('Credentials saved');
 }
 
@@ -1110,8 +1125,10 @@ function pullConfigFromSettingsForm() {
   if (!apiEl || !sheetEl || !scriptEl) return;
   CONFIG.apiKey    = (apiEl.value || '').trim();
   CONFIG.sheetId   = (sheetEl.value || '').trim();
-  CONFIG.scriptUrl = (scriptEl.value || '').trim();
-  localStorage.setItem('ft_config', JSON.stringify(CONFIG));
+  CONFIG.scriptUrl = normalizeScriptUrl((scriptEl.value || '').trim());
+  if (!CONFIG.apiKey) CONFIG.forceScriptRead = true;
+  if (!CONFIG.scriptUrl) CONFIG.forceScriptRead = false;
+  persistConfig();
 }
 
 async function testConnection() {
@@ -1125,7 +1142,7 @@ async function testConnection() {
     let readOk = false;
     let readMsg = '';
 
-    if (canReadViaApi()) {
+    if (canReadViaApi() && !scriptPreferred()) {
       const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(CONFIG.sheetId)}?key=${encodeURIComponent(CONFIG.apiKey)}`;
       const r = await fetch(url);
       if (r.ok) {
@@ -1133,6 +1150,10 @@ async function testConnection() {
       } else {
         const details = await r.json().catch(() => ({}));
         readMsg = (((details || {}).error || {}).message || 'Direct read failed');
+        if ((r.status === 401 || r.status === 403) && canReadViaScript()) {
+          CONFIG.forceScriptRead = true;
+          persistConfig();
+        }
       }
     }
 
@@ -1178,12 +1199,13 @@ async function runConnectionDiagnostics() {
   lines.push(`API key set: ${CONFIG.apiKey ? 'yes' : 'no'}`);
   lines.push(`Sheet ID set: ${CONFIG.sheetId ? 'yes' : 'no'}`);
   lines.push(`Apps Script URL set: ${CONFIG.scriptUrl ? 'yes' : 'no'}`);
+  lines.push(`Read mode: ${scriptPreferred() ? 'Apps Script preferred' : 'Auto (API first)'}`);
 
   let readUrl = '(not tested)';
   let readOk = false;
   let readErr = '';
 
-  if (canReadViaApi()) {
+  if (canReadViaApi() && !scriptPreferred()) {
     readUrl = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(CONFIG.sheetId)}?key=${encodeURIComponent(CONFIG.apiKey)}`;
     try {
       const readRes = await fetch(readUrl);
@@ -1195,6 +1217,11 @@ async function runConnectionDiagnostics() {
         readErr = (((d || {}).error || {}).message || 'Unknown error');
         lines.push(`Read test (Sheets API): FAIL (${readRes.status})`);
         lines.push(`Read error (Sheets API): ${readErr}`);
+        if ((readRes.status === 401 || readRes.status === 403) && canReadViaScript()) {
+          lines.push('Hint: API key cannot read this sheet. Falling back to Apps Script for reads.');
+          CONFIG.forceScriptRead = true;
+          persistConfig();
+        }
       }
     } catch (e) {
       lines.push('Read test (Sheets API): FAIL (network/CORS error)');
@@ -1295,12 +1322,16 @@ const BASE = 'https://sheets.googleapis.com/v4/spreadsheets';
 
 async function sheetsRead(range) {
   if (!CONFIG.sheetId) return null;
-  if (canReadViaApi()) {
+  if (canReadViaApi() && !scriptPreferred()) {
     try {
       const r = await fetch(`${BASE}/${CONFIG.sheetId}/values/${range}?key=${CONFIG.apiKey}`);
       if (r.ok) {
         const d = await r.json();
         return d.values || [];
+      }
+      if ((r.status === 401 || r.status === 403) && canReadViaScript()) {
+        CONFIG.forceScriptRead = true;
+        persistConfig();
       }
     } catch(e) {}
   }
