@@ -298,6 +298,40 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:var(--bg-3);border-radius:2px;}
 
+/* ── SKELETON LOADERS ────────────────────────────────────────── */
+.skeleton{background:var(--bg-3);border-radius:6px;position:relative;overflow:hidden;}
+.skeleton::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.05),transparent);animation:shimmer 1.5s infinite;}
+@keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+.skel-metric{height:82px;border-radius:var(--radius-lg);}
+.skel-card{height:180px;border-radius:var(--radius-lg);margin-bottom:16px;}
+.skel-text{height:12px;border-radius:4px;margin-bottom:8px;}
+.skel-text.w60{width:60%;}
+.skel-text.w40{width:40%;}
+.skel-text.w80{width:80%;}
+
+/* ── BUCKET CARDS ────────────────────────────────────────────── */
+.buckets{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:22px;}
+@media(max-width:700px){.buckets{grid-template-columns:1fr 1fr;}}
+.bucket-card{background:var(--bg-card);border:var(--border);border-radius:var(--radius-lg);padding:14px 16px;box-shadow:var(--shadow-soft);transition:transform .2s ease,box-shadow .2s ease;}
+.bucket-card:hover{transform:translateY(-2px);box-shadow:var(--shadow);}
+.bucket-label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;font-weight:500;}
+.bucket-value{font-size:18px;font-weight:300;color:var(--text);letter-spacing:-.02em;}
+.bucket-pct{font-size:11px;color:var(--text4);margin-top:3px;}
+.bucket-bar{height:3px;background:var(--bg-3);border-radius:2px;margin-top:10px;overflow:hidden;}
+.bucket-bar-fill{height:100%;border-radius:2px;transition:width .6s ease;}
+
+/* ── INSIGHTS ────────────────────────────────────────────────── */
+.insight-row{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:var(--border);}
+.insight-row:last-child{border-bottom:none;}
+.insight-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;}
+.insight-body{flex:1;}
+.insight-text{font-size:13px;color:var(--text2);}
+.insight-sub{font-size:11px;color:var(--text4);margin-top:2px;}
+
+/* ── COUNT-UP ANIMATION ──────────────────────────────────────── */
+@keyframes metricIn{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:translateY(0);}}
+.metric-value{animation:metricIn .35s ease both;}
+
 /* ── FILTER BAR ──────────────────────────────────────────────── */
 .filter-bar-input{width:100%;background:var(--bg-2);border:var(--border);border-radius:8px;padding:9px 13px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;}
 .filter-bar-input:focus{outline:none;border-color:var(--blue);}
@@ -424,6 +458,8 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
       <div class="tab-content-inner">
       <div id="dash-bills-alert"></div>
       <div class="metrics" id="dash-metrics"></div>
+      <div class="buckets" id="dash-buckets"></div>
+      <div id="dash-insights"></div>
       <div class="grid-2">
         <div class="card">
           <div class="card-header"><span class="card-title">Income vs Expenses</span><span id="dash-month-label" class="badge badge-gray"></span></div>
@@ -821,6 +857,16 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
     <div class="field" id="edit-tx-due-field" style="display:none">
       <label>Due Date</label><input id="edit-tx-due" type="date">
     </div>
+    <div class="field">
+      <label>Spending Bucket <small style="color:#555e78;font-weight:400">(optional)</small></label>
+      <select id="edit-tx-bucket">
+        <option value="">Unassigned</option>
+        <option value="Bills">🏠 Bills</option>
+        <option value="Spending">🛒 Spending</option>
+        <option value="Savings">🏦 Savings</option>
+        <option value="Investing">📈 Investing</option>
+      </select>
+    </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('edit-tx-modal')">Cancel</button>
       <button class="btn btn-primary" onclick="saveEditTransaction()">Save Changes</button>
@@ -893,6 +939,16 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
     <div class="field">
       <label>Linked Goal <small style="color:#555e78;font-weight:400">(optional)</small></label>
       <select id="tx-goal"></select>
+    </div>
+    <div class="field" id="tx-bucket-field">
+      <label>Spending Bucket <small style="color:#555e78;font-weight:400">(optional)</small></label>
+      <select id="tx-bucket">
+        <option value="">Unassigned</option>
+        <option value="Bills">🏠 Bills</option>
+        <option value="Spending">🛒 Spending</option>
+        <option value="Savings">🏦 Savings</option>
+        <option value="Investing">📈 Investing</option>
+      </select>
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('tx-modal')">Cancel</button>
@@ -1393,10 +1449,10 @@ async function loadAllFromSheets() {
       });
 
     // Transactions
-    const txs = await sheetsRead(`${SHEET_NAMES.transactions}!A2:K`);
+    const txs = await sheetsRead(`${SHEET_NAMES.transactions}!A2:L`);
     if (txs && txs.length) S.transactions = txs
       .filter(r => r && safeStr(r[0]) && safeStr(r[1]) && safeNum(r[4]) !== 0)
-      .map(r => ({ id: safeStr(r[0]), date: safeStr(r[1]), desc: safeStr(r[2],'(no description)'), type: safeStr(r[3],'expense'), amount: Math.abs(safeNum(r[4])), cat: safeStr(r[5],'Other'), account: safeStr(r[6],''), xferDir: safeStr(r[7]), xferRef: safeStr(r[8]), dueDate: safeStr(r[9]), goalId: safeStr(r[10]) }))
+      .map(r => ({ id: safeStr(r[0]), date: safeStr(r[1]), desc: safeStr(r[2],'(no description)'), type: safeStr(r[3],'expense'), amount: Math.abs(safeNum(r[4])), cat: safeStr(r[5],'Other'), account: safeStr(r[6],''), xferDir: safeStr(r[7]), xferRef: safeStr(r[8]), dueDate: safeStr(r[9]), goalId: safeStr(r[10]), bucket: safeStr(r[11]) }))
       .sort((a,b) => b.date.localeCompare(a.date));
 
     // Budgets
@@ -1432,7 +1488,7 @@ async function pushToSheets(sheetName, headers, rows) {
 }
 
 async function syncAccounts() { await pushToSheets(SHEET_NAMES.accounts, ['ID','Name','Type','Balance'], S.accounts.map(a => [a.id, a.name, a.type, a.balance])); }
-async function syncTransactions() { await pushToSheets(SHEET_NAMES.transactions, ['ID','Date','Description','Type','Amount','Category','Account','XferDir','XferRef','DueDate','GoalId'], S.transactions.map(t => [t.id, t.date, t.desc, t.type, t.amount, t.cat, t.account, t.xferDir||'', t.xferRef||'', t.dueDate||'', t.goalId||''])); }
+async function syncTransactions() { await pushToSheets(SHEET_NAMES.transactions, ['ID','Date','Description','Type','Amount','Category','Account','XferDir','XferRef','DueDate','GoalId','Bucket'], S.transactions.map(t => [t.id, t.date, t.desc, t.type, t.amount, t.cat, t.account, t.xferDir||'', t.xferRef||'', t.dueDate||'', t.goalId||'', t.bucket||''])); }
 async function syncBudgets() { await pushToSheets(SHEET_NAMES.budgets, ['ID','Category','Amount'], S.budgets.map(b => [b.id, b.cat, b.amount])); }
 async function syncStocks() { await pushToSheets(SHEET_NAMES.stocks, ['ID','Ticker','Name','Shares','CostPerShare','CurrentPrice'], S.stocks.map(s => [s.id, s.ticker, s.name, s.shares, s.costPerShare, s.current])); }
 
@@ -1758,12 +1814,13 @@ async function saveBalance(i) {
 // TRANSACTIONS
 // ═══════════════════════════════════════════════
 async function addTransaction() {
-  const desc = document.getElementById('tx-desc').value.trim();
-  const amt  = parseFloat(document.getElementById('tx-amt').value);
-  const type = document.getElementById('tx-type').value;
-  const cat  = document.getElementById('tx-cat').value;
-  const date = document.getElementById('tx-date').value;
+  const desc   = document.getElementById('tx-desc').value.trim();
+  const amt    = parseFloat(document.getElementById('tx-amt').value);
+  const type   = document.getElementById('tx-type').value;
+  const cat    = document.getElementById('tx-cat').value;
+  const date   = document.getElementById('tx-date').value;
   const goalId = (document.getElementById('tx-goal').value || '').trim();
+  const bucket = (document.getElementById('tx-bucket').value || '').trim();
 
   if (!desc || !amt || !isFinite(amt) || amt <= 0) { toast('Enter a valid description and positive amount'); return; }
 
@@ -1777,24 +1834,24 @@ async function addTransaction() {
 
     // Create two linked transaction records — one out, one in
     const xferId = uid();
-    S.transactions.unshift({ id: uid(), date, desc, type: 'transfer', amount: roundedAmt, cat, account: fromAcc, xferRef: xferId, xferDir: 'out', goalId: '' });
-    S.transactions.unshift({ id: uid(), date, desc, type: 'transfer', amount: roundedAmt, cat, account: toAcc,   xferRef: xferId, xferDir: 'in', goalId: goalId || ''  });
+    S.transactions.unshift({ id: uid(), date, desc, type: 'transfer', amount: roundedAmt, cat, account: fromAcc, xferRef: xferId, xferDir: 'out', goalId: '', bucket: bucket || '' });
+    S.transactions.unshift({ id: uid(), date, desc, type: 'transfer', amount: roundedAmt, cat, account: toAcc,   xferRef: xferId, xferDir: 'in',  goalId: goalId || '', bucket: bucket || '' });
     toast('Transfer recorded between ' + fromAcc + ' and ' + toAcc);
 
   } else if (type === 'bill') {
-    const acc    = document.getElementById('tx-acc').value;
+    const acc     = document.getElementById('tx-acc').value;
     const dueDate = document.getElementById('tx-due').value;
-    S.transactions.unshift({ id: uid(), date, desc, type: 'bill', amount: roundedAmt, cat, account: acc, dueDate: dueDate || '', goalId: goalId || '' });
+    S.transactions.unshift({ id: uid(), date, desc, type: 'bill', amount: roundedAmt, cat, account: acc, dueDate: dueDate || '', goalId: goalId || '', bucket: bucket || 'Bills' });
     toast('Bill payment saved');
 
   } else {
     const acc = document.getElementById('tx-acc').value;
-    S.transactions.unshift({ id: uid(), date, desc, type, amount: roundedAmt, cat, account: acc, goalId: goalId || '' });
+    S.transactions.unshift({ id: uid(), date, desc, type, amount: roundedAmt, cat, account: acc, goalId: goalId || '', bucket: bucket || '' });
     toast('Transaction saved');
   }
 
   saveLocal(); closeModal('tx-modal');
-  ['tx-desc','tx-amt','tx-due','tx-goal'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  ['tx-desc','tx-amt','tx-due','tx-goal','tx-bucket'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   renderAll();
   setSyncState('syncing', 'Saving...');
   await syncTransactions();
@@ -2584,6 +2641,50 @@ async function addGoal() {
   toast('Goal added');
 }
 
+function goalETA(g) {
+  const current = getGoalCurrent(g);
+  const rem = Math.max(g.target - current, 0);
+  if (rem <= 0) return null; // already reached
+
+  // Average monthly contribution over the last 3 months
+  const now = new Date();
+  let totalContrib = 0;
+  let monthsWithData = 0;
+  for (let i = 0; i < 3; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const m = d.getMonth(); const y = d.getFullYear();
+    let contrib = 0;
+    if (g.linkedAccount) {
+      // net inflows into linked account this month
+      contrib = monthTxs(m, y)
+        .filter(t => t.account === g.linkedAccount)
+        .reduce((s, t) => {
+          if (t.type === 'income') return s + t.amount;
+          if (t.type === 'expense' || t.type === 'bill') return s - t.amount;
+          if (t.type === 'transfer') return s + (t.xferDir === 'in' ? t.amount : -t.amount);
+          return s;
+        }, 0);
+    } else {
+      // tagged transactions or manual contributions
+      contrib = monthTxs(m, y)
+        .filter(t => t.goalId === g.id)
+        .reduce((s, t) => s + (t.type === 'income' ? t.amount : -t.amount), 0);
+    }
+    if (contrib > 0) { totalContrib += contrib; monthsWithData++; }
+  }
+
+  if (monthsWithData === 0) return null;
+  const avgMonthly = totalContrib / monthsWithData;
+  if (avgMonthly <= 0) return null;
+
+  const monthsLeft = Math.ceil(rem / avgMonthly);
+  if (monthsLeft <= 1)   return '~1 month remaining';
+  if (monthsLeft < 12)   return `~${monthsLeft} months remaining`;
+  const yrs = Math.floor(monthsLeft / 12);
+  const mos = monthsLeft % 12;
+  return mos > 0 ? `~${yrs}y ${mos}m remaining` : `~${yrs} year${yrs > 1 ? 's' : ''} remaining`;
+}
+
 function renderGoals() {
   const el = document.getElementById('goals-list');
   if (!S.goals.length) { el.innerHTML = '<div class="card"><div class="empty"><div class="empty-icon">🎯</div>No goals yet. Set a savings target to start tracking.</div></div>'; return; }
@@ -2595,6 +2696,10 @@ function renderGoals() {
     const linkedNet = getGoalLinkedNet(g);
     const linkedAccountLabel = g.linkedAccount ? `Linked account: ${g.linkedAccount}` : 'Manual goal tracking';
     const linkedNetLabel = linkedNet ? ` · Tagged tx net: ${linkedNet >= 0 ? '+' : ''}${fmt(linkedNet)}` : '';
+    const eta = goalETA(g);
+    const etaHtml = eta
+      ? `<span style="background:var(--blue-bg);color:var(--blue);border-radius:20px;padding:2px 10px;font-size:10px;font-weight:500;white-space:nowrap">${eta}</span>`
+      : (pct >= 100 ? `<span style="background:var(--green-bg);color:var(--green);border-radius:20px;padding:2px 10px;font-size:10px;font-weight:500">Reached! 🎉</span>` : '');
     return `<div class="card" style="margin-bottom:14px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
         <div>
@@ -2602,7 +2707,8 @@ function renderGoals() {
           <div style="font-size:11px;color:#555e78;margin-top:2px">${g.deadline ? 'Target: ' + g.deadline : 'No deadline set'}</div>
           <div style="font-size:11px;color:#555e78;margin-top:2px">${linkedAccountLabel}${linkedNetLabel}</div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+          ${etaHtml}
           <span style="font-size:13px;color:#8b92a8">${fmt(current)} <span style="color:#3a4260">/ ${fmt(g.target)}</span></span>
           ${g.linkedAccount ? '' : `<button class="btn btn-sm" style="font-size:11px;padding:3px 9px" onclick="openGoalContrib(${i})">+ Add</button>`}
           <button class="del" onclick="deleteItem('goals',${i},syncGoals)">×</button>
@@ -2664,22 +2770,50 @@ function renderDash() {
   const inc = txm.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
   const exp = txm.filter(t => t.type === 'expense' || t.type === 'bill').reduce((s, t) => s + t.amount, 0);
   const save = inc - exp;
-  const accountBalance = S.accounts.reduce((s, a) => s + a.balance, 0);
+  const accountBalance = S.accounts.reduce((s, a) => s + getAccountCurrentBalance(a), 0);
   const nw = netWorth();
+
+  // Money Left Today
+  const totalBudget = S.budgets.reduce((s, b) => s + b.amount, 0);
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const dayOfMonth  = now.getDate();
+  const daysLeft    = daysInMonth - dayOfMonth + 1;
+  const budgetLeft  = totalBudget > 0 ? totalBudget - exp : 0;
+  const moneyLeftToday = totalBudget > 0 ? budgetLeft / daysLeft : null;
 
   const savingsRate = inc > 0 ? Math.round((save / inc) * 100) : 0;
   const srColor = savingsRate >= 20 ? 'pos' : savingsRate >= 10 ? '' : 'neg';
   const srTip = savingsRate >= 20 ? 'Excellent (goal: 20%+)' : savingsRate >= 10 ? 'Good (goal: 20%+)' : savingsRate > 0 ? 'Low — aim for 20%' : 'Spending exceeds income';
+
+  const mltHtml = moneyLeftToday !== null
+    ? `<div class="metric ${moneyLeftToday >= 0 ? 'green' : 'red'}">
+        <div class="metric-label">Money Left Today</div>
+        <div class="metric-value ${moneyLeftToday >= 0 ? 'pos' : 'neg'}">${moneyLeftToday >= 0 ? '' : '−'}${fmtK(moneyLeftToday)}</div>
+        <div class="metric-trend">Daily allowance · ${daysLeft}d left</div>
+       </div>`
+    : `<div class="metric blue">
+        <div class="metric-label">Money Left Today</div>
+        <div class="metric-value" style="font-size:14px;color:var(--text4)">Set budgets</div>
+        <div class="metric-trend">Add budgets to see daily allowance</div>
+       </div>`;
+
   document.getElementById('dash-metrics').innerHTML = `
     <div class="metric blue"><div class="metric-label">Net Worth</div><div class="metric-value ${nw >= 0 ? 'pos' : 'neg'}">${fmtK(nw)}</div><div class="metric-trend">Accounts + portfolio</div></div>
     <div class="metric ${accountBalance >= 0 ? 'blue' : 'red'}"><div class="metric-label">Account Balance</div><div class="metric-value ${accountBalance >= 0 ? 'pos' : 'neg'}">${fmtK(accountBalance)}</div><div class="metric-trend">All cash + debt accounts</div></div>
     <div class="metric green"><div class="metric-label">Monthly Income</div><div class="metric-value pos">${fmtK(inc)}</div><div class="metric-trend">${now.toLocaleDateString('en-CA',{month:'short'})}</div></div>
     <div class="metric red"><div class="metric-label">Monthly Expenses</div><div class="metric-value neg">${fmtK(exp)}</div><div class="metric-trend">${now.toLocaleDateString('en-CA',{month:'short'})}</div></div>
     <div class="metric ${save >= 0 ? 'green' : 'red'}"><div class="metric-label">Net Saving</div><div class="metric-value ${save >= 0 ? 'pos' : 'neg'}">${save >= 0 ? '+' : ''}${fmtK(save)}</div><div class="metric-trend">Income − Expenses</div></div>
-    <div class="metric ${savingsRate >= 20 ? 'green' : savingsRate >= 10 ? 'amber' : 'red'}"><div class="metric-label">Savings Rate</div><div class="metric-value ${srColor}">${savingsRate}%</div><div class="metric-trend">${srTip}</div></div>`;
+    <div class="metric ${savingsRate >= 20 ? 'green' : savingsRate >= 10 ? 'amber' : 'red'}"><div class="metric-label">Savings Rate</div><div class="metric-value ${srColor}">${savingsRate}%</div><div class="metric-trend">${srTip}</div></div>
+    ${mltHtml}`;
+
+  // Bucket summary cards
+  renderBucketCards(txm, exp);
 
   // Bill alerts
   renderBillAlerts();
+
+  // Weekly insights
+  renderWeeklyInsights();
 
   // Recent txns
   const el = document.getElementById('dash-recent');
@@ -2701,6 +2835,159 @@ function renderDash() {
       <span class="amount ${amtClass}">${amtPrefix} ${fmt(t.amount)}</span>
     </div>`;
   }).join('');
+}
+
+// ─── Bucket summary cards ──────────────────────────────────────
+function renderBucketCards(txm, totalExp) {
+  const el = document.getElementById('dash-buckets');
+  if (!el) return;
+
+  // Bucket definitions: label, colors, which transaction types count
+  const BUCKETS = [
+    { key: 'Bills',     label: 'Bills',     color: '#f04f4f', bg: 'var(--red-bg)',   icon: '🏠', match: t => t.type === 'bill' || t.bucket === 'Bills' },
+    { key: 'Spending',  label: 'Spending',  color: '#f5a623', bg: 'var(--amber-bg)', icon: '🛒', match: t => (t.type === 'expense' && (!t.bucket || t.bucket === 'Spending')) || t.bucket === 'Spending' },
+    { key: 'Savings',   label: 'Savings',   color: '#18b880', bg: 'var(--green-bg)', icon: '🏦', match: t => t.bucket === 'Savings' },
+    { key: 'Investing', label: 'Investing', color: '#4a82e4', bg: 'var(--blue-bg)',  icon: '📈', match: t => t.bucket === 'Investing' },
+  ];
+
+  // For Bills/Spending use thisMonthTxs; for Savings/Investing look at all buckets
+  const spending = (txm || thisMonthTxs()).filter(t => t.type === 'expense' || t.type === 'bill');
+  const allMonthOutflow = spending.concat((txm || thisMonthTxs()).filter(t => t.bucket === 'Savings' || t.bucket === 'Investing'));
+
+  const totals = BUCKETS.map(b => {
+    const amt = (txm || thisMonthTxs())
+      .filter(t => {
+        if (b.key === 'Bills')     return t.type === 'bill' || t.bucket === 'Bills';
+        if (b.key === 'Spending')  return t.type === 'expense' && t.bucket !== 'Bills' && t.bucket !== 'Savings' && t.bucket !== 'Investing';
+        return t.bucket === b.key;
+      })
+      .reduce((s, t) => s + t.amount, 0);
+    return { ...b, amt };
+  });
+
+  const grandTotal = totals.reduce((s, b) => s + b.amt, 0) || 1;
+
+  el.innerHTML = totals.map(b => {
+    const pct = Math.min((b.amt / grandTotal) * 100, 100);
+    return `<div class="bucket-card">
+      <div class="bucket-label">${b.icon} ${b.label}</div>
+      <div class="bucket-value" style="color:${b.color}">${fmtK(b.amt)}</div>
+      <div class="bucket-pct">${pct.toFixed(0)}% of outflow</div>
+      <div class="bucket-bar"><div class="bucket-bar-fill" style="width:${pct.toFixed(1)}%;background:${b.color}"></div></div>
+    </div>`;
+  }).join('');
+}
+
+// ─── Weekly insights (rules-based) ────────────────────────────
+function renderWeeklyInsights() {
+  const el = document.getElementById('dash-insights');
+  if (!el) return;
+
+  const now   = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  // This week: last 7 days
+  const week1Start = new Date(today); week1Start.setDate(today.getDate() - 6);
+  // Last week: 7-14 days ago
+  const week2Start = new Date(today); week2Start.setDate(today.getDate() - 13);
+  const week2End   = new Date(today); week2End.setDate(today.getDate() - 7);
+
+  const inRange = (t, from, to) => {
+    const d = new Date((t.date || '') + 'T00:00:00');
+    return !isNaN(d) && d >= from && d <= to;
+  };
+
+  const thisWeekTxs = S.transactions.filter(t => (t.type === 'expense' || t.type === 'bill') && inRange(t, week1Start, today));
+  const lastWeekTxs = S.transactions.filter(t => (t.type === 'expense' || t.type === 'bill') && inRange(t, week2Start, week2End));
+
+  const thisWeekTotal = thisWeekTxs.reduce((s, t) => s + t.amount, 0);
+  const lastWeekTotal = lastWeekTxs.reduce((s, t) => s + t.amount, 0);
+
+  const insights = [];
+
+  // Insight 1: overall week-over-week spending
+  if (lastWeekTotal > 0 && thisWeekTotal > 0) {
+    const changePct = Math.round(((thisWeekTotal - lastWeekTotal) / lastWeekTotal) * 100);
+    const up = changePct > 0;
+    if (Math.abs(changePct) >= 5) {
+      insights.push({
+        icon: up ? '📈' : '📉',
+        bg: up ? 'var(--red-bg)' : 'var(--green-bg)',
+        text: `Overall spending is <strong>${up ? 'up' : 'down'} ${Math.abs(changePct)}%</strong> vs last week`,
+        sub: `${fmt(thisWeekTotal)} this week vs ${fmt(lastWeekTotal)} last week`
+      });
+    }
+  }
+
+  // Insight 2: biggest-spending category this week
+  if (thisWeekTxs.length) {
+    const byCat = {};
+    thisWeekTxs.forEach(t => byCat[t.cat] = (byCat[t.cat] || 0) + t.amount);
+    const topCat = Object.entries(byCat).sort((a, b) => b[1] - a[1])[0];
+    if (topCat) {
+      const lastWeekCatAmt = lastWeekTxs.filter(t => t.cat === topCat[0]).reduce((s, t) => s + t.amount, 0);
+      if (lastWeekCatAmt > 0) {
+        const catChg = Math.round(((topCat[1] - lastWeekCatAmt) / lastWeekCatAmt) * 100);
+        const up = catChg > 0;
+        if (Math.abs(catChg) >= 10) {
+          insights.push({
+            icon: up ? '⚠️' : '✅',
+            bg: up ? 'var(--amber-bg)' : 'var(--green-bg)',
+            text: `<strong>${topCat[0]}</strong> spending is ${up ? 'up' : 'down'} <strong>${Math.abs(catChg)}%</strong> vs last week`,
+            sub: `${fmt(topCat[1])} this week vs ${fmt(lastWeekCatAmt)} last week`
+          });
+        }
+      } else {
+        insights.push({
+          icon: '💸',
+          bg: 'var(--blue-bg)',
+          text: `Top spend this week: <strong>${topCat[0]}</strong>`,
+          sub: `${fmt(topCat[1])} across ${thisWeekTxs.filter(t => t.cat === topCat[0]).length} transactions`
+        });
+      }
+    }
+  }
+
+  // Insight 3: savings rate check
+  const txm = thisMonthTxs();
+  const inc  = txm.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const exp2 = txm.filter(t => t.type === 'expense' || t.type === 'bill').reduce((s, t) => s + t.amount, 0);
+  if (inc > 0) {
+    const sr = Math.round(((inc - exp2) / inc) * 100);
+    if (sr < 10 && sr >= 0) {
+      insights.push({ icon: '🎯', bg: 'var(--amber-bg)', text: `Savings rate is <strong>${sr}%</strong> this month`, sub: 'Aim for 20%+ to build long-term wealth' });
+    } else if (sr >= 20) {
+      insights.push({ icon: '🌟', bg: 'var(--green-bg)', text: `Great work — savings rate is <strong>${sr}%</strong> this month`, sub: 'You\'re on track for your goals' });
+    }
+  }
+
+  // Goal with no contributions this month
+  if (S.goals.length) {
+    const goalWithNoContrib = S.goals.find(g => {
+      if (g.linkedAccount) return false;
+      const contrib = txm.filter(t => t.goalId === g.id).reduce((s, t) => s + (t.type === 'income' ? t.amount : -t.amount), 0);
+      return contrib === 0 && getGoalCurrent(g) < g.target;
+    });
+    if (goalWithNoContrib) {
+      insights.push({ icon: '🎯', bg: 'var(--blue-bg)', text: `No contributions to <strong>${goalWithNoContrib.name}</strong> this month`, sub: `${fmt(goalWithNoContrib.target - getGoalCurrent(goalWithNoContrib))} remaining to reach your goal` });
+    }
+  }
+
+  if (!insights.length) { el.innerHTML = ''; return; }
+
+  el.innerHTML = `<div class="card" style="margin-bottom:18px">
+    <div class="card-header" style="margin-bottom:10px">
+      <span class="card-title">💡 Weekly Insights</span>
+      <span class="badge badge-blue">${insights.length} insight${insights.length > 1 ? 's' : ''}</span>
+    </div>
+    ${insights.map(ins => `<div class="insight-row">
+      <div class="insight-icon" style="background:${ins.bg}">${ins.icon}</div>
+      <div class="insight-body">
+        <div class="insight-text">${ins.text}</div>
+        <div class="insight-sub">${ins.sub}</div>
+      </div>
+    </div>`).join('')}
+  </div>`;
 }
 
 // ═══════════════════════════════════════════════
@@ -3158,10 +3445,17 @@ loadConfig();
 loadLocal();
 renderAll();
 if (canReadRemotely()) {
-  // Show subtle loading indicator while pulling latest data from Sheets
+  // Show skeleton placeholders while pulling from Sheets
+  const metricsEl = document.getElementById('dash-metrics');
+  const bucketsEl = document.getElementById('dash-buckets');
+  if (metricsEl && !S.transactions.length) {
+    metricsEl.innerHTML = Array(7).fill('<div class="metric skeleton skel-metric"></div>').join('');
+  }
+  if (bucketsEl && !S.transactions.length) {
+    bucketsEl.innerHTML = Array(4).fill('<div class="bucket-card skeleton" style="height:90px"></div>').join('');
+  }
   setSyncState('syncing', 'Loading latest data...');
   loadAllFromSheets().then(() => {
-    // Date cache may be stale after sheet pull
     invalidateDateCache();
     renderAll();
   });
@@ -3261,6 +3555,10 @@ function editTransaction(id) {
   document.getElementById('edit-tx-due-field').style.display = tx.type === 'bill' ? 'block' : 'none';
   document.getElementById('edit-tx-due').value = tx.dueDate || '';
 
+  // Bucket
+  const bucketSel = document.getElementById('edit-tx-bucket');
+  if (bucketSel) bucketSel.value = tx.bucket || '';
+
   openModal('edit-tx-modal');
 }
 
@@ -3285,6 +3583,7 @@ async function saveEditTransaction() {
   const cat     = document.getElementById('edit-tx-cat').value;
   const account = document.getElementById('edit-tx-acc').value;
   const dueDate = document.getElementById('edit-tx-due').value;
+  const bucket  = document.getElementById('edit-tx-bucket').value;
 
   if (!desc || !amt || !isFinite(amt) || amt <= 0) { toast('Description and valid amount required'); return; }
 
@@ -3294,7 +3593,7 @@ async function saveEditTransaction() {
   S.transactions[idx] = {
     ...S.transactions[idx],
     date, desc, type, amount: Math.round(amt * 100) / 100,
-    cat, account, dueDate: dueDate || ''
+    cat, account, dueDate: dueDate || '', bucket: bucket || ''
   };
 
   invalidateDateCache();
