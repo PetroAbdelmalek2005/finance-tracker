@@ -437,6 +437,7 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
         </div>
         <div id="dash-recent"></div>
       </div>
+      </div><!-- /tab-content-inner -->
     </div><!-- /tab-dashboard -->
 
     <!-- ACCOUNTS -->
@@ -455,7 +456,8 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
         <div class="card-header"><span class="card-title">Balance Distribution</span></div>
         <div class="chart-wrap h160"><canvas id="chart-accounts-bar"></canvas></div>
       </div>
-    </div>
+      </div><!-- /tab-content-inner -->
+    </div><!-- /tab-accounts -->
 
     <!-- TRANSACTIONS -->
     <div id="tab-transactions" class="tab">
@@ -495,7 +497,8 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
         <div id="tx-summary"></div>
       </div>
       <div class="card" id="tx-list"></div>
-    </div>
+      </div><!-- /tab-content-inner -->
+    </div><!-- /tab-transactions -->
 
     <!-- BUDGET -->
     <div id="tab-budget" class="tab">
@@ -519,7 +522,8 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
         <div class="card-header"><span class="card-title">Budget vs Actual</span></div>
         <div class="chart-wrap h220"><canvas id="chart-budget"></canvas></div>
       </div>
-    </div>
+      </div><!-- /tab-content-inner -->
+    </div><!-- /tab-budget -->
 
     <!-- INVESTMENTS -->
     <div id="tab-investments" class="tab">
@@ -554,7 +558,8 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
           <div class="chart-wrap h160"><canvas id="chart-returns"></canvas></div>
         </div>
       </div>
-    </div>
+      </div><!-- /tab-content-inner -->
+    </div><!-- /tab-investments -->
 
     <!-- GOALS -->
     <div id="tab-goals" class="tab">
@@ -572,7 +577,8 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
         <div class="card-header"><span class="card-title">Goals Progress</span></div>
         <div class="chart-wrap h220"><canvas id="chart-goals"></canvas></div>
       </div>
-    </div>
+      </div><!-- /tab-content-inner -->
+    </div><!-- /tab-goals -->
 
     <!-- SETTINGS -->
     <div id="tab-settings" class="tab">
@@ -1355,9 +1361,18 @@ function closeMoreSheet() {
 function openModal(id) {
   if (id === 'tx-modal')     seedTxModal();
   if (id === 'import-modal') { seedImportModal(); resetImport(); }
-  document.getElementById(id).classList.add('open');
+  const modal = document.getElementById(id);
+  if (!modal) {
+    console.warn('openModal called with missing id:', id);
+    return;
+  }
+  modal.classList.add('open');
 }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function closeModal(id) {
+  const modal = document.getElementById(id);
+  if (!modal) return;
+  modal.classList.remove('open');
+}
 document.querySelectorAll('.modal-bg').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); }));
 document.addEventListener('click', e => {
   const dd  = document.getElementById('ticker-dropdown');
@@ -3248,14 +3263,16 @@ function parseCSVDate(raw) {
   if (!raw) return '';
   // Try ISO: 2024-01-15
   if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
-  // Try MM/DD/YYYY
-  const mdy = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (mdy) return `${mdy[3]}-${mdy[1].padStart(2,'0')}-${mdy[2].padStart(2,'0')}`;
-  // Try DD/MM/YYYY
-  const dmy = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (dmy) {
-    const d = new Date(`${dmy[3]}-${dmy[2].padStart(2,'0')}-${dmy[1].padStart(2,'0')}T00:00:00`);
-    if (!isNaN(d)) return `${dmy[3]}-${dmy[2].padStart(2,'0')}-${dmy[1].padStart(2,'0')}`;
+  // Try slash format and disambiguate MM/DD/YYYY vs DD/MM/YYYY.
+  // If both day/month <= 12 we default to MM/DD (common for exported bank CSVs).
+  const slash = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (slash) {
+    const a = parseInt(slash[1], 10);
+    const b = parseInt(slash[2], 10);
+    const y = slash[3];
+    if (a > 12 && b <= 12) return `${y}-${String(b).padStart(2,'0')}-${String(a).padStart(2,'0')}`; // DD/MM
+    if (b > 12 && a <= 12) return `${y}-${String(a).padStart(2,'0')}-${String(b).padStart(2,'0')}`; // MM/DD
+    if (a >= 1 && a <= 12 && b >= 1 && b <= 31) return `${y}-${String(a).padStart(2,'0')}-${String(b).padStart(2,'0')}`;
   }
   // Try Jan 15, 2024
   const d = new Date(raw);
