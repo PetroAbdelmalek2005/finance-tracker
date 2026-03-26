@@ -504,7 +504,7 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
           <select id="f-acc" onchange="renderTx()" class="filter-bar-select">
             <option value="">All accounts</option>
           </select>
-          <select id="f-month" onchange="renderTx()" class="filter-bar-select">
+          <select id="f-month" onchange="this.dataset.userSet='1';renderTx()" class="filter-bar-select">
             <option value="">All months</option>
           </select>
         </div>
@@ -1297,8 +1297,7 @@ function normalizeLinkedData() {
 function getGoalCurrent(goal) {
   if (!goal) return 0;
   if (goal.linkedAccount) {
-    const acc = S.accounts.find(a => a.name === goal.linkedAccount);
-    return Math.max(acc ? acc.balance : 0, 0);
+    return Math.max(getAccountCurrentBalance(goal.linkedAccount), 0);
   }
   return goal.current || 0;
 }
@@ -1554,8 +1553,27 @@ function monthTxs(m, y) {
   });
 }
 
+function accountTransactionDelta(accountName) {
+  if (!accountName) return 0;
+  return S.transactions.reduce((sum, t) => {
+    if (t.account !== accountName) return sum;
+    if (t.type === 'income') return sum + t.amount;
+    if (t.type === 'expense' || t.type === 'bill') return sum - t.amount;
+    if (t.type === 'transfer') return sum + (t.xferDir === 'in' ? t.amount : -t.amount);
+    return sum;
+  }, 0);
+}
+
+function getAccountCurrentBalance(accountOrName) {
+  const acc = typeof accountOrName === 'string'
+    ? S.accounts.find(a => a.name === accountOrName)
+    : accountOrName;
+  if (!acc) return 0;
+  return (acc.balance || 0) + accountTransactionDelta(acc.name);
+}
+
 function netWorth() {
-  return S.accounts.reduce((s, a) => s + a.balance, 0)
+  return S.accounts.reduce((s, a) => s + getAccountCurrentBalance(a), 0)
        + S.stocks.reduce((s, st) => s + st.shares * st.current, 0);
 }
 
@@ -1693,10 +1711,10 @@ function renderAccounts() {
     <div class="row" id="acc-row-${i}">
       <div class="row-left">
         <div class="row-title">${a.name}</div>
-        <div class="row-sub"><span class="badge badge-${a.type === 'Credit Card' || a.type === 'Loan' ? 'red' : 'blue'}">${a.type}</span></div>
+        <div class="row-sub"><span class="badge badge-${a.type === 'Credit Card' || a.type === 'Loan' ? 'red' : 'blue'}">${a.type}</span> · Opening ${fmt(a.balance)} · Activity ${(accountTransactionDelta(a.name) >= 0 ? '+' : '−') + fmt(accountTransactionDelta(a.name))}</div>
       </div>
       <div class="row-right" id="acc-right-${i}">
-        <span class="amount ${a.balance < 0 ? 'neg' : 'pos'}" style="cursor:pointer" title="Click to edit" onclick="editBalance(${i})">${a.balance < 0 ? '-' : ''}${fmt(a.balance)}</span>
+        <span class="amount ${getAccountCurrentBalance(a) < 0 ? 'neg' : 'pos'}" style="cursor:pointer" title="Click to edit opening balance" onclick="editBalance(${i})">${getAccountCurrentBalance(a) < 0 ? '-' : ''}${fmt(getAccountCurrentBalance(a))}</span>
         <button class="btn btn-sm" style="padding:3px 9px;font-size:11px" onclick="editBalance(${i})">Edit</button>
         <button class="del" onclick="deleteItem('accounts',${i},syncAccounts)">×</button>
       </div>
@@ -1787,7 +1805,10 @@ function renderTx() {
   const tf  = document.getElementById('f-type').value;
   const cf  = document.getElementById('f-cat').value;
   const af  = document.getElementById('f-acc').value;
-  const mf  = document.getElementById('f-month').value;
+  const monthSel = document.getElementById('f-month');
+  const defaultMonth = new Date().toISOString().slice(0,7);
+  if (!monthSel.value && monthSel.dataset.userSet !== '1') monthSel.value = defaultMonth;
+  const mf  = monthSel.value;
   const sf  = (document.getElementById('f-search').value || '').trim().toLowerCase();
   let txs   = S.transactions;
   if (tf)  txs = txs.filter(t => t.type === tf);
@@ -1957,7 +1978,7 @@ function renderBudget() {
   if (!S.budgets.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📊</div>No budgets set yet. Add a monthly limit for each spending category.</div>'; return; }
   const isCurrentMonth = bM - 1 === new Date().getMonth() && bY === new Date().getFullYear();
   el.innerHTML = S.budgets.map((b, i) => {
-    const spent = monthTxs(bM - 1, bY).filter(t => t.type === 'expense' && t.cat === b.cat).reduce((s, t) => s + t.amount, 0);
+    const spent = monthTxs(bM - 1, bY).filter(t => (t.type === 'expense' || t.type === 'bill') && t.cat === b.cat).reduce((s, t) => s + t.amount, 0);
     const pct = Math.min((spent / b.amount) * 100, 100);
     const color = pct > 90 ? '#E24B4A' : pct > 70 ? '#EF9F27' : '#1D9E75';
     const remaining = Math.max(b.amount - spent, 0);
@@ -2783,12 +2804,14 @@ function drawNetWorth() {
 
 function drawAccountsBar() {
   kill('acc-bar');
-  const pos = S.accounts.filter(a => a.balance > 0);
+  const pos = S.accounts
+    .map(a => ({ ...a, currentBalance: getAccountCurrentBalance(a) }))
+    .filter(a => a.currentBalance > 0);
   if (!pos.length) return;
   const ctx = document.getElementById('chart-accounts-bar'); if (!ctx) return;
   charts['acc-bar'] = new Chart(ctx, {
     type: 'bar',
-    data: { labels: pos.map(a => a.name), datasets: [{ data: pos.map(a => a.balance), backgroundColor: PALETTE, borderRadius: 5, borderSkipped: false, borderWidth: 0 }] },
+    data: { labels: pos.map(a => a.name), datasets: [{ data: pos.map(a => a.currentBalance), backgroundColor: PALETTE, borderRadius: 5, borderSkipped: false, borderWidth: 0 }] },
     options: { responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: { x: { grid: { display: false }, ticks: { color: chartColors().text, font: { size: 11 } } },
@@ -2798,14 +2821,16 @@ function drawAccountsBar() {
 
 function drawAccountsPie() {
   kill('acc-pie');
-  const pos = S.accounts.filter(a => a.balance > 0);
+  const pos = S.accounts
+    .map(a => ({ ...a, currentBalance: getAccountCurrentBalance(a) }))
+    .filter(a => a.currentBalance > 0);
   if (!pos.length) return;
   const ctx = document.getElementById('chart-accounts-pie'); if (!ctx) return;
   charts['acc-pie'] = new Chart(ctx, {
     type: 'pie',
     data: {
       labels: pos.map(a => a.name),
-      datasets: [{ data: pos.map(a => a.balance), backgroundColor: PALETTE.slice(0, pos.length), borderWidth: 0, hoverOffset: 4 }]
+      datasets: [{ data: pos.map(a => a.currentBalance), backgroundColor: PALETTE.slice(0, pos.length), borderWidth: 0, hoverOffset: 4 }]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
