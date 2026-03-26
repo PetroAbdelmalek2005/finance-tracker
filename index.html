@@ -27,14 +27,16 @@
   --green:#18b880;--red:#f04f4f;--blue:#4a82e4;--amber:#f5a623;--purple:#8b5cf6;
   --green-bg:#082818;--red-bg:#280a0a;--blue-bg:#0a1830;--amber-bg:#281800;
   --radius-sm:8px;--radius-md:12px;--radius-lg:16px;--radius-xl:20px;
-  --shadow:0 2px 12px rgba(0,0,0,.35);
+  --shadow:0 8px 24px rgba(0,0,0,.28);
+  --shadow-soft:0 4px 14px rgba(0,0,0,.18);
 }
 body.light{
   --bg-base:#f0f2f8;--bg-card:#ffffff;--bg-input:#f8f9fc;--bg-2:#eaecf4;--bg-3:#e0e4ef;--bg-4:#d4d9e8;
   --border:1px solid #e0e4ef;--border2:1px solid #c8cedf;--border3:1px solid #a8b0c8;
   --text:#0f1525;--text2:#1e2a42;--text3:#4a5570;--text4:#7a8aaa;--text5:#a8b2c8;
   --green-bg:#e8f8f0;--red-bg:#fef0f0;--blue-bg:#eff4fe;--amber-bg:#fef8e8;
-  --shadow:0 2px 12px rgba(0,0,0,.08);
+  --shadow:0 10px 24px rgba(10,22,50,.08);
+  --shadow-soft:0 5px 14px rgba(10,22,50,.06);
 }
 
 /* ── RESET ───────────────────────────────────────────────────── */
@@ -54,9 +56,9 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
 .nav-section{padding:16px 10px 8px;flex:1;overflow-y:auto;}
 .nav-label{font-size:10px;color:var(--text5);text-transform:uppercase;letter-spacing:.1em;padding:0 10px;margin-bottom:5px;margin-top:14px;}
 .nav-label:first-child{margin-top:0;}
-.nav-btn{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;background:none;border:none;color:var(--text3);font-size:13px;font-family:'DM Sans',sans-serif;border-radius:10px;cursor:pointer;text-align:left;transition:all .15s;margin-bottom:1px;}
+.nav-btn{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px;background:none;border:none;color:var(--text3);font-size:13px;font-family:'DM Sans',sans-serif;border-radius:10px;cursor:pointer;text-align:left;transition:all .2s ease;margin-bottom:1px;}
 .nav-btn:hover{background:var(--bg-2);color:var(--text2);}
-.nav-btn.active{background:var(--bg-3);color:var(--text);font-weight:500;}
+.nav-btn.active{background:var(--bg-3);color:var(--text);font-weight:500;box-shadow:var(--shadow-soft);}
 .nav-icon{width:16px;height:16px;opacity:.6;flex-shrink:0;}
 .nav-btn.active .nav-icon{opacity:1;}
 .sidebar-footer{padding:14px 10px;border-top:var(--border);}
@@ -74,8 +76,8 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
 .header-actions{display:flex;gap:8px;align-items:center;}
 
 /* ── BUTTONS ─────────────────────────────────────────────────── */
-.btn{padding:8px 16px;font-size:13px;font-family:'DM Sans',sans-serif;border-radius:10px;border:var(--border2);background:transparent;color:var(--text3);cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px;}
-.btn:hover{background:var(--bg-2);color:var(--text);}
+.btn{padding:8px 16px;font-size:13px;font-family:'DM Sans',sans-serif;border-radius:10px;border:var(--border2);background:transparent;color:var(--text3);cursor:pointer;transition:all .2s ease;display:inline-flex;align-items:center;gap:6px;}
+.btn:hover{background:var(--bg-2);color:var(--text);transform:translateY(-1px);}
 .btn-primary{background:var(--blue);border-color:var(--blue);color:#fff;}
 .btn-primary:hover{filter:brightness(1.1);}
 .btn-sm{padding:6px 13px;font-size:12px;}
@@ -85,7 +87,8 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
 
 /* ── METRIC CARDS ────────────────────────────────────────────── */
 .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:22px;}
-.metric{background:var(--bg-card);border:var(--border);border-radius:var(--radius-lg);padding:16px 18px;position:relative;overflow:hidden;box-shadow:var(--shadow);}
+.metric{background:var(--bg-card);border:var(--border);border-radius:var(--radius-lg);padding:16px 18px;position:relative;overflow:hidden;box-shadow:var(--shadow-soft);transition:transform .2s ease, box-shadow .2s ease;}
+.metric:hover{transform:translateY(-2px);box-shadow:var(--shadow);}
 .metric::after{content:'';position:absolute;bottom:-12px;right:-12px;width:56px;height:56px;border-radius:50%;opacity:.08;}
 .metric.green::after{background:var(--green);}
 .metric.red::after{background:var(--red);}
@@ -98,7 +101,8 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
 .metric-trend{font-size:11px;color:var(--text4);margin-top:5px;}
 
 /* ── CARDS ───────────────────────────────────────────────────── */
-.card{background:var(--bg-card);border:var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:16px;box-shadow:var(--shadow);}
+.card{background:var(--bg-card);border:var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:16px;box-shadow:var(--shadow-soft);transition:box-shadow .2s ease, border-color .2s ease;}
+.card:hover{box-shadow:var(--shadow);}
 .card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
 .card-title{font-size:14px;font-weight:500;color:var(--text2);}
 
@@ -114,7 +118,8 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
 .chart-wrap.h180{height:180px;}
 
 /* ── ROWS ────────────────────────────────────────────────────── */
-.row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:var(--border);}
+.row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:var(--border);transition:background .2s ease;}
+.row:hover{background:rgba(127,140,170,.05);}
 .row:last-child{border-bottom:none;}
 .row-left{flex:1;min-width:0;}
 .row-title{font-size:13px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -143,9 +148,10 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
 .prog-fill{height:100%;border-radius:4px;transition:width .5s ease;}
 
 /* ── MODALS ──────────────────────────────────────────────────── */
-.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:100;align-items:flex-end;justify-content:center;padding:0;}
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(2px);z-index:100;align-items:flex-end;justify-content:center;padding:0;}
 .modal-bg.open{display:flex;}
-.modal{background:var(--bg-card);border:var(--border2);border-radius:20px 20px 0 0;padding:24px 20px 32px;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;}
+.modal{background:var(--bg-card);border:var(--border2);border-radius:20px 20px 0 0;padding:24px 20px 32px;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;box-shadow:var(--shadow);opacity:.96;transform:translateY(14px) scale(.99);transition:transform .22s ease, opacity .22s ease;}
+.modal-bg.open .modal{opacity:1;transform:translateY(0) scale(1);}
 .modal-drag{width:40px;height:4px;background:var(--bg-3);border-radius:2px;margin:0 auto 18px;}
 .modal-title{font-size:17px;font-weight:500;color:var(--text);margin-bottom:18px;}
 .field{margin-bottom:13px;}
@@ -159,8 +165,9 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
 .modal-footer .btn{flex:1;}
 
 /* ── TABS ────────────────────────────────────────────────────── */
-.tab{display:none;}
-.tab.active{display:block;}
+.tab{display:none;opacity:0;transform:translateY(6px);}
+.tab.active{display:block;animation:fadeTab .24s ease forwards;}
+@keyframes fadeTab{to{opacity:1;transform:translateY(0);}}
 
 /* ── EMPTY STATE ─────────────────────────────────────────────── */
 .empty{text-align:center;padding:36px 20px;color:var(--text5);font-size:13px;}
@@ -189,7 +196,8 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
 /* ── SETTINGS ────────────────────────────────────────────────── */
-.settings-card{background:var(--bg-card);border:var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:14px;box-shadow:var(--shadow);}
+.settings-card{background:var(--bg-card);border:var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:14px;box-shadow:var(--shadow-soft);transition:box-shadow .2s ease;}
+.settings-card:hover{box-shadow:var(--shadow);}
 .settings-title{font-size:14px;font-weight:500;color:var(--text2);margin-bottom:5px;}
 .settings-desc{font-size:12px;color:var(--text4);line-height:1.6;margin-bottom:14px;}
 
@@ -604,7 +612,9 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
           <button class="btn btn-primary btn-sm" onclick="updateConfig()">Save Credentials</button>
           <button class="btn btn-sm" onclick="testConnection()">Test Connection</button>
+          <button class="btn btn-sm" onclick="runConnectionDiagnostics()">Run Diagnostics</button>
         </div>
+        <div id="conn-diagnostics" style="display:none;margin-top:10px;padding:10px 12px;background:var(--bg-2);border:var(--border2);border-radius:10px;font-size:11px;line-height:1.6;color:var(--text3);white-space:pre-wrap"></div>
         <div style="margin-top:14px;padding:12px 14px;background:var(--blue-bg);border-radius:10px;font-size:12px;color:var(--blue);line-height:1.6">
           <strong>How to get your Apps Script URL:</strong><br>
           In your Google Sheet → Extensions → Apps Script → paste the script code → Deploy → New deployment → Web App → Execute as: Me → Who has access: Anyone → Deploy → copy the URL.
@@ -1081,15 +1091,97 @@ function updateConfig() {
   toast('Credentials saved');
 }
 
+function pullConfigFromSettingsForm() {
+  const apiEl    = document.getElementById('set-api-key');
+  const sheetEl  = document.getElementById('set-sheet-id');
+  const scriptEl = document.getElementById('set-script-url');
+  if (!apiEl || !sheetEl || !scriptEl) return;
+  CONFIG.apiKey    = (apiEl.value || '').trim();
+  CONFIG.sheetId   = (sheetEl.value || '').trim();
+  CONFIG.scriptUrl = (scriptEl.value || '').trim();
+  localStorage.setItem('ft_config', JSON.stringify(CONFIG));
+}
+
 async function testConnection() {
+  pullConfigFromSettingsForm();
   if (!CONFIG.apiKey || !CONFIG.sheetId) { toast('No credentials saved yet'); return; }
   setSyncState('syncing', 'Testing...');
   try {
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.sheetId}?key=${CONFIG.apiKey}`;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(CONFIG.sheetId)}?key=${encodeURIComponent(CONFIG.apiKey)}`;
     const r = await fetch(url);
-    if (r.ok) { setSyncState('ok', 'Connected'); toast('Connection successful!'); }
-    else { setSyncState('error', 'Error'); toast('Connection failed — check your credentials'); }
+    if (r.ok) {
+      if (CONFIG.scriptUrl) {
+        const marker = `FT_WRITE_TEST ${new Date().toISOString()}`;
+        const writeOk = await sheetsWrite(`${SHEET_NAMES.accounts}!Z1`, [[marker]], 'RAW');
+        if (writeOk) {
+          setSyncState('ok', 'Connected');
+          toast('Read + write tests passed');
+        } else {
+          setSyncState('error', 'Write failed');
+          toast('Read passed, but write failed. Check Apps Script URL/deployment access.');
+        }
+      } else {
+        setSyncState('ok', 'Read-only');
+        toast('Read works. Add Apps Script URL for push/write.');
+      }
+    } else {
+      const details = await r.json().catch(() => ({}));
+      const msg = (((details || {}).error || {}).message || 'Connection failed — check API key, Sheet ID, and API restrictions');
+      setSyncState('error', 'Error');
+      toast(msg);
+    }
   } catch(e) { setSyncState('error', 'Error'); toast('Network error'); }
+}
+
+async function runConnectionDiagnostics() {
+  pullConfigFromSettingsForm();
+  const box = document.getElementById('conn-diagnostics');
+  if (!box) return;
+  box.style.display = 'block';
+  box.textContent = 'Running diagnostics...';
+
+  const lines = [];
+  const now = new Date().toISOString();
+  lines.push(`Time: ${now}`);
+  lines.push(`API key set: ${CONFIG.apiKey ? 'yes' : 'no'}`);
+  lines.push(`Sheet ID set: ${CONFIG.sheetId ? 'yes' : 'no'}`);
+  lines.push(`Apps Script URL set: ${CONFIG.scriptUrl ? 'yes' : 'no'}`);
+
+  if (!CONFIG.apiKey || !CONFIG.sheetId) {
+    lines.push('Read test: skipped (missing API key or Sheet ID)');
+    box.textContent = lines.join('\n');
+    return;
+  }
+
+  const readUrl = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(CONFIG.sheetId)}?key=${encodeURIComponent(CONFIG.apiKey)}`;
+  try {
+    const readRes = await fetch(readUrl);
+    if (readRes.ok) {
+      lines.push(`Read test: PASS (${readRes.status})`);
+    } else {
+      const d = await readRes.json().catch(() => ({}));
+      const msg = (((d || {}).error || {}).message || 'Unknown error');
+      lines.push(`Read test: FAIL (${readRes.status})`);
+      lines.push(`Read error: ${msg}`);
+    }
+  } catch (e) {
+    lines.push('Read test: FAIL (network/CORS error)');
+  }
+
+  if (!CONFIG.scriptUrl) {
+    lines.push('Write test: SKIPPED (no Apps Script URL configured)');
+  } else {
+    const marker = `FT_DIAG ${now}`;
+    const writeOk = await sheetsWrite(`${SHEET_NAMES.accounts}!Z1`, [[marker]], 'RAW');
+    lines.push(`Write test: ${writeOk ? 'PASS' : 'FAIL'}`);
+    if (!writeOk) {
+      lines.push('Write hint: confirm Apps Script deployment is Web App + access is "Anyone".');
+    }
+  }
+
+  lines.push(`Read endpoint: ${readUrl}`);
+  lines.push(`Write endpoint: ${CONFIG.scriptUrl || '(not set)'}`);
+  box.textContent = lines.join('\n');
 }
 
 // ═══════════════════════════════════════════════
@@ -1240,7 +1332,8 @@ async function loadAllFromSheets() {
 // ─── Write full sheet ───
 async function pushToSheets(sheetName, headers, rows) {
   const values = [headers, ...rows];
-  await sheetsWrite(`${sheetName}!A1`, values);
+  const ok = await sheetsWrite(`${sheetName}!A1`, values);
+  if (!ok) throw new Error(`Write failed for ${sheetName}. Check Apps Script URL and deployment access.`);
 }
 
 async function syncAccounts() { await pushToSheets(SHEET_NAMES.accounts, ['ID','Name','Type','Balance'], S.accounts.map(a => [a.id, a.name, a.type, a.balance])); }
@@ -2701,21 +2794,34 @@ function importData(e) {
       S = { ...S, ...data };
       saveLocal(); renderAll();
       toast('Data imported successfully');
-      if (CONFIG.apiKey) {
+      if (CONFIG.apiKey && CONFIG.scriptUrl) {
         setSyncState('syncing', 'Pushing...');
         await Promise.all([syncAccounts(), syncTransactions(), syncBudgets(), syncStocks(), syncGoals()]);
         setSyncState('ok', 'Synced');
+      } else if (CONFIG.apiKey && !CONFIG.scriptUrl) {
+        setSyncState('ok', 'Read-only');
+        toast('Imported locally. Add Apps Script URL in Settings to enable push.');
       }
-    } catch(err) { toast('Import failed — invalid file'); }
+    } catch(err) {
+      console.error(err);
+      toast('Import failed — invalid file or write configuration');
+    }
   };
   reader.readAsText(file);
 }
 
 async function forcePush() {
+  pullConfigFromSettingsForm();
   const statusEl = document.getElementById('manual-sync-status');
   if (!CONFIG.apiKey || !CONFIG.sheetId) {
     if (statusEl) statusEl.textContent = 'No Google Sheets credentials saved. Add them above first.';
     toast('No credentials — add your API key and Sheet ID first'); return;
+  }
+  if (!CONFIG.scriptUrl) {
+    setSyncState('error', 'Write not set');
+    if (statusEl) statusEl.textContent = 'Push requires Apps Script URL. Add it in Settings and deploy as Web App.';
+    toast('Push needs Apps Script URL (write endpoint)');
+    return;
   }
   if (statusEl) statusEl.textContent = 'Pushing all local data to Google Sheets...';
   setSyncState('syncing', 'Pushing...');
@@ -2732,13 +2838,15 @@ async function forcePush() {
     if (statusEl) statusEl.textContent = `✓ All data pushed to Google Sheets · ${now}`;
     toast('All data pushed to Google Sheets');
   } catch(e) {
+    console.error(e);
     setSyncState('error', 'Error');
-    if (statusEl) statusEl.textContent = 'Push failed — check your connection and credentials';
-    toast('Push failed');
+    if (statusEl) statusEl.textContent = 'Push failed — verify Apps Script deployment + access ("Anyone") and Sheet credentials';
+    toast('Push failed — check script URL/deployment and credentials');
   }
 }
 
 async function forcePull() {
+  pullConfigFromSettingsForm();
   const statusEl = document.getElementById('manual-sync-status');
   if (!CONFIG.apiKey || !CONFIG.sheetId) {
     if (statusEl) statusEl.textContent = 'No Google Sheets credentials saved. Add them above first.';
