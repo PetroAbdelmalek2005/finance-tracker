@@ -757,35 +757,6 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<!-- Edit Transaction Modal -->
-<div class="modal-bg" id="edit-tx-modal">
-  <div class="modal">
-    <div class="modal-drag"></div>
-    <div class="modal-title">Edit Transaction</div>
-    <input type="hidden" id="edit-tx-id">
-    <div class="field-row">
-      <div class="field"><label>Type</label>
-        <select id="edit-tx-type">
-          <option value="expense">Expense</option>
-          <option value="income">Income</option>
-          <option value="bill">Bill Payment</option>
-        </select>
-      </div>
-      <div class="field"><label>Date</label><input id="edit-tx-date" type="date"></div>
-    </div>
-    <div class="field"><label>Description</label><input id="edit-tx-desc" placeholder="Description"></div>
-    <div class="field-row">
-      <div class="field"><label>Amount ($)</label><input id="edit-tx-amt" type="number" step="0.01"></div>
-      <div class="field"><label>Category</label><select id="edit-tx-cat"></select></div>
-    </div>
-    <div class="field"><label>Account</label><select id="edit-tx-acc"></select></div>
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal('edit-tx-modal')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveEditTransaction()">Save Changes</button>
-    </div>
-  </div>
-</div>
-
 <!-- Import Bank Statement Modal -->
 <div class="modal-bg" id="import-modal">
   <div class="modal" style="max-width:520px">
@@ -1651,6 +1622,12 @@ function showTab(id, btn) {
     document.querySelectorAll('.nav-btn[data-tab]').forEach(b => { if (b.dataset.tab === tabId) b.classList.add('active'); });
   }
   activeTab = id;
+  // Render tab content immediately when switching
+  if (id === 'transactions') renderTx();
+  if (id === 'budget')       renderBudget();
+  if (id === 'investments')  renderStocks();
+  if (id === 'goals')        renderGoals();
+  if (id === 'accounts')     renderAccounts();
   setTimeout(() => drawCharts(id), 60);
   if (id === 'investments') setTimeout(() => refreshPrices(false), 200);
   // Keep "More" button active when viewing a "more" tab
