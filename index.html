@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Finance Tracker</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0b0e18">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
@@ -661,6 +666,11 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
       <div class="settings-card">
         <div class="settings-title">Google Sheets Sync</div>
         <div class="settings-desc">Manually push your local data up to Google Sheets, or pull fresh data down from Google Sheets to this device. Use Push if you've made changes locally that haven't synced. Use Pull if another device has newer data.</div>
+        <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;cursor:pointer">
+          <input type="checkbox" id="set-auto-sync" onchange="updateConfig()"
+                 style="width:16px;height:16px;accent-color:var(--green)" checked>
+          <span style="font-size:13px">Auto-sync changes to Google Sheets</span>
+        </label>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-primary btn-sm" onclick="forcePush()">
             ↑ Push all data to Sheets
@@ -1125,7 +1135,7 @@ const SHEET_NAMES = {
   prices:       'Prices'   // auto-managed tab for GoogleFinance() live prices
 };
 
-let CONFIG = { sheetId: '', scriptUrl: '' };
+let CONFIG = { sheetId: '', scriptUrl: '', autoSync: true };
 function canReadViaScript() { return !!(CONFIG.scriptUrl && CONFIG.sheetId); }
 function canReadRemotely() { return canReadViaScript(); }
 function hasSheetsCredentials() { return !!(CONFIG.sheetId && CONFIG.scriptUrl); }
@@ -1157,6 +1167,8 @@ function loadConfig() {
   const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
   setVal('set-sheet-id',   CONFIG.sheetId);
   setVal('set-script-url', CONFIG.scriptUrl);
+  const autoSyncEl = document.getElementById('set-auto-sync');
+  if (autoSyncEl) autoSyncEl.checked = CONFIG.autoSync !== false;
 
   // Also hide banner if credentials are saved
   if (canReadRemotely()) {
@@ -1172,6 +1184,10 @@ function saveConfig() {
     return;
   }
   persistConfig();
+  // Mirror credentials into the Settings form fields so forcePush/forcePull work immediately
+  const _sv = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+  _sv('set-sheet-id',   CONFIG.sheetId);
+  _sv('set-script-url', CONFIG.scriptUrl);
   localStorage.removeItem('ft_skipped_config');
   document.getElementById('config-banner').classList.remove('show');
   toast('Connected via Apps Script. Loading your data...');
@@ -1189,8 +1205,9 @@ function skipConfig() {
 }
 
 function updateConfig() {
-  CONFIG.sheetId  = document.getElementById('set-sheet-id').value.trim();
+  CONFIG.sheetId   = document.getElementById('set-sheet-id').value.trim();
   CONFIG.scriptUrl = normalizeScriptUrl((document.getElementById('set-script-url').value || '').trim());
+  CONFIG.autoSync  = document.getElementById('set-auto-sync')?.checked ?? true;
   persistConfig();
   toast('Credentials saved');
 }
@@ -1219,7 +1236,8 @@ async function testConnection() {
       return;
     }
     const marker = `FT_WRITE_TEST ${new Date().toISOString()}`;
-    const writeOk = await sheetsWrite(`${SHEET_NAMES.accounts}!A1`, [[marker]], 'RAW');
+    // Write to a throwaway test sheet — NOT a data sheet — to avoid clearContents wiping real data
+    const writeOk = await sheetsWrite('_FT_Test!A1', [[marker]], 'RAW');
     if (writeOk) {
       setSyncState('ok', 'Connected');
       toast('Read + write tests passed ✓');
@@ -1273,9 +1291,9 @@ async function runConnectionDiagnostics() {
       lines.push({ text: `Read test (Apps Script): FAIL (network error)`, type: 'fail' });
     }
 
-    // Write test
+    // Write test — use a throwaway sheet to avoid wiping real data via clearContents
     const marker = `FT_DIAG ${now}`;
-    const writeOk = await sheetsWrite(`${SHEET_NAMES.accounts}!A1`, [[marker]], 'RAW');
+    const writeOk = await sheetsWrite('_FT_Test!A1', [[marker]], 'RAW');
     lines.push({ text: `Write test: ${writeOk ? 'PASS' : 'FAIL'}`, type: writeOk ? 'pass' : 'fail' });
     if (!writeOk) {
       lines.push({ text: 'Hint: Confirm Apps Script deployment type is Web App and access is set to "Anyone".', type: 'hint' });
@@ -1311,6 +1329,7 @@ const MILESTONE_KEY = 'ft_milestones_v1';
 function saveLocal() {
   invalidateDateCache(); // dates may have changed
   localStorage.setItem(LSKEY, JSON.stringify(S));
+  schedulePush(); // auto-push to Google Sheets if credentials + autoSync are configured
 }
 
 function loadLocal() {
@@ -1509,6 +1528,48 @@ function setSyncState(state, label) {
   const lbl = document.getElementById('sync-label');
   dot.className = 'sync-dot' + (state === 'syncing' ? ' syncing' : state === 'error' ? ' error' : '');
   lbl.textContent = label;
+}
+
+// ── Auto-sync (laptop ↔ phone) ──────────────────────────────────
+let _pushTimer = null;
+let _lastSyncTime = 0;
+const AUTO_SYNC_DEBOUNCE_MS     = 3000;
+const AUTO_SYNC_INTERVAL_MS     = 120000; // 2 minutes
+const VISIBILITY_SYNC_COOLDOWN_MS = 30000; // 30 seconds
+
+function schedulePush() {
+  if (!CONFIG.autoSync || !CONFIG.scriptUrl) return;
+  clearTimeout(_pushTimer);
+  _pushTimer = setTimeout(async () => {
+    setSyncState('syncing', 'Auto-saving...');
+    try {
+      await Promise.all([syncAccounts(), syncTransactions(), syncBudgets(), syncStocks(), syncGoals()]);
+      _lastSyncTime = Date.now();
+      setSyncState('ok', 'Synced');
+    } catch(e) {
+      setSyncState('error', 'Auto-save failed');
+      // Queue a background retry when connectivity is restored
+      if ('serviceWorker' in navigator && 'SyncManager' in window) {
+        navigator.serviceWorker.ready.then(reg => reg.sync.register('ft-sync').catch(() => {}));
+      }
+    }
+  }, AUTO_SYNC_DEBOUNCE_MS);
+}
+
+function startPeriodicSync() {
+  setInterval(async () => {
+    if (!CONFIG.autoSync || !canReadRemotely() || document.hidden) return;
+    await loadAllFromSheets();
+    _lastSyncTime = Date.now();
+  }, AUTO_SYNC_INTERVAL_MS);
+
+  document.addEventListener('visibilitychange', async () => {
+    if (document.hidden || !CONFIG.autoSync || !canReadRemotely()) return;
+    if (Date.now() - _lastSyncTime < VISIBILITY_SYNC_COOLDOWN_MS) return;
+    setSyncState('syncing', 'Checking for updates...');
+    await loadAllFromSheets();
+    _lastSyncTime = Date.now();
+  });
 }
 
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
@@ -3593,7 +3654,16 @@ if (canReadRemotely()) {
   loadAllFromSheets().then(() => {
     invalidateDateCache();
     renderAll();
+    _lastSyncTime = Date.now();
   });
+}
+startPeriodicSync();
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').then(reg => {
+    navigator.serviceWorker.addEventListener('message', e => {
+      if (e.data?.type === 'BG_SYNC_READY' && canReadRemotely()) schedulePush();
+    });
+  }).catch(() => {}); // SW optional — graceful degradation
 }
 
 // ═══════════════════════════════════════════════
