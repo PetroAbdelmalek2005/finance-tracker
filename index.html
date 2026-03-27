@@ -41,8 +41,8 @@ body.light{
 
 /* ── RESET ───────────────────────────────────────────────────── */
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
-html{font-size:15px;-webkit-text-size-adjust:100%;}
-body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);color:var(--text);min-height:100vh;line-height:1.5;transition:background .25s,color .25s;}
+html{font-size:15px;-webkit-text-size-adjust:100%;overflow-x:hidden;}
+body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);color:var(--text);min-height:100vh;line-height:1.5;transition:background .25s,color .25s;overflow-x:hidden;}
 
 /* ── LAYOUT ──────────────────────────────────────────────────── */
 .shell{display:flex;min-height:100vh;}
@@ -230,7 +230,7 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
 @media(max-width:680px){
   /* Layout */
   .sidebar{display:none;}
-  .main{margin-left:0;padding:0 0 90px;}
+  .main{margin-left:0;padding:0 0 90px;width:100%;max-width:100%;}
 
   /* Mobile header — compact sticky bar */
   .mob-header{
@@ -379,6 +379,8 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
   .del{padding:9px 11px;font-size:17px;}
   .filter-selects{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
   .filter-selects .filter-bar-select{min-width:0;width:100%;}
+  /* Override translateX animations to avoid horizontal overflow on mobile */
+  .tab.active.enter-right,.tab.active.enter-left{animation:fadeTab .26s ease forwards;}
 }
 </style>
 </head>
