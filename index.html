@@ -1111,6 +1111,8 @@ const SHEET_NAMES = {
 let CONFIG = { sheetId: '', scriptUrl: '' };
 function canReadViaScript() { return !!(CONFIG.scriptUrl && CONFIG.sheetId); }
 function canReadRemotely() { return canReadViaScript(); }
+function hasSheetsCredentials() { return !!(CONFIG.sheetId && CONFIG.scriptUrl); }
+function missingSheetsCredentialsMessage() { return 'Add Spreadsheet ID and Apps Script URL first'; }
 function normalizeScriptUrl(url) {
   const clean = (url || '').trim();
   if (!clean) return '';
@@ -1148,8 +1150,8 @@ function loadConfig() {
 function saveConfig() {
   CONFIG.sheetId   = document.getElementById('cfg-sheet-id').value.trim();
   CONFIG.scriptUrl = normalizeScriptUrl(document.getElementById('cfg-script-url').value);
-  if (!CONFIG.sheetId || !CONFIG.scriptUrl) {
-    toast('Provide both Spreadsheet ID and Apps Script URL');
+  if (!hasSheetsCredentials()) {
+    toast(missingSheetsCredentialsMessage());
     return;
   }
   persistConfig();
@@ -1187,8 +1189,8 @@ function pullConfigFromSettingsForm() {
 
 async function testConnection() {
   pullConfigFromSettingsForm();
-  if (!CONFIG.sheetId || !CONFIG.scriptUrl) {
-    toast('Add Spreadsheet ID and Apps Script URL first');
+  if (!hasSheetsCredentials()) {
+    toast(missingSheetsCredentialsMessage());
     return;
   }
   setSyncState('syncing', 'Testing...');
@@ -1376,8 +1378,16 @@ async function loadAllFromSheets() {
     const safeStr = (v, fallback='') => (v !== undefined && v !== null && String(v).trim() !== '') ? String(v).trim() : fallback;
     const safeNum = (v, fallback=0) => { const n = parseFloat(v); return isFinite(n) ? n : fallback; };
 
+    // Load all tabs concurrently to reduce initial sync latency
+    const [acc, txs, bud, stk, gls] = await Promise.all([
+      sheetsRead(`${SHEET_NAMES.accounts}!A2:D`),
+      sheetsRead(`${SHEET_NAMES.transactions}!A2:L`),
+      sheetsRead(`${SHEET_NAMES.budgets}!A2:C`),
+      sheetsRead(`${SHEET_NAMES.stocks}!A2:F`),
+      sheetsRead(`${SHEET_NAMES.goals}!A2:G`)
+    ]);
+
     // Accounts
-    const acc = await sheetsRead(`${SHEET_NAMES.accounts}!A2:D`);
     if (acc && acc.length) S.accounts = acc
       .filter(r => r && safeStr(r[0]) && safeStr(r[1]))
       .map(r => {
@@ -1386,26 +1396,22 @@ async function loadAllFromSheets() {
       });
 
     // Transactions
-    const txs = await sheetsRead(`${SHEET_NAMES.transactions}!A2:L`);
     if (txs && txs.length) S.transactions = txs
       .filter(r => r && safeStr(r[0]) && safeStr(r[1]) && safeNum(r[4]) !== 0)
       .map(r => ({ id: safeStr(r[0]), date: safeStr(r[1]), desc: safeStr(r[2],'(no description)'), type: safeStr(r[3],'expense'), amount: Math.abs(safeNum(r[4])), cat: safeStr(r[5],'Other'), account: safeStr(r[6],''), xferDir: safeStr(r[7]), xferRef: safeStr(r[8]), dueDate: safeStr(r[9]), goalId: safeStr(r[10]), bucket: safeStr(r[11]) }))
       .sort((a,b) => b.date.localeCompare(a.date));
 
     // Budgets
-    const bud = await sheetsRead(`${SHEET_NAMES.budgets}!A2:C`);
     if (bud && bud.length) S.budgets = bud
       .filter(r => r && safeStr(r[0]) && safeStr(r[1]) && safeNum(r[2]) > 0)
       .map(r => ({ id: safeStr(r[0]), cat: safeStr(r[1]), amount: safeNum(r[2]) }));
 
     // Stocks
-    const stk = await sheetsRead(`${SHEET_NAMES.stocks}!A2:F`);
     if (stk && stk.length) S.stocks = stk
       .filter(r => r && safeStr(r[0]) && safeStr(r[1]) && safeNum(r[3]) > 0)
       .map(r => ({ id: safeStr(r[0]), ticker: safeStr(r[1]), name: safeStr(r[2],r[1]||'?'), shares: safeNum(r[3]), costPerShare: safeNum(r[4]), current: safeNum(r[5]) }));
 
     // Goals
-    const gls = await sheetsRead(`${SHEET_NAMES.goals}!A2:G`);
     if (gls && gls.length) S.goals = gls
       .filter(r => r && safeStr(r[0]) && safeStr(r[1]) && safeNum(r[2]) > 0)
       .map(r => ({ id: safeStr(r[0]), name: safeStr(r[1]), target: safeNum(r[2]), current: safeNum(r[3]), deadline: safeStr(r[4]), linkedAccount: safeStr(r[5]), trackMode: safeStr(r[6], safeStr(r[5]) ? 'account' : 'manual') }));
@@ -3264,9 +3270,9 @@ async function forcePush() {
 async function forcePull() {
   pullConfigFromSettingsForm();
   const statusEl = document.getElementById('manual-sync-status');
-  if (!canReadRemotely()) {
-    if (statusEl) statusEl.textContent = 'No read credentials saved. Add Sheet ID + API key or Apps Script URL first.';
-    toast('No read credentials — add Sheet ID plus API key or Apps Script URL first'); return;
+  if (!canReadRemotely() || !hasSheetsCredentials()) {
+    if (statusEl) statusEl.textContent = missingSheetsCredentialsMessage();
+    toast(`No read credentials — ${missingSheetsCredentialsMessage().toLowerCase()}`); return;
   }
   if (!confirm('This will replace all local data with what\'s in your Google Sheet. Any unsynced local changes will be lost. Continue?')) return;
   if (statusEl) statusEl.textContent = 'Pulling all data from Google Sheets...';
