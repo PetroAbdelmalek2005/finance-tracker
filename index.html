@@ -516,7 +516,7 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
       <div class="card" id="accounts-list"></div>
       <div class="grid-2" style="margin-top:18px">
         <div class="card">
-          <div class="card-header"><span class="card-title">Balance Distribution (Bar)</span></div>
+          <div class="card-header"><span class="card-title">Balance by Account Type</span></div>
           <div class="chart-wrap h160"><canvas id="chart-accounts-bar"></canvas></div>
         </div>
         <div class="card">
@@ -3059,14 +3059,17 @@ function drawNetWorth() {
 
 function drawAccountsBar() {
   kill('acc-bar');
-  const pos = S.accounts
-    .map(a => ({ ...a, currentBalance: getAccountCurrentBalance(a) }))
-    .filter(a => a.currentBalance > 0);
-  if (!pos.length) return;
+  const byType = {};
+  S.accounts.forEach(a => {
+    if (a.balance > 0) byType[a.type || 'Other'] = (byType[a.type || 'Other'] || 0) + a.balance;
+  });
+  const labels = Object.keys(byType);
+  if (!labels.length) return;
+  const data = Object.values(byType);
   const ctx = document.getElementById('chart-accounts-bar'); if (!ctx) return;
   charts['acc-bar'] = new Chart(ctx, {
-    type: 'bar',
-    data: { labels: pos.map(a => a.name), datasets: [{ data: pos.map(a => a.currentBalance), backgroundColor: PALETTE, borderRadius: 5, borderSkipped: false, borderWidth: 0 }] },
+    type: 'pie',
+    data: { labels, datasets: [{ data, backgroundColor: PALETTE.slice(0, labels.length), borderWidth: 0, hoverOffset: 4 }] },
     options: { responsive: true, maintainAspectRatio: false,
       plugins: { legend: { position: 'right', labels: { color: chartColors().text, font: { size: 11 }, boxWidth: 9, padding: 8 } } } }
   });
