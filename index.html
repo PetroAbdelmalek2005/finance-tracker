@@ -896,6 +896,39 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
   </div>
 </div>
 
+<!-- Edit Account -->
+<div class="modal-bg" id="edit-acc-modal">
+  <div class="modal">
+    <div class="modal-drag"></div>
+    <div class="modal-title">Edit Account</div>
+    <div class="field"><label>Account Name</label><input id="edit-acc-name" placeholder="e.g. TD Chequing"></div>
+    <div class="field"><label>Type</label>
+      <select id="edit-acc-type">
+        <option value="Chequing">Chequing</option>
+        <option value="Savings">Savings</option>
+        <option value="Credit Card">Credit Card</option>
+        <option value="Investment">Investment</option>
+        <option value="TFSA">TFSA</option>
+        <option value="RRSP">RRSP</option>
+        <option value="Loan">Loan</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+    <div class="field"><label>Currency</label>
+      <select id="edit-acc-currency">
+        <option value="CAD">CAD – Canadian Dollar</option>
+        <option value="USD">USD – US Dollar</option>
+      </select>
+    </div>
+    <div class="field"><label>Opening Balance (negative = debt)</label><input id="edit-acc-bal" type="number" step="0.01" placeholder="0.00"></div>
+    <input type="hidden" id="edit-acc-idx">
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('edit-acc-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditAccount()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
 <!-- Add Transaction -->
 <div class="modal-bg" id="tx-modal">
   <div class="modal">
@@ -1924,37 +1957,32 @@ function renderAccounts() {
 
 function editBalance(i) {
   const a = S.accounts[i];
-  const isUSD = (a.currency === 'USD');
-  const rightEl = document.getElementById(`acc-right-${i}`);
-  // Replace the right side with an inline input + save/cancel
-  rightEl.innerHTML = `
-    ${isUSD ? '<span style="color:var(--text4);font-size:11px;margin-right:4px">USD opening balance:</span>' : ''}
-    <input id="bal-input-${i}" type="number" step="0.01" value="${a.balance}"
-      style="width:120px;background:#0f1117;border:1px solid #4a7fcb;border-radius:6px;
-             padding:5px 9px;color:#e8eaf0;font-size:13px;font-family:'DM Sans',sans-serif;"
-      onkeydown="if(event.key==='Enter')saveBalance(${i});if(event.key==='Escape')renderAccounts()">
-    <button class="btn btn-primary btn-sm" onclick="saveBalance(${i})">Save</button>
-    <button class="btn btn-sm" onclick="renderAccounts()">Cancel</button>`;
-  // Focus and select the input
-  setTimeout(() => {
-    const inp = document.getElementById(`bal-input-${i}`);
-    if (inp) { inp.focus(); inp.select(); }
-  }, 30);
+  document.getElementById('edit-acc-idx').value = i;
+  document.getElementById('edit-acc-name').value = a.name;
+  document.getElementById('edit-acc-type').value = a.type;
+  document.getElementById('edit-acc-currency').value = a.currency || 'CAD';
+  document.getElementById('edit-acc-bal').value = a.balance;
+  openModal('edit-acc-modal');
+  setTimeout(() => document.getElementById('edit-acc-name').focus(), 80);
 }
 
-async function saveBalance(i) {
-  const inp = document.getElementById(`bal-input-${i}`);
-  if (!inp) return;
-  const newBal = parseFloat(inp.value);
-  if (!isFinite(newBal)) { toast('Enter a valid number'); return; }
-  const normalized = normalizeAccountBalance(S.accounts[i].type, newBal);
-  S.accounts[i].balance = normalized;
+async function saveEditAccount() {
+  const i = parseInt(document.getElementById('edit-acc-idx').value, 10);
+  const name = document.getElementById('edit-acc-name').value.trim();
+  const type = document.getElementById('edit-acc-type').value;
+  const currency = document.getElementById('edit-acc-currency').value;
+  const rawBal = parseFloat(document.getElementById('edit-acc-bal').value);
+  if (!name) { toast('Account name is required'); return; }
+  if (!isFinite(rawBal)) { toast('Enter a valid balance'); return; }
+  const normalized = normalizeAccountBalance(type, rawBal);
+  S.accounts[i] = { ...S.accounts[i], name, type, currency, balance: normalized };
   saveLocal();
+  closeModal('edit-acc-modal');
   renderAll();
   setSyncState('syncing', 'Saving...');
   await syncAccounts();
   setSyncState('ok', 'Synced');
-  toast(`${S.accounts[i].name} updated to ${normalized < 0 ? '-' : ''}${fmt(normalized)}`);
+  toast(`${name} updated`);
 }
 
 // ═══════════════════════════════════════════════
