@@ -426,10 +426,6 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
         Transactions
       </button>
-      <button class="nav-btn" onclick="showTab('budget',this)" data-tab="budget">
-        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-        Budget
-      </button>
       <div class="nav-label" style="margin-top:14px">Growth</div>
       <button class="nav-btn" onclick="showTab('investments',this)" data-tab="investments">
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
@@ -513,16 +509,11 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
         <button class="btn btn-primary btn-sm" onclick="openModal('acc-modal')">+ Add Account</button>
       </div>
       <div class="tab-content-inner">
+      <div class="metrics" id="acc-stats" style="margin-bottom:14px"></div>
       <div class="card" id="accounts-list"></div>
-      <div class="grid-2" style="margin-top:18px">
-        <div class="card">
-          <div class="card-header"><span class="card-title">Balance by Account Type</span></div>
-          <div class="chart-wrap h160"><canvas id="chart-accounts-bar"></canvas></div>
-        </div>
-        <div class="card">
-          <div class="card-header"><span class="card-title">Balance Distribution (Pie)</span></div>
-          <div class="chart-wrap h160"><canvas id="chart-accounts-pie"></canvas></div>
-        </div>
+      <div class="card" style="margin-top:18px">
+        <div class="card-header"><span class="card-title">Balance Distribution</span></div>
+        <div class="chart-wrap h220"><canvas id="chart-accounts-pie"></canvas></div>
       </div>
       </div><!-- /tab-content-inner -->
     </div><!-- /tab-accounts -->
@@ -565,33 +556,22 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
         <div id="tx-summary"></div>
       </div>
       <div class="card" id="tx-list"></div>
-      </div><!-- /tab-content-inner -->
-    </div><!-- /tab-transactions -->
 
-    <!-- BUDGET -->
-    <div id="tab-budget" class="tab">
-      <div class="mob-header">
-        <div class="mob-header-title">Budget</div>
-        <div class="mob-header-actions">
-          <select id="bud-month-sel-mob" onchange="document.getElementById('bud-month-sel').value=this.value;renderBudget()" style="background:var(--bg-2);border:var(--border2);border-radius:8px;padding:5px 8px;color:var(--text3);font-size:11px;font-family:'DM Sans',sans-serif;max-width:110px"></select>
-          <button class="btn btn-primary btn-sm" onclick="openBudgetModal()">+ Add</button>
-        </div>
-      </div>
-      <div class="page-header">
-        <div><div class="page-title">Budget</div><div class="page-sub">Monthly spending limits</div></div>
-        <div class="header-actions">
-          <select id="bud-month-sel" onchange="renderBudget()" style="background:#141927;border:1px solid #2e3650;border-radius:8px;padding:6px 10px;color:#8b92a8;font-size:12px;font-family:'DM Sans',sans-serif;"></select>
+      <!-- BUDGET SECTION -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin:24px 0 10px">
+        <div style="font-size:16px;font-weight:600;color:var(--text1)">Budget</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <select id="bud-month-sel" onchange="renderBudget();kill('bud');drawBudgetChart()" style="background:var(--bg-2);border:var(--border2);border-radius:8px;padding:5px 10px;color:var(--text3);font-size:12px;font-family:'DM Sans',sans-serif;"></select>
           <button class="btn btn-primary btn-sm" onclick="openBudgetModal()">+ Set Budget</button>
         </div>
       </div>
-      <div class="tab-content-inner">
       <div class="card" id="budget-bars"></div>
-      <div class="card">
-        <div class="card-header"><span class="card-title">Budget Category Spend (Pie)</span></div>
+      <div class="card" style="margin-top:14px">
+        <div class="card-header"><span class="card-title">Budget Category Spend</span></div>
         <div class="chart-wrap h220"><canvas id="chart-budget"></canvas></div>
       </div>
       </div><!-- /tab-content-inner -->
-    </div><!-- /tab-budget -->
+    </div><!-- /tab-transactions -->
 
     <!-- INVESTMENTS -->
     <div id="tab-investments" class="tab">
@@ -736,10 +716,6 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
   <button class="mob-nav-btn" onclick="showTab('transactions',this)" data-tab="transactions">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
     Txns
-  </button>
-  <button class="mob-nav-btn" onclick="showTab('budget',this)" data-tab="budget">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-    Budget
   </button>
   <button class="mob-nav-btn" onclick="showTab('goals',this)" data-tab="goals">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
@@ -1738,7 +1714,7 @@ function netWorth() {
 // NAVIGATION
 // ═══════════════════════════════════════════════
 let activeTab = 'dashboard';
-const TAB_ORDER = ['dashboard','accounts','transactions','budget','goals','investments','settings'];
+const TAB_ORDER = ['dashboard','accounts','transactions','goals','investments','settings'];
 function showTab(id, btn) {
   const prevTab = activeTab;
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -1764,8 +1740,7 @@ function showTab(id, btn) {
   }
   activeTab = id;
   if (id === 'accounts') renderAccounts();
-  if (id === 'transactions') renderTx();
-  if (id === 'budget') renderBudget();
+  if (id === 'transactions') { renderTx(); renderBudget(); }
   if (id === 'investments') renderStocks();
   if (id === 'goals') renderGoals();
   if (id === 'dashboard') renderDash();
@@ -1882,6 +1857,16 @@ async function addAccount() {
 }
 
 function renderAccounts() {
+  const statsEl = document.getElementById('acc-stats');
+  if (statsEl) {
+    const totalAssets = S.accounts.reduce((s, a) => { const b = getAccountCurrentBalance(a); return b > 0 ? s + b : s; }, 0);
+    const totalLiab   = S.accounts.reduce((s, a) => { const b = getAccountCurrentBalance(a); return b < 0 ? s + Math.abs(b) : s; }, 0);
+    const nw = totalAssets - totalLiab;
+    statsEl.innerHTML = `
+      <div class="metric green"><div class="metric-label">Total Assets</div><div class="metric-value pos">${fmt(totalAssets)}</div></div>
+      <div class="metric red"><div class="metric-label">Total Liabilities</div><div class="metric-value neg">${fmt(totalLiab)}</div></div>
+      <div class="metric blue"><div class="metric-label">Net Worth</div><div class="metric-value ${nw >= 0 ? 'pos' : 'neg'}">${nw < 0 ? '-' : ''}${fmt(Math.abs(nw))}</div></div>`;
+  }
   const el = document.getElementById('accounts-list');
   if (!S.accounts.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">🏦</div>No accounts yet. Add your chequing, savings, and credit cards.</div>'; return; }
   el.innerHTML = S.accounts.map((a, i) => `
@@ -3060,8 +3045,8 @@ function chartColors() {
 
 function drawCharts(tab) {
   if (tab === 'dashboard') { drawBar(); drawDonut(); drawNetWorth(); }
-  if (tab === 'accounts') { drawAccountsBar(); drawAccountsPie(); }
-  if (tab === 'budget') { drawBudgetChart(); }
+  if (tab === 'accounts') { drawAccountsPie(); }
+  if (tab === 'transactions') { drawBudgetChart(); }
   if (tab === 'investments') { drawAlloc(); drawReturns(); }
   if (tab === 'goals') { drawGoalsChart(); }
 }
@@ -3139,42 +3124,6 @@ function drawNetWorth() {
       plugins: { legend: { display: false } },
       scales: { x: { grid: { display: false }, ticks: { color: chartColors().text, font: { size: 11 } } },
                 y: { beginAtZero:false, grid: { color: chartColors().grid }, ticks: { color: chartColors().text, font: { size: 11 }, callback: v => fmtK(v), maxTicksLimit:5 } } } }
-  });
-}
-
-function drawAccountsBar() {
-  kill('acc-bar');
-  const byType = {};
-  S.accounts.forEach(a => {
-    if (a.balance > 0) byType[a.type || 'Other'] = (byType[a.type || 'Other'] || 0) + a.balance;
-  });
-  const labels = Object.keys(byType);
-  if (!labels.length) return;
-  const data = Object.values(byType);
-  const ctx = document.getElementById('chart-accounts-bar'); if (!ctx) return;
-  charts['acc-bar'] = new Chart(ctx, {
-    type: 'pie',
-    data: { labels, datasets: [{ data, backgroundColor: PALETTE.slice(0, labels.length), borderWidth: 0, hoverOffset: 4 }] },
-    options: { responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: 'right', labels: { color: chartColors().text, font: { size: 11 }, boxWidth: 9, padding: 8 } } } }
-  });
-}
-
-function drawAccountsPie() {
-  kill('acc-pie');
-  const pos = S.accounts.filter(a => a.balance > 0);
-  if (!pos.length) return;
-  const ctx = document.getElementById('chart-accounts-pie'); if (!ctx) return;
-  charts['acc-pie'] = new Chart(ctx, {
-    type: 'pie',
-    data: {
-      labels: pos.map(a => a.name),
-      datasets: [{ data: pos.map(a => a.balance), backgroundColor: PALETTE.slice(0, pos.length), borderWidth: 0, hoverOffset: 4 }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: 'right', labels: { color: chartColors().text, font: { size: 11 }, boxWidth: 9, padding: 8 } } }
-    }
   });
 }
 
@@ -3263,8 +3212,7 @@ function renderAll() {
   // Only render the sections visible in the current tab + dashboard metrics
   renderDash();
   if (activeTab === 'accounts')      renderAccounts();
-  if (activeTab === 'transactions')  renderTx();
-  if (activeTab === 'budget')        renderBudget();
+  if (activeTab === 'transactions')  { renderTx(); renderBudget(); }
   if (activeTab === 'investments')   renderStocks();
   if (activeTab === 'goals')         renderGoals();
   // Redraw only the active chart
