@@ -1551,9 +1551,15 @@ function getCheckins() {
   } catch(e) { return []; }
 }
 function saveCheckins(days) { localStorage.setItem(CHECKIN_KEY, JSON.stringify(days)); }
+function localDayKey(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
 
 function checkInToday() {
-  const today = new Date().toISOString().slice(0,10);
+  const today = localDayKey();
   const days = getCheckins();
   if (days.includes(today)) { toast('Already checked in today ✅'); return; }
   days.push(today);
@@ -1569,10 +1575,10 @@ function currentStreak() {
   let cursor = new Date();
   cursor.setHours(0,0,0,0);
   // If user hasn't checked in today, streak still counts through yesterday.
-  const todayKey = cursor.toISOString().slice(0,10);
+  const todayKey = localDayKey(cursor);
   if (!daySet.has(todayKey)) cursor.setDate(cursor.getDate() - 1);
   while (true) {
-    const key = cursor.toISOString().slice(0,10);
+    const key = localDayKey(cursor);
     if (!daySet.has(key)) break;
     streak++;
     cursor.setDate(cursor.getDate() - 1);
@@ -1607,7 +1613,7 @@ function renderHealthPanel({ savingsRate, exp, monthlyBudget }) {
     </div>`;
   animateCountUps(el);
 
-  const milestoneDay = new Date().toISOString().slice(0,10);
+  const milestoneDay = localDayKey();
   const k = `${milestoneDay}:${score>=85?'highscore':''}`;
   if (score >= 85) {
     let m = {};
