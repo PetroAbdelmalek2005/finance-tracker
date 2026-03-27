@@ -2749,10 +2749,14 @@ function renderDash() {
   const save = inc - exp;
   const accountBalance = S.accounts.reduce((s, a) => s + getAccountCurrentBalance(a), 0);
   const nw = netWorth();
-  const totalBudget = S.budgets.reduce((s, b) => s + b.amount, 0);
+  const monthlyBudget = S.budgets.reduce((s, b) => s + b.amount, 0);
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   const daysLeft = Math.max(daysInMonth - now.getDate() + 1, 1);
-  const budgetLeft = totalBudget > 0 ? totalBudget - exp : 0;
+  const dailySpendLeft = monthlyBudget > 0 ? Math.round(((monthlyBudget - exp) / daysLeft) * 100) / 100 : 0;
+
+  // Money Left Today
+  const totalBudget = monthlyBudget;
+  const budgetLeft  = totalBudget > 0 ? totalBudget - exp : 0;
   const moneyLeftToday = totalBudget > 0 ? budgetLeft / daysLeft : null;
 
   const mltValue = moneyLeftToday !== null
