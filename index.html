@@ -326,7 +326,9 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
 
 /* ── BUCKET CARDS ────────────────────────────────────────────── */
 .buckets{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:22px;}
+.summary-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;}
 @media(max-width:700px){.buckets{grid-template-columns:1fr 1fr;}}
+@media(max-width:700px){.summary-cards{grid-template-columns:1fr 1fr;}}
 .bucket-card{background:var(--bg-card);border:var(--border);border-radius:var(--radius-lg);padding:14px 16px;box-shadow:var(--shadow-soft);transition:transform .2s ease,box-shadow .2s ease;}
 .bucket-card:hover{transform:translateY(-2px);box-shadow:var(--shadow);}
 .bucket-label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;font-weight:500;}
@@ -334,6 +336,9 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
 .bucket-pct{font-size:11px;color:var(--text4);margin-top:3px;}
 .bucket-bar{height:3px;background:var(--bg-3);border-radius:2px;margin-top:10px;overflow:hidden;}
 .bucket-bar-fill{height:100%;border-radius:2px;transition:width .6s ease;}
+.summary-cards .bucket-card{padding:12px 14px;}
+.summary-cards .bucket-value{font-size:20px;line-height:1.2;}
+.summary-cards .bucket-pct{min-height:34px;}
 
 /* ── INSIGHTS ────────────────────────────────────────────────── */
 .insight-row{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:var(--border);}
@@ -470,22 +475,7 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
       </div>
       <div class="tab-content-inner">
       <div id="dash-bills-alert"></div>
-      <div class="metrics" id="dash-metrics"></div>
-      <div class="grid-2" style="margin-bottom:16px">
-        <div class="card">
-          <div class="card-header"><span class="card-title">Quick Actions</span></div>
-          <div class="action-grid">
-            <button class="action-btn" onclick="openModal('tx-modal')">+ Add Transaction</button>
-            <button class="action-btn" onclick="openBudgetModal()">+ Add Budget</button>
-            <button class="action-btn" onclick="openModal('goal-modal')">+ Add Goal</button>
-            <button class="action-btn" onclick="showTab('transactions',document.querySelector('[data-tab=transactions]'))">View Transactions</button>
-          </div>
-        </div>
-        <div class="card">
-          <div class="card-header"><span class="card-title">Weekly Financial Health</span></div>
-          <div id="dash-health"></div>
-        </div>
-      </div>
+      <div class="summary-cards" id="dash-metrics"></div>
       <div class="buckets" id="dash-buckets"></div>
       <div id="dash-insights"></div>
       <div class="grid-2">
@@ -1552,18 +1542,18 @@ function animateCountUps(scopeEl) {
 }
 
 function getCheckins() {
-  try { return JSON.parse(localStorage.getItem(CHECKIN_KEY) || '[]'); } catch(e) { return []; }
+  try {
+    const raw = JSON.parse(localStorage.getItem(CHECKIN_KEY) || '[]');
+    if (!Array.isArray(raw)) return [];
+    // Keep only unique YYYY-MM-DD strings and cap storage growth.
+    const clean = [...new Set(raw.filter(d => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)))].sort();
+    return clean.slice(-365);
+  } catch(e) { return []; }
 }
 function saveCheckins(days) { localStorage.setItem(CHECKIN_KEY, JSON.stringify(days)); }
-function localDayKey(date = new Date()) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
 
 function checkInToday() {
-  const today = localDayKey();
+  const today = new Date().toISOString().slice(0,10);
   const days = getCheckins();
   if (days.includes(today)) { toast('Already checked in today ✅'); return; }
   days.push(today);
@@ -1573,14 +1563,17 @@ function checkInToday() {
 }
 
 function currentStreak() {
-  const days = getCheckins().slice().sort();
-  if (!days.length) return 0;
+  const daySet = new Set(getCheckins());
+  if (!daySet.size) return 0;
   let streak = 0;
   let cursor = new Date();
   cursor.setHours(0,0,0,0);
+  // If user hasn't checked in today, streak still counts through yesterday.
+  const todayKey = cursor.toISOString().slice(0,10);
+  if (!daySet.has(todayKey)) cursor.setDate(cursor.getDate() - 1);
   while (true) {
-    const key = localDayKey(cursor);
-    if (!days.includes(key)) break;
+    const key = cursor.toISOString().slice(0,10);
+    if (!daySet.has(key)) break;
     streak++;
     cursor.setDate(cursor.getDate() - 1);
   }
@@ -1614,10 +1607,11 @@ function renderHealthPanel({ savingsRate, exp, monthlyBudget }) {
     </div>`;
   animateCountUps(el);
 
-  const milestoneDay = localDayKey();
+  const milestoneDay = new Date().toISOString().slice(0,10);
   const k = `${milestoneDay}:${score>=85?'highscore':''}`;
   if (score >= 85) {
-    const m = JSON.parse(localStorage.getItem(MILESTONE_KEY) || '{}');
+    let m = {};
+    try { m = JSON.parse(localStorage.getItem(MILESTONE_KEY) || '{}') || {}; } catch(e) { m = {}; }
     if (!m[k]) {
       m[k] = true;
       localStorage.setItem(MILESTONE_KEY, JSON.stringify(m));
@@ -2752,31 +2746,37 @@ function renderDash() {
   const budgetLeft  = totalBudget > 0 ? totalBudget - exp : 0;
   const moneyLeftToday = totalBudget > 0 ? budgetLeft / daysLeft : null;
 
-  const savingsRate = inc > 0 ? Math.round((save / inc) * 100) : 0;
-  const srColor = savingsRate >= 20 ? 'pos' : savingsRate >= 10 ? '' : 'neg';
-  const srTip = savingsRate >= 20 ? 'Excellent (goal: 20%+)' : savingsRate >= 10 ? 'Good (goal: 20%+)' : savingsRate > 0 ? 'Low — aim for 20%' : 'Spending exceeds income';
-
-  const mltHtml = moneyLeftToday !== null
-    ? `<div class="metric ${moneyLeftToday >= 0 ? 'green' : 'red'}">
-        <div class="metric-label">Money Left Today</div>
-        <div class="metric-value ${moneyLeftToday >= 0 ? 'pos' : 'neg'}">${moneyLeftToday >= 0 ? '' : '−'}${fmtK(moneyLeftToday)}</div>
-        <div class="metric-trend">Daily allowance · ${daysLeft}d left</div>
-       </div>`
-    : `<div class="metric blue">
-        <div class="metric-label">Money Left Today</div>
-        <div class="metric-value" style="font-size:14px;color:var(--text4)">Set budgets</div>
-        <div class="metric-trend">Add budgets to see daily allowance</div>
-       </div>`;
+  const mltValue = moneyLeftToday !== null
+    ? `${moneyLeftToday >= 0 ? '' : '−'}${fmtK(moneyLeftToday)}`
+    : 'Set budgets';
+  const mltSub = moneyLeftToday !== null
+    ? `Daily allowance · ${daysLeft}d left`
+    : 'Add budgets to see daily allowance';
 
   document.getElementById('dash-metrics').innerHTML = `
-    <div class="metric blue"><div class="metric-label">Net Worth</div><div class="metric-value ${nw >= 0 ? 'pos' : 'neg'}"><span class="countup" data-value="${nw}" data-format="currencyCompact"></span></div><div class="metric-trend">Accounts + portfolio</div></div>
-    <div class="metric green"><div class="metric-label">Monthly Income</div><div class="metric-value pos"><span class="countup" data-value="${inc}" data-format="currencyCompact"></span></div><div class="metric-trend">${now.toLocaleDateString('en-CA',{month:'short'})}</div></div>
-    <div class="metric red"><div class="metric-label">Monthly Expenses</div><div class="metric-value neg"><span class="countup" data-value="${exp}" data-format="currencyCompact"></span></div><div class="metric-trend">${now.toLocaleDateString('en-CA',{month:'short'})}</div></div>
-    <div class="metric ${save >= 0 ? 'green' : 'red'}"><div class="metric-label">Net Saving</div><div class="metric-value ${save >= 0 ? 'pos' : 'neg'}"><span class="countup" data-value="${save}" data-format="currencyCompactSigned"></span></div><div class="metric-trend">Income − Expenses</div></div>
-    <div class="metric ${dailySpendLeft >= 0 ? 'amber' : 'red'}"><div class="metric-label">Spend Left / Day</div><div class="metric-value ${dailySpendLeft >= 0 ? 'pos' : 'neg'}"><span class="countup" data-value="${dailySpendLeft}" data-format="currencyCompact"></span></div><div class="metric-trend">${monthlyBudget > 0 ? daysLeft + ' day' + (daysLeft > 1 ? 's' : '') + ' left this month' : 'Set budgets to track daily pace'}</div></div>
-    <div class="metric ${savingsRate >= 20 ? 'green' : savingsRate >= 10 ? 'amber' : 'red'}"><div class="metric-label">Savings Rate</div><div class="metric-value ${srColor}"><span class="countup" data-value="${savingsRate}" data-format="percent"></span></div><div class="metric-trend">${srTip}</div></div>`;
-  animateCountUps(document.getElementById('dash-metrics'));
-  renderHealthPanel({ savingsRate, exp, monthlyBudget });
+    <div class="bucket-card">
+      <div class="bucket-label">Net Worth</div>
+      <div class="bucket-value" style="color:${nw >= 0 ? 'var(--green)' : 'var(--red)'}">${fmtK(nw)}</div>
+      <div class="bucket-pct">Accounts + portfolio</div>
+    </div>
+    <div class="bucket-card">
+      <div class="bucket-label">Account Balance</div>
+      <div class="bucket-value" style="color:${accountBalance >= 0 ? 'var(--green)' : 'var(--red)'}">${fmtK(accountBalance)}</div>
+      <div class="bucket-pct">All cash + debt accounts</div>
+    </div>
+    <div class="bucket-card">
+      <div class="bucket-label">Net Saving (${now.toLocaleDateString('en-CA',{month:'short'})})</div>
+      <div class="bucket-value" style="color:${save >= 0 ? 'var(--green)' : 'var(--red)'}">${save >= 0 ? '+' : ''}${fmtK(save)}</div>
+      <div class="bucket-pct">Income − Expenses</div>
+    </div>
+    <div class="bucket-card">
+      <div class="bucket-label">Money Left Today</div>
+      <div class="bucket-value" style="color:${moneyLeftToday === null ? 'var(--text4)' : moneyLeftToday >= 0 ? 'var(--green)' : 'var(--red)'}">${mltValue}</div>
+      <div class="bucket-pct">${mltSub}</div>
+    </div>`;
+
+  // Bucket summary cards
+  renderBucketCards(txm, exp);
 
   // Bill alerts
   renderBillAlerts();
@@ -3443,7 +3443,7 @@ if (canReadRemotely()) {
   const metricsEl = document.getElementById('dash-metrics');
   const bucketsEl = document.getElementById('dash-buckets');
   if (metricsEl && !S.transactions.length) {
-    metricsEl.innerHTML = Array(7).fill('<div class="metric skeleton skel-metric"></div>').join('');
+    metricsEl.innerHTML = Array(4).fill('<div class="bucket-card skeleton" style="height:96px"></div>').join('');
   }
   if (bucketsEl && !S.transactions.length) {
     bucketsEl.innerHTML = Array(4).fill('<div class="bucket-card skeleton" style="height:90px"></div>').join('');
