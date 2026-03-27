@@ -546,7 +546,7 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
       <div class="tab-content-inner">
       <div class="card" style="padding:14px 16px;margin-bottom:14px">
         <div style="margin-bottom:10px">
-          <input id="f-search" oninput="renderTx()" placeholder="Search transactions..." class="filter-bar-input">
+          <input id="f-search" oninput="queueRenderTx()" placeholder="Search transactions..." class="filter-bar-input">
         </div>
         <div class="filter-selects">
           <select id="f-type" onchange="renderTx()" class="filter-bar-select">
@@ -1635,6 +1635,9 @@ function renderHealthPanel({ savingsRate, exp, monthlyBudget }) {
 // Pre-parsed date cache — rebuilt when state changes
 // Avoids creating new Date() objects inside hot filter loops
 let _txDateCache = null;
+let _goalNameMap = null;
+let _txFilterOptionsCache = null;
+let _txFilterOptionsCacheKey = '';
 function getTxDateCache() {
   if (_txDateCache && _txDateCache.length === S.transactions.length) return _txDateCache;
   _txDateCache = S.transactions.map(t => {
@@ -1644,7 +1647,51 @@ function getTxDateCache() {
   });
   return _txDateCache;
 }
-function invalidateDateCache() { _txDateCache = null; }
+function txCacheKey() {
+  const first = S.transactions[0];
+  const last = S.transactions[S.transactions.length - 1];
+  return `${S.transactions.length}:${first ? first.id : ''}:${last ? last.id : ''}`;
+}
+function goalCacheKey() {
+  const first = S.goals[0];
+  const last = S.goals[S.goals.length - 1];
+  return `${S.goals.length}:${first ? first.id : ''}:${last ? last.id : ''}`;
+}
+let _goalNameMapKey = '';
+function getGoalNameMap() {
+  const key = goalCacheKey();
+  if (_goalNameMap && _goalNameMapKey === key) return _goalNameMap;
+  _goalNameMap = {};
+  S.goals.forEach(g => { _goalNameMap[g.id] = g.name || ''; });
+  _goalNameMapKey = key;
+  return _goalNameMap;
+}
+function getTxFilterOptions() {
+  const key = txCacheKey();
+  if (_txFilterOptionsCache && _txFilterOptionsCacheKey === key) return _txFilterOptionsCache;
+  const catSet = new Set();
+  const accSet = new Set();
+  const monthSet = new Set();
+  S.transactions.forEach(t => {
+    if (t.cat) catSet.add(t.cat);
+    if (t.account) accSet.add(t.account);
+    if (t.date) monthSet.add(t.date.slice(0,7));
+  });
+  _txFilterOptionsCache = {
+    cats: [...catSet].sort(),
+    accs: [...accSet].sort(),
+    months: [...monthSet].sort().reverse()
+  };
+  _txFilterOptionsCacheKey = key;
+  return _txFilterOptionsCache;
+}
+function invalidateDateCache() {
+  _txDateCache = null;
+  _goalNameMap = null;
+  _goalNameMapKey = '';
+  _txFilterOptionsCache = null;
+  _txFilterOptionsCacheKey = '';
+}
 
 function thisMonthTxs() {
   const now = new Date(); const m = now.getMonth(); const y = now.getFullYear();
@@ -1716,6 +1763,12 @@ function showTab(id, btn) {
     document.querySelectorAll('.nav-btn[data-tab]').forEach(b => { if (b.dataset.tab === tabId) b.classList.add('active'); });
   }
   activeTab = id;
+  if (id === 'accounts') renderAccounts();
+  if (id === 'transactions') renderTx();
+  if (id === 'budget') renderBudget();
+  if (id === 'investments') renderStocks();
+  if (id === 'goals') renderGoals();
+  if (id === 'dashboard') renderDash();
   setTimeout(() => drawCharts(id), 60);
   if (id === 'investments') setTimeout(() => refreshPrices(false), 200);
   // Keep "More" button active when viewing a "more" tab
@@ -1926,6 +1979,16 @@ async function addTransaction() {
   setSyncState('ok', 'Synced');
 }
 
+let _txRenderQueued = false;
+function queueRenderTx() {
+  if (_txRenderQueued) return;
+  _txRenderQueued = true;
+  requestAnimationFrame(() => {
+    _txRenderQueued = false;
+    renderTx();
+  });
+}
+
 function renderTx() {
   const tf  = document.getElementById('f-type').value;
   const cf  = document.getElementById('f-cat').value;
@@ -1935,23 +1998,34 @@ function renderTx() {
   if (!monthSel.value && monthSel.dataset.userSet !== '1') monthSel.value = defaultMonth;
   const mf  = monthSel.value;
   const sf  = (document.getElementById('f-search').value || '').trim().toLowerCase();
-  let txs   = S.transactions;
-  if (tf)  txs = txs.filter(t => t.type === tf);
-  if (cf)  txs = txs.filter(t => t.cat === cf);
-  if (af)  txs = txs.filter(t => t.account === af);
-  if (mf)  txs = txs.filter(t => t.date && t.date.startsWith(mf));
-  if (sf)  txs = txs.filter(t =>
-    t.desc.toLowerCase().includes(sf) ||
-    t.cat.toLowerCase().includes(sf) ||
-    t.account.toLowerCase().includes(sf) ||
-    ((S.goals.find(g => g.id === t.goalId) || {}).name || '').toLowerCase().includes(sf) ||
-    String(t.amount).includes(sf)
-  );
+  const goalNameMap = getGoalNameMap();
+  const txs = [];
+  let totalInc = 0;
+  let totalExp = 0;
+  let totalXfer = 0;
+  for (let i = 0; i < S.transactions.length; i++) {
+    const t = S.transactions[i];
+    if (tf && t.type !== tf) continue;
+    if (cf && t.cat !== cf) continue;
+    if (af && t.account !== af) continue;
+    if (mf && (!t.date || !t.date.startsWith(mf))) continue;
+    if (sf) {
+      const goalName = goalNameMap[t.goalId] || '';
+      const matches =
+        (t.desc || '').toLowerCase().includes(sf) ||
+        (t.cat || '').toLowerCase().includes(sf) ||
+        (t.account || '').toLowerCase().includes(sf) ||
+        goalName.toLowerCase().includes(sf) ||
+        String(t.amount).includes(sf);
+      if (!matches) continue;
+    }
+    txs.push(t);
+    if (t.type === 'income') totalInc += t.amount;
+    else if (t.type === 'expense' || t.type === 'bill') totalExp += t.amount;
+    else if (t.type === 'transfer' && t.xferDir === 'out') totalXfer += t.amount;
+  }
 
   // Summary line — transfers excluded from totals (not real income/expense)
-  const totalInc   = txs.filter(t => t.type === 'income').reduce((s,t) => s+t.amount, 0);
-  const totalExp   = txs.filter(t => t.type === 'expense' || t.type === 'bill').reduce((s,t) => s+t.amount, 0);
-  const totalXfer  = txs.filter(t => t.type === 'transfer' && t.xferDir === 'out').reduce((s,t) => s+t.amount, 0);
   const net        = totalInc - totalExp;
   const summaryEl  = document.getElementById('tx-summary');
   if (summaryEl) {
@@ -1987,7 +2061,7 @@ function renderTx() {
     } else {
       amtClass = 'neg'; amtPrefix = '−'; typeLabel = '';
     }
-    const goalName = (S.goals.find(g => g.id === t.goalId) || {}).name || '';
+    const goalName = goalNameMap[t.goalId] || '';
     const subGoal  = goalName ? ' · Goal: ' + goalName : '';
     const subExtra = (t.dueDate ? ' · due ' + t.dueDate : '') + subGoal;
     return `<div class="row">
@@ -2004,9 +2078,7 @@ function renderTx() {
   }).join('');
 
   // Update filter dropdowns (preserve selections)
-  const cats   = [...new Set(S.transactions.map(t => t.cat))].sort();
-  const accs   = [...new Set(S.transactions.map(t => t.account))].filter(Boolean).sort();
-  const months = [...new Set(S.transactions.map(t => t.date ? t.date.slice(0,7) : ''))].filter(Boolean).sort().reverse();
+  const { cats, accs, months } = getTxFilterOptions();
   const fc = document.getElementById('f-cat'); const fa = document.getElementById('f-acc'); const fm = document.getElementById('f-month');
   const cv = fc.value; const av = fa.value; const mv = fm.value;
   fc.innerHTML = '<option value="">All categories</option>' + cats.map(ct => `<option value="${ct}">${ct}</option>`).join('');
@@ -3195,8 +3267,6 @@ function renderAll() {
   if (activeTab === 'budget')        renderBudget();
   if (activeTab === 'investments')   renderStocks();
   if (activeTab === 'goals')         renderGoals();
-  // Always render accounts list (used by tx modal) and recent txns (dashboard)
-  if (activeTab !== 'accounts')      renderAccounts();
   // Redraw only the active chart
   drawCharts(activeTab);
 }
