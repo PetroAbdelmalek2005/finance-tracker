@@ -313,6 +313,40 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
 ::-webkit-scrollbar-track{background:transparent;}
 ::-webkit-scrollbar-thumb{background:var(--bg-3);border-radius:2px;}
 
+/* ── SKELETON LOADERS ────────────────────────────────────────── */
+.skeleton{background:var(--bg-3);border-radius:6px;position:relative;overflow:hidden;}
+.skeleton::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.05),transparent);animation:shimmer 1.5s infinite;}
+@keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+.skel-metric{height:82px;border-radius:var(--radius-lg);}
+.skel-card{height:180px;border-radius:var(--radius-lg);margin-bottom:16px;}
+.skel-text{height:12px;border-radius:4px;margin-bottom:8px;}
+.skel-text.w60{width:60%;}
+.skel-text.w40{width:40%;}
+.skel-text.w80{width:80%;}
+
+/* ── BUCKET CARDS ────────────────────────────────────────────── */
+.buckets{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:22px;}
+@media(max-width:700px){.buckets{grid-template-columns:1fr 1fr;}}
+.bucket-card{background:var(--bg-card);border:var(--border);border-radius:var(--radius-lg);padding:14px 16px;box-shadow:var(--shadow-soft);transition:transform .2s ease,box-shadow .2s ease;}
+.bucket-card:hover{transform:translateY(-2px);box-shadow:var(--shadow);}
+.bucket-label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;font-weight:500;}
+.bucket-value{font-size:18px;font-weight:300;color:var(--text);letter-spacing:-.02em;}
+.bucket-pct{font-size:11px;color:var(--text4);margin-top:3px;}
+.bucket-bar{height:3px;background:var(--bg-3);border-radius:2px;margin-top:10px;overflow:hidden;}
+.bucket-bar-fill{height:100%;border-radius:2px;transition:width .6s ease;}
+
+/* ── INSIGHTS ────────────────────────────────────────────────── */
+.insight-row{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:var(--border);}
+.insight-row:last-child{border-bottom:none;}
+.insight-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px;}
+.insight-body{flex:1;}
+.insight-text{font-size:13px;color:var(--text2);}
+.insight-sub{font-size:11px;color:var(--text4);margin-top:2px;}
+
+/* ── COUNT-UP ANIMATION ──────────────────────────────────────── */
+@keyframes metricIn{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:translateY(0);}}
+.metric-value{animation:metricIn .35s ease both;}
+
 /* ── FILTER BAR ──────────────────────────────────────────────── */
 .filter-bar-input{width:100%;background:var(--bg-2);border:var(--border);border-radius:8px;padding:9px 13px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;}
 .filter-bar-input:focus{outline:none;border-color:var(--blue);}
@@ -351,11 +385,9 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
     <h2>Connect to Google Sheets</h2>
     <p>Paste your Google Sheets credentials below to sync across devices. Or skip and use the app locally.</p>
     <a href="javascript:void(0)" onclick="skipConfig()" style="display:block;text-align:center;color:var(--blue);font-size:13px;margin-bottom:16px;padding:8px;background:var(--bg-3);border-radius:8px;text-decoration:none">Skip for now — use local storage only</a>
-    <label>Google Sheets API Key</label>
-    <input id="cfg-api-key" placeholder="AIzaSy...">
     <label>Spreadsheet ID</label>
     <input id="cfg-sheet-id" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74...">
-    <label>Apps Script URL <span style="opacity:.7;font-weight:400;font-size:10px">(for saving — see Setup Guide)</span></label>
+    <label>Apps Script URL <span style="opacity:.7;font-weight:400;font-size:10px">(see Settings → Setup Guide)</span></label>
     <input id="cfg-script-url" placeholder="https://script.google.com/macros/s/.../exec">
     <button class="config-save" onclick="saveConfig()">Connect & Launch</button>
     <p class="config-note">Your credentials are stored only on this device. Never shared.</p>
@@ -454,6 +486,8 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
           <div id="dash-health"></div>
         </div>
       </div>
+      <div class="buckets" id="dash-buckets"></div>
+      <div id="dash-insights"></div>
       <div class="grid-2">
         <div class="card">
           <div class="card-header"><span class="card-title">Income vs Expenses</span><span id="dash-month-label" class="badge badge-gray"></span></div>
@@ -534,7 +568,7 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
           <select id="f-acc" onchange="renderTx()" class="filter-bar-select">
             <option value="">All accounts</option>
           </select>
-          <select id="f-month" onchange="renderTx()" class="filter-bar-select">
+          <select id="f-month" onchange="this.dataset.userSet='1';renderTx()" class="filter-bar-select">
             <option value="">All months</option>
           </select>
         </div>
@@ -637,14 +671,8 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
       <div class="settings-card">
         <div class="settings-title">Google Sheets Connection</div>
         <div class="settings-desc">Your data syncs to a Google Sheet so it's available on all devices. Update your credentials here if needed.</div>
-        <div style="font-size:12px;color:#EF9F27;background:#2a1f0a;border:1px solid #4a3010;border-radius:8px;padding:10px 14px;margin-bottom:12px">
-          <strong>Important:</strong> For live stock prices, you need a tab called <strong>Prices</strong> in your Google Sheet.
-          Go to your Sheet, click the + button at the bottom, and name the new tab <strong>Prices</strong> exactly.
-          The app writes GOOGLEFINANCE() formulas there automatically when you refresh prices.
-        </div>
-        <div class="field"><label>API Key</label><input id="set-api-key" placeholder="AIzaSy..."></div>
         <div class="field"><label>Spreadsheet ID</label><input id="set-sheet-id" placeholder="1BxiMVs0XRA..."></div>
-        <div class="field"><label>Apps Script URL <span style="color:var(--text4);font-size:10px;font-weight:400">(for saving — see Setup Guide)</span></label><input id="set-script-url" placeholder="https://script.google.com/macros/s/.../exec"></div>
+        <div class="field"><label>Apps Script URL <span style="color:var(--text4);font-size:10px;font-weight:400">(see Setup Guide below)</span></label><input id="set-script-url" placeholder="https://script.google.com/macros/s/.../exec"></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
           <button class="btn btn-primary btn-sm" onclick="updateConfig()">Save Credentials</button>
           <button class="btn btn-sm" onclick="testConnection()">Test Connection</button>
@@ -851,6 +879,16 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
     <div class="field" id="edit-tx-due-field" style="display:none">
       <label>Due Date</label><input id="edit-tx-due" type="date">
     </div>
+    <div class="field">
+      <label>Spending Bucket <small style="color:#555e78;font-weight:400">(optional)</small></label>
+      <select id="edit-tx-bucket">
+        <option value="">Unassigned</option>
+        <option value="Bills">🏠 Bills</option>
+        <option value="Spending">🛒 Spending</option>
+        <option value="Savings">🏦 Savings</option>
+        <option value="Investing">📈 Investing</option>
+      </select>
+    </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('edit-tx-modal')">Cancel</button>
       <button class="btn btn-primary" onclick="saveEditTransaction()">Save Changes</button>
@@ -923,6 +961,16 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
     <div class="field">
       <label>Linked Goal <small style="color:#555e78;font-weight:400">(optional)</small></label>
       <select id="tx-goal"></select>
+    </div>
+    <div class="field" id="tx-bucket-field">
+      <label>Spending Bucket <small style="color:#555e78;font-weight:400">(optional)</small></label>
+      <select id="tx-bucket">
+        <option value="">Unassigned</option>
+        <option value="Bills">🏠 Bills</option>
+        <option value="Spending">🛒 Spending</option>
+        <option value="Savings">🏦 Savings</option>
+        <option value="Investing">📈 Investing</option>
+      </select>
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('tx-modal')">Cancel</button>
@@ -1070,10 +1118,18 @@ const SHEET_NAMES = {
   prices:       'Prices'   // auto-managed tab for GoogleFinance() live prices
 };
 
-let CONFIG = { apiKey: '', sheetId: '', scriptUrl: '' };
-function canReadViaApi() { return !!(CONFIG.apiKey && CONFIG.sheetId); }
+let CONFIG = { sheetId: '', scriptUrl: '' };
 function canReadViaScript() { return !!(CONFIG.scriptUrl && CONFIG.sheetId); }
-function canReadRemotely() { return canReadViaApi() || canReadViaScript(); }
+function canReadRemotely() { return canReadViaScript(); }
+function normalizeScriptUrl(url) {
+  const clean = (url || '').trim();
+  if (!clean) return '';
+  if (clean.includes('/exec') || clean.includes('/dev')) return clean;
+  return clean.replace(/\/+$/, '') + '/exec';
+}
+function persistConfig() {
+  localStorage.setItem('ft_config', JSON.stringify(CONFIG));
+}
 
 function loadConfig() {
   // Check skip flag FIRST — before anything else can crash
@@ -1084,12 +1140,12 @@ function loadConfig() {
 
   const saved = localStorage.getItem('ft_config');
   if (saved) {
-    try { CONFIG = JSON.parse(saved); } catch(e) { CONFIG = { apiKey:'', sheetId:'', scriptUrl:'' }; }
+    try { CONFIG = { ...CONFIG, ...JSON.parse(saved) }; } catch(e) { CONFIG = { sheetId:'', scriptUrl:'' }; }
   }
+  CONFIG.scriptUrl = normalizeScriptUrl(CONFIG.scriptUrl);
 
   // Null-safe population of settings fields
   const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
-  setVal('set-api-key',    CONFIG.apiKey);
   setVal('set-sheet-id',   CONFIG.sheetId);
   setVal('set-script-url', CONFIG.scriptUrl);
 
@@ -1100,18 +1156,16 @@ function loadConfig() {
 }
 
 function saveConfig() {
-  CONFIG.apiKey    = document.getElementById('cfg-api-key').value.trim();
   CONFIG.sheetId   = document.getElementById('cfg-sheet-id').value.trim();
-  CONFIG.scriptUrl = document.getElementById('cfg-script-url').value.trim();
-  if (!CONFIG.sheetId || (!CONFIG.apiKey && !CONFIG.scriptUrl)) {
-    toast('Provide Sheet ID plus either API key (direct read) or Apps Script URL');
+  CONFIG.scriptUrl = normalizeScriptUrl(document.getElementById('cfg-script-url').value);
+  if (!CONFIG.sheetId || !CONFIG.scriptUrl) {
+    toast('Provide both Spreadsheet ID and Apps Script URL');
     return;
   }
-  localStorage.setItem('ft_config', JSON.stringify(CONFIG));
+  persistConfig();
   localStorage.removeItem('ft_skipped_config');
   document.getElementById('config-banner').classList.remove('show');
-  if (canReadViaScript()) { toast('Connected via Apps Script. Loading your data...'); }
-  else { toast('Connected read-only via API key. Add Apps Script URL to enable writing.'); }
+  toast('Connected via Apps Script. Loading your data...');
   loadAllFromSheets();
 }
 
@@ -1126,71 +1180,43 @@ function skipConfig() {
 }
 
 function updateConfig() {
-  CONFIG.apiKey   = document.getElementById('set-api-key').value.trim();
   CONFIG.sheetId  = document.getElementById('set-sheet-id').value.trim();
-  CONFIG.scriptUrl = (document.getElementById('set-script-url').value || '').trim();
-  localStorage.setItem('ft_config', JSON.stringify(CONFIG));
+  CONFIG.scriptUrl = normalizeScriptUrl((document.getElementById('set-script-url').value || '').trim());
+  persistConfig();
   toast('Credentials saved');
 }
 
 function pullConfigFromSettingsForm() {
-  const apiEl    = document.getElementById('set-api-key');
   const sheetEl  = document.getElementById('set-sheet-id');
   const scriptEl = document.getElementById('set-script-url');
-  if (!apiEl || !sheetEl || !scriptEl) return;
-  CONFIG.apiKey    = (apiEl.value || '').trim();
+  if (!sheetEl || !scriptEl) return;
   CONFIG.sheetId   = (sheetEl.value || '').trim();
-  CONFIG.scriptUrl = (scriptEl.value || '').trim();
-  localStorage.setItem('ft_config', JSON.stringify(CONFIG));
+  CONFIG.scriptUrl = normalizeScriptUrl((scriptEl.value || '').trim());
+  persistConfig();
 }
 
 async function testConnection() {
   pullConfigFromSettingsForm();
-  if (!CONFIG.sheetId || (!CONFIG.apiKey && !CONFIG.scriptUrl)) {
-    toast('No credentials saved yet');
+  if (!CONFIG.sheetId || !CONFIG.scriptUrl) {
+    toast('Add Spreadsheet ID and Apps Script URL first');
     return;
   }
   setSyncState('syncing', 'Testing...');
   try {
-    let readOk = false;
-    let readMsg = '';
-
-    if (canReadViaApi()) {
-      const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(CONFIG.sheetId)}?key=${encodeURIComponent(CONFIG.apiKey)}`;
-      const r = await fetch(url);
-      if (r.ok) {
-        readOk = true;
-      } else {
-        const details = await r.json().catch(() => ({}));
-        readMsg = (((details || {}).error || {}).message || 'Direct read failed');
-      }
-    }
-
-    if (!readOk && canReadViaScript()) {
-      const probe = await sheetsRead(`${SHEET_NAMES.accounts}!A1:A1`);
-      if (probe) readOk = true;
-      else readMsg = readMsg || 'Script read failed';
-    }
-
-    if (!readOk) {
-      setSyncState('error', 'Error');
-      toast(readMsg || 'Connection failed — check Sheet ID + API key/script settings');
+    const probe = await sheetsRead(`${SHEET_NAMES.accounts}!A1:A1`);
+    if (probe === null) {
+      setSyncState('error', 'Read failed');
+      toast('Read failed — run Diagnostics for details');
       return;
     }
-
-    if (CONFIG.scriptUrl) {
-      const marker = `FT_WRITE_TEST ${new Date().toISOString()}`;
-      const writeOk = await sheetsWrite(`${SHEET_NAMES.accounts}!Z1`, [[marker]], 'RAW');
-      if (writeOk) {
-        setSyncState('ok', 'Connected');
-        toast('Read + write tests passed');
-      } else {
-        setSyncState('error', 'Write failed');
-        toast('Read passed, but write failed. Check Apps Script URL/deployment access.');
-      }
+    const marker = `FT_WRITE_TEST ${new Date().toISOString()}`;
+    const writeOk = await sheetsWrite(`${SHEET_NAMES.accounts}!A1`, [[marker]], 'RAW');
+    if (writeOk) {
+      setSyncState('ok', 'Connected');
+      toast('Read + write tests passed ✓');
     } else {
-      setSyncState('ok', 'Read-only');
-      toast('Read works. Add Apps Script URL for push/write.');
+      setSyncState('error', 'Write failed');
+      toast('Read passed, but write failed — run Diagnostics for details');
     }
   } catch(e) { setSyncState('error', 'Error'); toast('Network error'); }
 }
@@ -1200,65 +1226,62 @@ async function runConnectionDiagnostics() {
   const box = document.getElementById('conn-diagnostics');
   if (!box) return;
   box.style.display = 'block';
-  box.textContent = 'Running diagnostics...';
+  box.innerHTML = '<span style="color:var(--text3)">Running diagnostics...</span>';
 
   const lines = [];
   const now = new Date().toISOString();
-  lines.push(`Time: ${now}`);
-  lines.push(`API key set: ${CONFIG.apiKey ? 'yes' : 'no'}`);
-  lines.push(`Sheet ID set: ${CONFIG.sheetId ? 'yes' : 'no'}`);
-  lines.push(`Apps Script URL set: ${CONFIG.scriptUrl ? 'yes' : 'no'}`);
+  lines.push({ text: `Time: ${now}` });
+  lines.push({ text: `Sheet ID set: ${CONFIG.sheetId ? 'yes' : 'no'}` });
+  lines.push({ text: `Apps Script URL set: ${CONFIG.scriptUrl ? 'yes' : 'no'}` });
 
-  let readUrl = '(not tested)';
   let readOk = false;
-  let readErr = '';
 
-  if (canReadViaApi()) {
-    readUrl = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(CONFIG.sheetId)}?key=${encodeURIComponent(CONFIG.apiKey)}`;
+  if (!CONFIG.sheetId || !CONFIG.scriptUrl) {
+    lines.push({ text: 'Read test (Apps Script): SKIPPED (missing credentials)', type: 'skip' });
+    lines.push({ text: 'Write test: SKIPPED (missing credentials)', type: 'skip' });
+  } else {
+    // Read test — fetch directly so we can show the actual error message
     try {
-      const readRes = await fetch(readUrl);
-      if (readRes.ok) {
-        lines.push(`Read test (Sheets API): PASS (${readRes.status})`);
-        readOk = true;
+      const r = await fetch(CONFIG.scriptUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action: 'read', range: `${SHEET_NAMES.accounts}!A1:A1`, sheetId: CONFIG.sheetId })
+      });
+      if (!r.ok) {
+        lines.push({ text: `Read test (Apps Script): FAIL (HTTP ${r.status})`, type: 'fail' });
       } else {
-        const d = await readRes.json().catch(() => ({}));
-        readErr = (((d || {}).error || {}).message || 'Unknown error');
-        lines.push(`Read test (Sheets API): FAIL (${readRes.status})`);
-        lines.push(`Read error (Sheets API): ${readErr}`);
+        const d = await r.json().catch(() => ({}));
+        if (d.status === 'ok') {
+          lines.push({ text: 'Read test (Apps Script): PASS', type: 'pass' });
+          readOk = true;
+        } else {
+          lines.push({ text: 'Read test (Apps Script): FAIL', type: 'fail' });
+          lines.push({ text: `Read error: ${d.message || 'Unknown error'}`, type: 'fail' });
+          lines.push({ text: 'Hint: Re-deploy your Apps Script — Deploy → Manage deployments → pencil icon → New version → Deploy', type: 'hint' });
+        }
       }
-    } catch (e) {
-      lines.push('Read test (Sheets API): FAIL (network/CORS error)');
+    } catch(e) {
+      lines.push({ text: `Read test (Apps Script): FAIL (network error)`, type: 'fail' });
     }
-  } else {
-    lines.push('Read test (Sheets API): SKIPPED (missing API key)');
-  }
 
-  if (!readOk && canReadViaScript()) {
-    const scriptData = await sheetsRead(`${SHEET_NAMES.accounts}!A1:A1`);
-    if (scriptData) {
-      lines.push('Read test (Apps Script): PASS');
-      readOk = true;
-      readUrl = `${CONFIG.scriptUrl} [action=read]`;
-    } else {
-      lines.push('Read test (Apps Script): FAIL');
-      if (!readErr) readErr = 'Apps Script read failed';
-    }
-  }
-
-  if (!CONFIG.scriptUrl) {
-    lines.push('Write test: SKIPPED (no Apps Script URL configured)');
-  } else {
+    // Write test
     const marker = `FT_DIAG ${now}`;
-    const writeOk = await sheetsWrite(`${SHEET_NAMES.accounts}!Z1`, [[marker]], 'RAW');
-    lines.push(`Write test: ${writeOk ? 'PASS' : 'FAIL'}`);
+    const writeOk = await sheetsWrite(`${SHEET_NAMES.accounts}!A1`, [[marker]], 'RAW');
+    lines.push({ text: `Write test: ${writeOk ? 'PASS' : 'FAIL'}`, type: writeOk ? 'pass' : 'fail' });
     if (!writeOk) {
-      lines.push('Write hint: confirm Apps Script deployment is Web App + access is "Anyone".');
+      lines.push({ text: 'Hint: Confirm Apps Script deployment type is Web App and access is set to "Anyone".', type: 'hint' });
     }
   }
 
-  lines.push(`Read endpoint: ${readUrl}`);
-  lines.push(`Write endpoint: ${CONFIG.scriptUrl || '(not set)'}`);
-  box.textContent = lines.join('\n');
+  lines.push({ text: `Endpoint: ${CONFIG.scriptUrl || '(not set)'}` });
+
+  box.innerHTML = lines.map(l => {
+    let color = 'var(--text3)';
+    if (l.type === 'pass') color = '#1D9E75';
+    else if (l.type === 'fail') color = '#f04f4f';
+    else if (l.type === 'hint' || l.type === 'skip') color = '#EF9F27';
+    return `<span style="color:${color}">${l.text}</span>`;
+  }).join('\n');
 }
 
 // ═══════════════════════════════════════════════
@@ -1302,8 +1325,7 @@ function normalizeLinkedData() {
 function getGoalCurrent(goal) {
   if (!goal) return 0;
   if (goal.linkedAccount) {
-    const acc = S.accounts.find(a => a.name === goal.linkedAccount);
-    return Math.max(acc ? acc.balance : 0, 0);
+    return Math.max(getAccountCurrentBalance(goal.linkedAccount), 0);
   }
   return goal.current || 0;
 }
@@ -1323,25 +1345,14 @@ function getGoalLinkedNet(goal) {
 // ═══════════════════════════════════════════════
 // GOOGLE SHEETS API
 // ═══════════════════════════════════════════════
-const BASE = 'https://sheets.googleapis.com/v4/spreadsheets';
 
 async function sheetsRead(range) {
-  if (!CONFIG.sheetId) return null;
-  if (canReadViaApi()) {
-    try {
-      const r = await fetch(`${BASE}/${CONFIG.sheetId}/values/${range}?key=${CONFIG.apiKey}`);
-      if (r.ok) {
-        const d = await r.json();
-        return d.values || [];
-      }
-    } catch(e) {}
-  }
-  if (!canReadViaScript()) return null;
+  if (!CONFIG.sheetId || !CONFIG.scriptUrl) return null;
   try {
     const r = await fetch(CONFIG.scriptUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action:'read', range, sheetId:CONFIG.sheetId })
+      body: JSON.stringify({ action: 'read', range, sheetId: CONFIG.sheetId })
     });
     if (!r.ok) return null;
     const d = await r.json().catch(() => ({}));
@@ -1366,16 +1377,6 @@ async function sheetsWrite(range, values, inputOption) {
   } catch(e) { console.error('sheetsWrite error:', e); return false; }
 }
 
-async function sheetsClear(sheetName) {
-  if (!CONFIG.apiKey || !CONFIG.sheetId) return;
-  try {
-    await fetch(
-      `${BASE}/${CONFIG.sheetId}/values/${sheetName}!A:Z:clear?key=${CONFIG.apiKey}`,
-      { method: 'POST', headers: { 'Content-Type': 'application/json' } }
-    );
-  } catch(e) {}
-}
-
 // ─── Load all sheets on startup ───
 async function loadAllFromSheets() {
   if (!canReadRemotely()) return;
@@ -1389,13 +1390,16 @@ async function loadAllFromSheets() {
     const acc = await sheetsRead(`${SHEET_NAMES.accounts}!A2:D`);
     if (acc && acc.length) S.accounts = acc
       .filter(r => r && safeStr(r[0]) && safeStr(r[1]))
-      .map(r => ({ id: safeStr(r[0]), name: safeStr(r[1],'Unnamed'), type: safeStr(r[2],'Other'), balance: safeNum(r[3]) }));
+      .map(r => {
+        const type = safeStr(r[2],'Other');
+        return { id: safeStr(r[0]), name: safeStr(r[1],'Unnamed'), type, balance: normalizeAccountBalance(type, safeNum(r[3])) };
+      });
 
     // Transactions
-    const txs = await sheetsRead(`${SHEET_NAMES.transactions}!A2:K`);
+    const txs = await sheetsRead(`${SHEET_NAMES.transactions}!A2:L`);
     if (txs && txs.length) S.transactions = txs
       .filter(r => r && safeStr(r[0]) && safeStr(r[1]) && safeNum(r[4]) !== 0)
-      .map(r => ({ id: safeStr(r[0]), date: safeStr(r[1]), desc: safeStr(r[2],'(no description)'), type: safeStr(r[3],'expense'), amount: Math.abs(safeNum(r[4])), cat: safeStr(r[5],'Other'), account: safeStr(r[6],''), xferDir: safeStr(r[7]), xferRef: safeStr(r[8]), dueDate: safeStr(r[9]), goalId: safeStr(r[10]) }))
+      .map(r => ({ id: safeStr(r[0]), date: safeStr(r[1]), desc: safeStr(r[2],'(no description)'), type: safeStr(r[3],'expense'), amount: Math.abs(safeNum(r[4])), cat: safeStr(r[5],'Other'), account: safeStr(r[6],''), xferDir: safeStr(r[7]), xferRef: safeStr(r[8]), dueDate: safeStr(r[9]), goalId: safeStr(r[10]), bucket: safeStr(r[11]) }))
       .sort((a,b) => b.date.localeCompare(a.date));
 
     // Budgets
@@ -1431,7 +1435,7 @@ async function pushToSheets(sheetName, headers, rows) {
 }
 
 async function syncAccounts() { await pushToSheets(SHEET_NAMES.accounts, ['ID','Name','Type','Balance'], S.accounts.map(a => [a.id, a.name, a.type, a.balance])); }
-async function syncTransactions() { await pushToSheets(SHEET_NAMES.transactions, ['ID','Date','Description','Type','Amount','Category','Account','XferDir','XferRef','DueDate','GoalId'], S.transactions.map(t => [t.id, t.date, t.desc, t.type, t.amount, t.cat, t.account, t.xferDir||'', t.xferRef||'', t.dueDate||'', t.goalId||''])); }
+async function syncTransactions() { await pushToSheets(SHEET_NAMES.transactions, ['ID','Date','Description','Type','Amount','Category','Account','XferDir','XferRef','DueDate','GoalId','Bucket'], S.transactions.map(t => [t.id, t.date, t.desc, t.type, t.amount, t.cat, t.account, t.xferDir||'', t.xferRef||'', t.dueDate||'', t.goalId||'', t.bucket||''])); }
 async function syncBudgets() { await pushToSheets(SHEET_NAMES.budgets, ['ID','Category','Amount'], S.budgets.map(b => [b.id, b.cat, b.amount])); }
 async function syncStocks() { await pushToSheets(SHEET_NAMES.stocks, ['ID','Ticker','Name','Shares','CostPerShare','CurrentPrice'], S.stocks.map(s => [s.id, s.ticker, s.name, s.shares, s.costPerShare, s.current])); }
 
@@ -1512,6 +1516,13 @@ function fmtK(n) {
   if (abs >= 1000000) return sign + '$' + (abs/1000000).toFixed(1) + 'M';
   if (abs >= 1000)    return sign + '$' + (abs/1000 % 1 === 0 ? (abs/1000).toFixed(0) : (abs/1000).toFixed(1)) + 'k';
   return sign + '$' + abs.toFixed(0);
+}
+function isLiabilityType(type) {
+  return type === 'Credit Card' || type === 'Loan';
+}
+function normalizeAccountBalance(type, balance) {
+  const rounded = Math.round((isFinite(balance) ? balance : 0) * 100) / 100;
+  return isLiabilityType(type) && rounded > 0 ? -rounded : rounded;
 }
 
 function formatCountUpValue(value, fmtType) {
@@ -1640,8 +1651,27 @@ function monthTxs(m, y) {
   });
 }
 
+function accountTransactionDelta(accountName) {
+  if (!accountName) return 0;
+  return S.transactions.reduce((sum, t) => {
+    if (t.account !== accountName) return sum;
+    if (t.type === 'income') return sum + t.amount;
+    if (t.type === 'expense' || t.type === 'bill') return sum - t.amount;
+    if (t.type === 'transfer') return sum + (t.xferDir === 'in' ? t.amount : -t.amount);
+    return sum;
+  }, 0);
+}
+
+function getAccountCurrentBalance(accountOrName) {
+  const acc = typeof accountOrName === 'string'
+    ? S.accounts.find(a => a.name === accountOrName)
+    : accountOrName;
+  if (!acc) return 0;
+  return (acc.balance || 0) + accountTransactionDelta(acc.name);
+}
+
 function netWorth() {
-  return S.accounts.reduce((s, a) => s + a.balance, 0)
+  return S.accounts.reduce((s, a) => s + getAccountCurrentBalance(a), 0)
        + S.stocks.reduce((s, st) => s + st.shares * st.current, 0);
 }
 
@@ -1774,7 +1804,7 @@ async function addAccount() {
   const name = document.getElementById('acc-name').value.trim();
   const type = document.getElementById('acc-type').value;
   const rawBal = parseFloat(document.getElementById('acc-bal').value);
-  const balance = isFinite(rawBal) ? Math.round(rawBal * 100) / 100 : 0;
+  const balance = normalizeAccountBalance(type, rawBal);
   if (!name) { toast('Please enter a name'); return; }
   S.accounts.push({ id: uid(), name, type, balance });
   saveLocal(); closeModal('acc-modal');
@@ -1793,10 +1823,10 @@ function renderAccounts() {
     <div class="row" id="acc-row-${i}">
       <div class="row-left">
         <div class="row-title">${a.name}</div>
-        <div class="row-sub"><span class="badge badge-${a.type === 'Credit Card' || a.type === 'Loan' ? 'red' : 'blue'}">${a.type}</span></div>
+        <div class="row-sub"><span class="badge badge-${a.type === 'Credit Card' || a.type === 'Loan' ? 'red' : 'blue'}">${a.type}</span> · Opening ${fmt(a.balance)} · Activity ${(accountTransactionDelta(a.name) >= 0 ? '+' : '−') + fmt(accountTransactionDelta(a.name))}</div>
       </div>
       <div class="row-right" id="acc-right-${i}">
-        <span class="amount ${a.balance < 0 ? 'neg' : 'pos'}" style="cursor:pointer" title="Click to edit" onclick="editBalance(${i})">${a.balance < 0 ? '-' : ''}${fmt(a.balance)}</span>
+        <span class="amount ${getAccountCurrentBalance(a) < 0 ? 'neg' : 'pos'}" style="cursor:pointer" title="Click to edit opening balance" onclick="editBalance(${i})">${getAccountCurrentBalance(a) < 0 ? '-' : ''}${fmt(getAccountCurrentBalance(a))}</span>
         <button class="btn btn-sm" style="padding:3px 9px;font-size:11px" onclick="editBalance(${i})">Edit</button>
         <button class="del" onclick="deleteItem('accounts',${i},syncAccounts)">×</button>
       </div>
@@ -1826,25 +1856,27 @@ async function saveBalance(i) {
   if (!inp) return;
   const newBal = parseFloat(inp.value);
   if (!isFinite(newBal)) { toast('Enter a valid number'); return; }
-  S.accounts[i].balance = Math.round(newBal * 100) / 100;
+  const normalized = normalizeAccountBalance(S.accounts[i].type, newBal);
+  S.accounts[i].balance = normalized;
   saveLocal();
   renderAll();
   setSyncState('syncing', 'Saving...');
   await syncAccounts();
   setSyncState('ok', 'Synced');
-  toast(`${S.accounts[i].name} updated to ${fmt(newBal)}`);
+  toast(`${S.accounts[i].name} updated to ${normalized < 0 ? '-' : ''}${fmt(normalized)}`);
 }
 
 // ═══════════════════════════════════════════════
 // TRANSACTIONS
 // ═══════════════════════════════════════════════
 async function addTransaction() {
-  const desc = document.getElementById('tx-desc').value.trim();
-  const amt  = parseFloat(document.getElementById('tx-amt').value);
-  const type = document.getElementById('tx-type').value;
-  const cat  = document.getElementById('tx-cat').value;
-  const date = document.getElementById('tx-date').value;
+  const desc   = document.getElementById('tx-desc').value.trim();
+  const amt    = parseFloat(document.getElementById('tx-amt').value);
+  const type   = document.getElementById('tx-type').value;
+  const cat    = document.getElementById('tx-cat').value;
+  const date   = document.getElementById('tx-date').value;
   const goalId = (document.getElementById('tx-goal').value || '').trim();
+  const bucket = (document.getElementById('tx-bucket').value || '').trim();
 
   if (!desc || !amt || !isFinite(amt) || amt <= 0) { toast('Enter a valid description and positive amount'); return; }
 
@@ -1858,24 +1890,24 @@ async function addTransaction() {
 
     // Create two linked transaction records — one out, one in
     const xferId = uid();
-    S.transactions.unshift({ id: uid(), date, desc, type: 'transfer', amount: roundedAmt, cat, account: fromAcc, xferRef: xferId, xferDir: 'out', goalId: '' });
-    S.transactions.unshift({ id: uid(), date, desc, type: 'transfer', amount: roundedAmt, cat, account: toAcc,   xferRef: xferId, xferDir: 'in', goalId: goalId || ''  });
+    S.transactions.unshift({ id: uid(), date, desc, type: 'transfer', amount: roundedAmt, cat, account: fromAcc, xferRef: xferId, xferDir: 'out', goalId: '', bucket: bucket || '' });
+    S.transactions.unshift({ id: uid(), date, desc, type: 'transfer', amount: roundedAmt, cat, account: toAcc,   xferRef: xferId, xferDir: 'in',  goalId: goalId || '', bucket: bucket || '' });
     toast('Transfer recorded between ' + fromAcc + ' and ' + toAcc);
 
   } else if (type === 'bill') {
-    const acc    = document.getElementById('tx-acc').value;
+    const acc     = document.getElementById('tx-acc').value;
     const dueDate = document.getElementById('tx-due').value;
-    S.transactions.unshift({ id: uid(), date, desc, type: 'bill', amount: roundedAmt, cat, account: acc, dueDate: dueDate || '', goalId: goalId || '' });
+    S.transactions.unshift({ id: uid(), date, desc, type: 'bill', amount: roundedAmt, cat, account: acc, dueDate: dueDate || '', goalId: goalId || '', bucket: bucket || 'Bills' });
     toast('Bill payment saved');
 
   } else {
     const acc = document.getElementById('tx-acc').value;
-    S.transactions.unshift({ id: uid(), date, desc, type, amount: roundedAmt, cat, account: acc, goalId: goalId || '' });
+    S.transactions.unshift({ id: uid(), date, desc, type, amount: roundedAmt, cat, account: acc, goalId: goalId || '', bucket: bucket || '' });
     toast('Transaction saved');
   }
 
   saveLocal(); closeModal('tx-modal');
-  ['tx-desc','tx-amt','tx-due','tx-goal'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  ['tx-desc','tx-amt','tx-due','tx-goal','tx-bucket'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   renderAll();
   setSyncState('syncing', 'Saving...');
   await syncTransactions();
@@ -1886,7 +1918,10 @@ function renderTx() {
   const tf  = document.getElementById('f-type').value;
   const cf  = document.getElementById('f-cat').value;
   const af  = document.getElementById('f-acc').value;
-  const mf  = document.getElementById('f-month').value;
+  const monthSel = document.getElementById('f-month');
+  const defaultMonth = new Date().toISOString().slice(0,7);
+  if (!monthSel.value && monthSel.dataset.userSet !== '1') monthSel.value = defaultMonth;
+  const mf  = monthSel.value;
   const sf  = (document.getElementById('f-search').value || '').trim().toLowerCase();
   let txs   = S.transactions;
   if (tf)  txs = txs.filter(t => t.type === tf);
@@ -1920,7 +1955,13 @@ function renderTx() {
   }
 
   const el = document.getElementById('tx-list');
-  if (!txs.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div>No transactions found.</div>'; return; }
+  if (!txs.length) {
+    const hint = canReadViaScript()
+      ? 'No transactions yet. Use <strong>↓ Pull</strong> in Settings to load data from Google Sheets.'
+      : 'No transactions yet. Add one above, or connect Google Sheets in Settings.';
+    el.innerHTML = `<div class="empty"><div class="empty-icon">📋</div>${hint}</div>`;
+    return;
+  }
   el.innerHTML = txs.map((t) => {
     let amtClass, amtPrefix, typeLabel;
     if (t.type === 'income')   { amtClass = 'pos'; amtPrefix = '+'; typeLabel = ''; }
@@ -2056,7 +2097,7 @@ function renderBudget() {
   if (!S.budgets.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📊</div>No budgets set yet. Add a monthly limit for each spending category.</div>'; return; }
   const isCurrentMonth = bM - 1 === new Date().getMonth() && bY === new Date().getFullYear();
   el.innerHTML = S.budgets.map((b, i) => {
-    const spent = monthTxs(bM - 1, bY).filter(t => t.type === 'expense' && t.cat === b.cat).reduce((s, t) => s + t.amount, 0);
+    const spent = monthTxs(bM - 1, bY).filter(t => (t.type === 'expense' || t.type === 'bill') && t.cat === b.cat).reduce((s, t) => s + t.amount, 0);
     const pct = Math.min((spent / b.amount) * 100, 100);
     const color = PALETTE[i % PALETTE.length];
     const statusColor = pct > 90 ? '#E24B4A' : pct > 70 ? '#EF9F27' : '#1D9E75';
@@ -2084,73 +2125,6 @@ function renderBudget() {
 let lastPriceRefresh = null;
 let priceCache = {}; // ticker -> { price, name, change, changePct, timestamp }
 
-// ─── proxy wrappers ────────────────────────────────────────────────────────
-// We try multiple CORS proxies in order — if one is down the next is tried.
-// allorigins wraps the response in {contents:'...'}, corsproxy returns raw.
-async function proxyFetch(targetUrl, timeoutMs) {
-  const proxies = [
-    { url: 'https://api.allorigins.win/get?url=' + encodeURIComponent(targetUrl), unwrap: d => JSON.parse(d.contents) },
-    { url: 'https://corsproxy.io/?' + encodeURIComponent(targetUrl),             unwrap: d => d },
-    { url: 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(targetUrl), unwrap: d => d },
-  ];
-  for (const p of proxies) {
-    try {
-      const r = await fetch(p.url, { signal: AbortSignal.timeout(timeoutMs || 7000) });
-      if (!r.ok) continue;
-      const raw = await r.json();
-      return p.unwrap(raw);
-    } catch(e) {}
-  }
-  return null;
-}
-
-async function fetchPrice(ticker) {
-  // Try bare ticker plus Canadian exchange suffixes
-  const variants = [ticker];
-  if (!ticker.includes('.')) {
-    variants.push(ticker + '.TO');  // TSX
-    variants.push(ticker + '.V');   // TSX Venture
-    variants.push(ticker + '.CN');  // NEO
-  }
-
-  function parseYahoo(d, originalTicker) {
-    const meta = d && d.chart && d.chart.result && d.chart.result[0] && d.chart.result[0].meta;
-    if (!meta || !meta.regularMarketPrice) return null;
-    return {
-      price:      meta.regularMarketPrice,
-      name:       meta.longName || meta.shortName || originalTicker,
-      change:     meta.regularMarketPrice - (meta.previousClose || meta.regularMarketPrice),
-      changePct:  meta.previousClose ? ((meta.regularMarketPrice - meta.previousClose) / meta.previousClose * 100) : 0,
-      currency:   meta.currency    || 'USD',
-      exchange:   meta.exchangeName || '',
-      resolvedTicker: meta.symbol  || originalTicker,
-      timestamp:  new Date()
-    };
-  }
-
-  for (const variant of variants) {
-    // Use query2 — slightly more permissive than query1 for browser requests
-    const yahooUrl = 'https://query2.finance.yahoo.com/v8/finance/chart/' + variant + '?interval=1d&range=5d';
-
-    // Attempt 1: direct (works if Yahoo relaxes CORS for your network/browser)
-    try {
-      const r = await fetch(yahooUrl, { signal: AbortSignal.timeout(4000), headers: { 'Accept': 'application/json' } });
-      if (r.ok) {
-        const d = await r.json();
-        const result = parseYahoo(d, ticker);
-        if (result) { if (variant !== ticker) priceCache[ticker + '__resolvedAs'] = variant; return result; }
-      }
-    } catch(e) {}
-
-    // Attempt 2: via rotating CORS proxies
-    const d = await proxyFetch(yahooUrl, 8000);
-    if (d) {
-      const result = parseYahoo(d, ticker);
-      if (result) { if (variant !== ticker) priceCache[ticker + '__resolvedAs'] = variant; return result; }
-    }
-  }
-  return null;
-}
 
 // ═══════════════════════════════════════════════
 // GOOGLE FINANCE PRICE ENGINE
@@ -2168,7 +2142,7 @@ async function fetchPrice(ticker) {
 async function buildPricesSheet() {
   // Write header + one row per holding with GOOGLEFINANCE formulas
   if (!S.stocks.length) return false;
-  if (!CONFIG.apiKey || !CONFIG.sheetId) return false;
+  if (!CONFIG.scriptUrl || !CONFIG.sheetId) return false;
 
   const header = [['Ticker','Price','Name','Change%','Currency','LastUpdated']];
   const rows   = S.stocks.map(s => [
@@ -2227,72 +2201,55 @@ async function refreshPrices(manual = false) {
   if (statusDot) statusDot.style.background = '#EF9F27';
   if (refreshBtn) refreshBtn.textContent = '↻ Updating...';
 
-  // ── Path A: Google Sheets connected → use GOOGLEFINANCE() ──────────────
-  if (CONFIG.apiKey && CONFIG.sheetId) {
-    if (statusTxt) statusTxt.textContent = `Writing GOOGLEFINANCE formulas to your Sheet...`;
+  if (!CONFIG.scriptUrl || !CONFIG.sheetId) {
+    if (statusTxt) statusTxt.textContent = 'Connect Google Sheets in Settings to enable live prices';
+    if (statusDot) statusDot.style.background = '#EF9F27';
+    if (refreshBtn) refreshBtn.textContent = '↻ Refresh';
+    return;
+  }
 
-    const wrote = await buildPricesSheet();
-    if (!wrote) {
-      if (statusTxt) statusTxt.textContent = 'Could not write to Prices sheet — check credentials';
-      if (statusDot) statusDot.style.background = '#E24B4A';
-      if (refreshBtn) refreshBtn.textContent = '↻ Refresh';
-      return;
+  if (statusTxt) statusTxt.textContent = 'Writing GOOGLEFINANCE formulas to your Sheet...';
+
+  const wrote = await buildPricesSheet();
+  if (!wrote) {
+    if (statusTxt) statusTxt.textContent = 'Could not write to Prices sheet — check your Apps Script URL and re-deploy if needed';
+    if (statusDot) statusDot.style.background = '#E24B4A';
+    if (refreshBtn) refreshBtn.textContent = '↻ Refresh';
+    return;
+  }
+
+  // Wait for Google to evaluate the formulas (3 seconds is usually enough)
+  if (statusTxt) statusTxt.textContent = 'Waiting for Google Finance to calculate prices...';
+  await new Promise(res => setTimeout(res, 3500));
+
+  if (statusTxt) statusTxt.textContent = 'Reading prices from your Sheet...';
+  const prices = await readPricesSheet();
+
+  let updated = 0, failed = 0;
+  for (const stock of S.stocks) {
+    const data = prices[stock.ticker];
+    if (data && data.price > 0) {
+      priceCache[stock.ticker] = data;
+      stock.current = data.price;
+      if (!stock.name || stock.name === stock.ticker) stock.name = data.name;
+      updated++;
+    } else {
+      failed++;
     }
+  }
 
-    // Wait for Google to evaluate the formulas (3 seconds is usually enough)
-    if (statusTxt) statusTxt.textContent = 'Waiting for Google Finance to calculate prices...';
-    await new Promise(res => setTimeout(res, 3500));
+  lastPriceRefresh = Date.now();
+  saveLocal();
+  setSyncState('syncing', 'Saving...');
+  await syncStocks();
+  setSyncState('ok', 'Synced');
 
-    if (statusTxt) statusTxt.textContent = 'Reading prices from your Sheet...';
-    const prices = await readPricesSheet();
-    const tickers = Object.keys(prices);
-
-    let updated = 0, failed = 0;
-    for (const stock of S.stocks) {
-      const data = prices[stock.ticker];
-      if (data && data.price > 0) {
-        priceCache[stock.ticker] = data;
-        stock.current = data.price;
-        if (!stock.name || stock.name === stock.ticker) stock.name = data.name;
-        updated++;
-      } else {
-        failed++;
-      }
-    }
-
-    lastPriceRefresh = Date.now();
-    saveLocal();
-    setSyncState('syncing', 'Saving...');
-    await syncStocks();
-    setSyncState('ok', 'Synced');
-
-    const now = new Date().toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit' });
-    if (statusDot) statusDot.style.background = updated === 0 ? '#E24B4A' : '#1D9E75';
-    if (statusTxt) {
-      if (failed === 0)        statusTxt.textContent = `All ${updated} prices updated via Google Finance · ${now}`;
-      else if (updated === 0)  statusTxt.textContent = `Prices unavailable — market may be closed, or add a "Prices" tab to your Sheet`;
-      else                     statusTxt.textContent = `${updated} updated, ${failed} unavailable · ${now}`;
-    }
-
-  // ── Path B: No Sheets connection → fall back to proxy attempts ──────────
-  } else {
-    if (statusTxt) statusTxt.textContent = `No Google Sheets connected — trying direct fetch...`;
-    let updated = 0, failed = 0;
-    for (const stock of S.stocks) {
-      const data = await fetchPrice(stock.ticker);
-      if (data) {
-        priceCache[stock.ticker] = data;
-        stock.current = data.price;
-        updated++;
-      } else { failed++; }
-    }
-    lastPriceRefresh = Date.now();
-    saveLocal();
-    const now = new Date().toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit' });
-    if (statusDot) statusDot.style.background = updated === 0 ? '#E24B4A' : '#1D9E75';
-    if (statusTxt) statusTxt.textContent = updated === 0
-      ? 'Could not fetch prices — connect Google Sheets in Settings for reliable prices'
-      : `${updated} updated · ${now}`;
+  const now = new Date().toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit' });
+  if (statusDot) statusDot.style.background = updated === 0 ? '#E24B4A' : '#1D9E75';
+  if (statusTxt) {
+    if (failed === 0)        statusTxt.textContent = `All ${updated} prices updated via Google Finance · ${now}`;
+    else if (updated === 0)  statusTxt.textContent = `Prices unavailable — market may be closed`;
+    else                     statusTxt.textContent = `${updated} updated, ${failed} unavailable · ${now}`;
   }
 
   if (refreshBtn) refreshBtn.textContent = '↻ Refresh';
@@ -2333,17 +2290,6 @@ async function tickerSearch(query) {
         );
       }
     } catch(e) {}
-
-    // If direct failed, try proxies
-    if (!quotes.length) {
-      const d = await proxyFetch(searchUrl, 8000);
-      if (d && d.quotes) {
-        quotes = d.quotes.filter(q =>
-          q.symbol && q.quoteType &&
-          ['EQUITY','ETF','MUTUALFUND','CRYPTOCURRENCY','INDEX'].includes(q.quoteType)
-        );
-      }
-    }
 
     tickerResults = quotes;
 
@@ -2397,7 +2343,7 @@ async function selectTicker(idx) {
   document.getElementById('stk-sel-name').textContent   = q.longname || q.shortname || '';
   document.getElementById('stk-sel-exch').textContent   = q.exchDisp || q.exchange || '';
 
-  // Fetch live price — use Google Finance sheet if connected, else proxy
+  // Fetch live price via Google Finance (Apps Script)
   const statusEl = document.getElementById('price-fetch-status');
   const priceRow    = document.getElementById('stk-price-row');
   const priceBanner = document.getElementById('stk-price-banner');
@@ -2407,8 +2353,7 @@ async function selectTicker(idx) {
 
   let data = null;
 
-  if (CONFIG.apiKey && CONFIG.sheetId) {
-    // Write a single-ticker price lookup to the Prices sheet
+  if (CONFIG.scriptUrl && CONFIG.sheetId) {
     statusEl.textContent = 'Looking up via Google Finance...';
     const tempRows = [[
       q.symbol,
@@ -2419,15 +2364,9 @@ async function selectTicker(idx) {
       `=NOW()`
     ]];
     await sheetsWrite(`${SHEET_NAMES.prices}!A1`, [['Ticker','Price','Name','Change%','Currency','LastUpdated'], ...tempRows], 'USER_ENTERED');
-    await new Promise(res => setTimeout(res, 3000)); // wait for formula evaluation
+    await new Promise(res => setTimeout(res, 3000));
     const prices = await readPricesSheet();
     data = prices[q.symbol] || null;
-  }
-
-  // Fallback to proxy if no sheets or sheets lookup failed
-  if (!data) {
-    statusEl.textContent = 'Trying direct fetch...';
-    data = await fetchPrice(q.symbol);
   }
 
   if (data) {
@@ -2435,14 +2374,14 @@ async function selectTicker(idx) {
     if (!document.getElementById('stk-cost').value) {
       document.getElementById('stk-cost').value = data.price.toFixed(2);
     }
-    statusEl.textContent = '✓ Price fetched via ' + (CONFIG.apiKey ? 'Google Finance' : 'market data');
+    statusEl.textContent = '✓ Price fetched via Google Finance';
     statusEl.style.color = '#1D9E75';
     priceRow.style.display = 'block';
     const chgSign = data.changePct >= 0 ? '+' : '';
     priceBanner.textContent = q.symbol + ' · $' + data.price.toFixed(2) + ' · ' + chgSign + data.changePct.toFixed(2) + '% today' + (data.currency && data.currency !== 'USD' ? ' · ' + data.currency : '');
     setTimeout(() => document.getElementById('stk-shares').focus(), 100);
   } else {
-    statusEl.textContent = 'Could not fetch — enter price manually below';
+    statusEl.textContent = CONFIG.scriptUrl ? 'Could not fetch — enter price manually below' : 'Connect Google Sheets in Settings to auto-fetch prices';
     statusEl.style.color = '#E24B4A';
     priceRow.style.display = 'none';
     setTimeout(() => document.getElementById('stk-price').focus(), 100);
@@ -2494,23 +2433,23 @@ async function addStock() {
 
   if (!ticker || !shares || !cost) { toast('Ticker, shares and cost are required'); return; }
 
-  // If no price entered, try Google Finance first then proxy
+  // If no price entered, try Google Finance via Apps Script
   if (!price) {
-    toast('Looking up current price...');
-    let data = null;
-    if (CONFIG.apiKey && CONFIG.sheetId) {
-      await sheetsWrite(`${SHEET_NAMES.prices}!A1`,
-        [['Ticker','Price','Name','Change%','Currency','LastUpdated'],
-         [ticker, `=IFERROR(GOOGLEFINANCE("${ticker}","price"),"N/A")`,
-          `=IFERROR(GOOGLEFINANCE("${ticker}","name"),"${ticker}")`,
-          `=IFERROR(GOOGLEFINANCE("${ticker}","changepct"),"N/A")`,
-          `=IFERROR(GOOGLEFINANCE("${ticker}","currency"),"N/A")`,`=NOW()`]],
-        'USER_ENTERED');
-      await new Promise(res => setTimeout(res, 3000));
-      const prices = await readPricesSheet();
-      data = prices[ticker] || null;
+    if (!CONFIG.scriptUrl || !CONFIG.sheetId) {
+      toast('Enter a price manually, or connect Google Sheets in Settings to auto-fetch');
+      return;
     }
-    if (!data) data = await fetchPrice(ticker);
+    toast('Looking up current price...');
+    await sheetsWrite(`${SHEET_NAMES.prices}!A1`,
+      [['Ticker','Price','Name','Change%','Currency','LastUpdated'],
+       [ticker, `=IFERROR(GOOGLEFINANCE("${ticker}","price"),"N/A")`,
+        `=IFERROR(GOOGLEFINANCE("${ticker}","name"),"${ticker}")`,
+        `=IFERROR(GOOGLEFINANCE("${ticker}","changepct"),"N/A")`,
+        `=IFERROR(GOOGLEFINANCE("${ticker}","currency"),"N/A")`,`=NOW()`]],
+      'USER_ENTERED');
+    await new Promise(res => setTimeout(res, 3000));
+    const prices = await readPricesSheet();
+    const data = prices[ticker] || null;
     if (data) { price = data.price; priceCache[ticker] = data; }
     else { toast('Could not fetch price — please enter it manually in the price field'); return; }
   }
@@ -2663,6 +2602,50 @@ async function addGoal() {
   toast('Goal added');
 }
 
+function goalETA(g) {
+  const current = getGoalCurrent(g);
+  const rem = Math.max(g.target - current, 0);
+  if (rem <= 0) return null; // already reached
+
+  // Average monthly contribution over the last 3 months
+  const now = new Date();
+  let totalContrib = 0;
+  let monthsWithData = 0;
+  for (let i = 0; i < 3; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const m = d.getMonth(); const y = d.getFullYear();
+    let contrib = 0;
+    if (g.linkedAccount) {
+      // net inflows into linked account this month
+      contrib = monthTxs(m, y)
+        .filter(t => t.account === g.linkedAccount)
+        .reduce((s, t) => {
+          if (t.type === 'income') return s + t.amount;
+          if (t.type === 'expense' || t.type === 'bill') return s - t.amount;
+          if (t.type === 'transfer') return s + (t.xferDir === 'in' ? t.amount : -t.amount);
+          return s;
+        }, 0);
+    } else {
+      // tagged transactions or manual contributions
+      contrib = monthTxs(m, y)
+        .filter(t => t.goalId === g.id)
+        .reduce((s, t) => s + (t.type === 'income' ? t.amount : -t.amount), 0);
+    }
+    if (contrib > 0) { totalContrib += contrib; monthsWithData++; }
+  }
+
+  if (monthsWithData === 0) return null;
+  const avgMonthly = totalContrib / monthsWithData;
+  if (avgMonthly <= 0) return null;
+
+  const monthsLeft = Math.ceil(rem / avgMonthly);
+  if (monthsLeft <= 1)   return '~1 month remaining';
+  if (monthsLeft < 12)   return `~${monthsLeft} months remaining`;
+  const yrs = Math.floor(monthsLeft / 12);
+  const mos = monthsLeft % 12;
+  return mos > 0 ? `~${yrs}y ${mos}m remaining` : `~${yrs} year${yrs > 1 ? 's' : ''} remaining`;
+}
+
 function renderGoals() {
   const el = document.getElementById('goals-list');
   if (!S.goals.length) { el.innerHTML = '<div class="card"><div class="empty"><div class="empty-icon">🎯</div>No goals yet. Set a savings target to start tracking.</div></div>'; return; }
@@ -2674,6 +2657,10 @@ function renderGoals() {
     const linkedNet = getGoalLinkedNet(g);
     const linkedAccountLabel = g.linkedAccount ? `Linked account: ${g.linkedAccount}` : 'Manual goal tracking';
     const linkedNetLabel = linkedNet ? ` · Tagged tx net: ${linkedNet >= 0 ? '+' : ''}${fmt(linkedNet)}` : '';
+    const eta = goalETA(g);
+    const etaHtml = eta
+      ? `<span style="background:var(--blue-bg);color:var(--blue);border-radius:20px;padding:2px 10px;font-size:10px;font-weight:500;white-space:nowrap">${eta}</span>`
+      : (pct >= 100 ? `<span style="background:var(--green-bg);color:var(--green);border-radius:20px;padding:2px 10px;font-size:10px;font-weight:500">Reached! 🎉</span>` : '');
     return `<div class="card" style="margin-bottom:14px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
         <div>
@@ -2681,7 +2668,8 @@ function renderGoals() {
           <div style="font-size:11px;color:#555e78;margin-top:2px">${g.deadline ? 'Target: ' + g.deadline : 'No deadline set'}</div>
           <div style="font-size:11px;color:#555e78;margin-top:2px">${linkedAccountLabel}${linkedNetLabel}</div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+          ${etaHtml}
           <span style="font-size:13px;color:#8b92a8">${fmt(current)} <span style="color:#3a4260">/ ${fmt(g.target)}</span></span>
           ${g.linkedAccount ? '' : `<button class="btn btn-sm" style="font-size:11px;padding:3px 9px" onclick="openGoalContrib(${i})">+ Add</button>`}
           <button class="del" onclick="deleteItem('goals',${i},syncGoals)">×</button>
@@ -2743,15 +2731,37 @@ function renderDash() {
   const inc = txm.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
   const exp = txm.filter(t => t.type === 'expense' || t.type === 'bill').reduce((s, t) => s + t.amount, 0);
   const save = inc - exp;
+  const accountBalance = S.accounts.reduce((s, a) => s + getAccountCurrentBalance(a), 0);
   const nw = netWorth();
   const monthlyBudget = S.budgets.reduce((s, b) => s + b.amount, 0);
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   const daysLeft = Math.max(daysInMonth - now.getDate() + 1, 1);
   const dailySpendLeft = monthlyBudget > 0 ? Math.round(((monthlyBudget - exp) / daysLeft) * 100) / 100 : 0;
 
+  // Money Left Today
+  const totalBudget = S.budgets.reduce((s, b) => s + b.amount, 0);
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const dayOfMonth  = now.getDate();
+  const daysLeft    = daysInMonth - dayOfMonth + 1;
+  const budgetLeft  = totalBudget > 0 ? totalBudget - exp : 0;
+  const moneyLeftToday = totalBudget > 0 ? budgetLeft / daysLeft : null;
+
   const savingsRate = inc > 0 ? Math.round((save / inc) * 100) : 0;
   const srColor = savingsRate >= 20 ? 'pos' : savingsRate >= 10 ? '' : 'neg';
   const srTip = savingsRate >= 20 ? 'Excellent (goal: 20%+)' : savingsRate >= 10 ? 'Good (goal: 20%+)' : savingsRate > 0 ? 'Low — aim for 20%' : 'Spending exceeds income';
+
+  const mltHtml = moneyLeftToday !== null
+    ? `<div class="metric ${moneyLeftToday >= 0 ? 'green' : 'red'}">
+        <div class="metric-label">Money Left Today</div>
+        <div class="metric-value ${moneyLeftToday >= 0 ? 'pos' : 'neg'}">${moneyLeftToday >= 0 ? '' : '−'}${fmtK(moneyLeftToday)}</div>
+        <div class="metric-trend">Daily allowance · ${daysLeft}d left</div>
+       </div>`
+    : `<div class="metric blue">
+        <div class="metric-label">Money Left Today</div>
+        <div class="metric-value" style="font-size:14px;color:var(--text4)">Set budgets</div>
+        <div class="metric-trend">Add budgets to see daily allowance</div>
+       </div>`;
+
   document.getElementById('dash-metrics').innerHTML = `
     <div class="metric blue"><div class="metric-label">Net Worth</div><div class="metric-value ${nw >= 0 ? 'pos' : 'neg'}"><span class="countup" data-value="${nw}" data-format="currencyCompact"></span></div><div class="metric-trend">Accounts + portfolio</div></div>
     <div class="metric green"><div class="metric-label">Monthly Income</div><div class="metric-value pos"><span class="countup" data-value="${inc}" data-format="currencyCompact"></span></div><div class="metric-trend">${now.toLocaleDateString('en-CA',{month:'short'})}</div></div>
@@ -2764,6 +2774,9 @@ function renderDash() {
 
   // Bill alerts
   renderBillAlerts();
+
+  // Weekly insights
+  renderWeeklyInsights();
 
   // Recent txns
   const el = document.getElementById('dash-recent');
@@ -2785,6 +2798,159 @@ function renderDash() {
       <span class="amount ${amtClass}">${amtPrefix} ${fmt(t.amount)}</span>
     </div>`;
   }).join('');
+}
+
+// ─── Bucket summary cards ──────────────────────────────────────
+function renderBucketCards(txm, totalExp) {
+  const el = document.getElementById('dash-buckets');
+  if (!el) return;
+
+  // Bucket definitions: label, colors, which transaction types count
+  const BUCKETS = [
+    { key: 'Bills',     label: 'Bills',     color: '#f04f4f', bg: 'var(--red-bg)',   icon: '🏠', match: t => t.type === 'bill' || t.bucket === 'Bills' },
+    { key: 'Spending',  label: 'Spending',  color: '#f5a623', bg: 'var(--amber-bg)', icon: '🛒', match: t => (t.type === 'expense' && (!t.bucket || t.bucket === 'Spending')) || t.bucket === 'Spending' },
+    { key: 'Savings',   label: 'Savings',   color: '#18b880', bg: 'var(--green-bg)', icon: '🏦', match: t => t.bucket === 'Savings' },
+    { key: 'Investing', label: 'Investing', color: '#4a82e4', bg: 'var(--blue-bg)',  icon: '📈', match: t => t.bucket === 'Investing' },
+  ];
+
+  // For Bills/Spending use thisMonthTxs; for Savings/Investing look at all buckets
+  const spending = (txm || thisMonthTxs()).filter(t => t.type === 'expense' || t.type === 'bill');
+  const allMonthOutflow = spending.concat((txm || thisMonthTxs()).filter(t => t.bucket === 'Savings' || t.bucket === 'Investing'));
+
+  const totals = BUCKETS.map(b => {
+    const amt = (txm || thisMonthTxs())
+      .filter(t => {
+        if (b.key === 'Bills')     return t.type === 'bill' || t.bucket === 'Bills';
+        if (b.key === 'Spending')  return t.type === 'expense' && t.bucket !== 'Bills' && t.bucket !== 'Savings' && t.bucket !== 'Investing';
+        return t.bucket === b.key;
+      })
+      .reduce((s, t) => s + t.amount, 0);
+    return { ...b, amt };
+  });
+
+  const grandTotal = totals.reduce((s, b) => s + b.amt, 0) || 1;
+
+  el.innerHTML = totals.map(b => {
+    const pct = Math.min((b.amt / grandTotal) * 100, 100);
+    return `<div class="bucket-card">
+      <div class="bucket-label">${b.icon} ${b.label}</div>
+      <div class="bucket-value" style="color:${b.color}">${fmtK(b.amt)}</div>
+      <div class="bucket-pct">${pct.toFixed(0)}% of outflow</div>
+      <div class="bucket-bar"><div class="bucket-bar-fill" style="width:${pct.toFixed(1)}%;background:${b.color}"></div></div>
+    </div>`;
+  }).join('');
+}
+
+// ─── Weekly insights (rules-based) ────────────────────────────
+function renderWeeklyInsights() {
+  const el = document.getElementById('dash-insights');
+  if (!el) return;
+
+  const now   = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  // This week: last 7 days
+  const week1Start = new Date(today); week1Start.setDate(today.getDate() - 6);
+  // Last week: 7-14 days ago
+  const week2Start = new Date(today); week2Start.setDate(today.getDate() - 13);
+  const week2End   = new Date(today); week2End.setDate(today.getDate() - 7);
+
+  const inRange = (t, from, to) => {
+    const d = new Date((t.date || '') + 'T00:00:00');
+    return !isNaN(d) && d >= from && d <= to;
+  };
+
+  const thisWeekTxs = S.transactions.filter(t => (t.type === 'expense' || t.type === 'bill') && inRange(t, week1Start, today));
+  const lastWeekTxs = S.transactions.filter(t => (t.type === 'expense' || t.type === 'bill') && inRange(t, week2Start, week2End));
+
+  const thisWeekTotal = thisWeekTxs.reduce((s, t) => s + t.amount, 0);
+  const lastWeekTotal = lastWeekTxs.reduce((s, t) => s + t.amount, 0);
+
+  const insights = [];
+
+  // Insight 1: overall week-over-week spending
+  if (lastWeekTotal > 0 && thisWeekTotal > 0) {
+    const changePct = Math.round(((thisWeekTotal - lastWeekTotal) / lastWeekTotal) * 100);
+    const up = changePct > 0;
+    if (Math.abs(changePct) >= 5) {
+      insights.push({
+        icon: up ? '📈' : '📉',
+        bg: up ? 'var(--red-bg)' : 'var(--green-bg)',
+        text: `Overall spending is <strong>${up ? 'up' : 'down'} ${Math.abs(changePct)}%</strong> vs last week`,
+        sub: `${fmt(thisWeekTotal)} this week vs ${fmt(lastWeekTotal)} last week`
+      });
+    }
+  }
+
+  // Insight 2: biggest-spending category this week
+  if (thisWeekTxs.length) {
+    const byCat = {};
+    thisWeekTxs.forEach(t => byCat[t.cat] = (byCat[t.cat] || 0) + t.amount);
+    const topCat = Object.entries(byCat).sort((a, b) => b[1] - a[1])[0];
+    if (topCat) {
+      const lastWeekCatAmt = lastWeekTxs.filter(t => t.cat === topCat[0]).reduce((s, t) => s + t.amount, 0);
+      if (lastWeekCatAmt > 0) {
+        const catChg = Math.round(((topCat[1] - lastWeekCatAmt) / lastWeekCatAmt) * 100);
+        const up = catChg > 0;
+        if (Math.abs(catChg) >= 10) {
+          insights.push({
+            icon: up ? '⚠️' : '✅',
+            bg: up ? 'var(--amber-bg)' : 'var(--green-bg)',
+            text: `<strong>${topCat[0]}</strong> spending is ${up ? 'up' : 'down'} <strong>${Math.abs(catChg)}%</strong> vs last week`,
+            sub: `${fmt(topCat[1])} this week vs ${fmt(lastWeekCatAmt)} last week`
+          });
+        }
+      } else {
+        insights.push({
+          icon: '💸',
+          bg: 'var(--blue-bg)',
+          text: `Top spend this week: <strong>${topCat[0]}</strong>`,
+          sub: `${fmt(topCat[1])} across ${thisWeekTxs.filter(t => t.cat === topCat[0]).length} transactions`
+        });
+      }
+    }
+  }
+
+  // Insight 3: savings rate check
+  const txm = thisMonthTxs();
+  const inc  = txm.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const exp2 = txm.filter(t => t.type === 'expense' || t.type === 'bill').reduce((s, t) => s + t.amount, 0);
+  if (inc > 0) {
+    const sr = Math.round(((inc - exp2) / inc) * 100);
+    if (sr < 10 && sr >= 0) {
+      insights.push({ icon: '🎯', bg: 'var(--amber-bg)', text: `Savings rate is <strong>${sr}%</strong> this month`, sub: 'Aim for 20%+ to build long-term wealth' });
+    } else if (sr >= 20) {
+      insights.push({ icon: '🌟', bg: 'var(--green-bg)', text: `Great work — savings rate is <strong>${sr}%</strong> this month`, sub: 'You\'re on track for your goals' });
+    }
+  }
+
+  // Goal with no contributions this month
+  if (S.goals.length) {
+    const goalWithNoContrib = S.goals.find(g => {
+      if (g.linkedAccount) return false;
+      const contrib = txm.filter(t => t.goalId === g.id).reduce((s, t) => s + (t.type === 'income' ? t.amount : -t.amount), 0);
+      return contrib === 0 && getGoalCurrent(g) < g.target;
+    });
+    if (goalWithNoContrib) {
+      insights.push({ icon: '🎯', bg: 'var(--blue-bg)', text: `No contributions to <strong>${goalWithNoContrib.name}</strong> this month`, sub: `${fmt(goalWithNoContrib.target - getGoalCurrent(goalWithNoContrib))} remaining to reach your goal` });
+    }
+  }
+
+  if (!insights.length) { el.innerHTML = ''; return; }
+
+  el.innerHTML = `<div class="card" style="margin-bottom:18px">
+    <div class="card-header" style="margin-bottom:10px">
+      <span class="card-title">💡 Weekly Insights</span>
+      <span class="badge badge-blue">${insights.length} insight${insights.length > 1 ? 's' : ''}</span>
+    </div>
+    ${insights.map(ins => `<div class="insight-row">
+      <div class="insight-icon" style="background:${ins.bg}">${ins.icon}</div>
+      <div class="insight-body">
+        <div class="insight-text">${ins.text}</div>
+        <div class="insight-sub">${ins.sub}</div>
+      </div>
+    </div>`).join('')}
+  </div>`;
 }
 
 // ═══════════════════════════════════════════════
@@ -2921,6 +3087,26 @@ function drawAccountsPie() {
   });
 }
 
+function drawAccountsPie() {
+  kill('acc-pie');
+  const pos = S.accounts
+    .map(a => ({ ...a, currentBalance: getAccountCurrentBalance(a) }))
+    .filter(a => a.currentBalance > 0);
+  if (!pos.length) return;
+  const ctx = document.getElementById('chart-accounts-pie'); if (!ctx) return;
+  charts['acc-pie'] = new Chart(ctx, {
+    type: 'pie',
+    data: {
+      labels: pos.map(a => a.name),
+      datasets: [{ data: pos.map(a => a.currentBalance), backgroundColor: PALETTE.slice(0, pos.length), borderWidth: 0, hoverOffset: 4 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'right', labels: { color: chartColors().text, font: { size: 11 }, boxWidth: 9, padding: 8 } } }
+    }
+  });
+}
+
 function drawBudgetChart() {
   kill('bud');
   if (!S.budgets.length) return;
@@ -3015,13 +3201,10 @@ function importData(e) {
       S = { ...S, ...data };
       saveLocal(); renderAll();
       toast('Data imported successfully');
-      if (CONFIG.apiKey && CONFIG.scriptUrl) {
+      if (CONFIG.scriptUrl && CONFIG.sheetId) {
         setSyncState('syncing', 'Pushing...');
         await Promise.all([syncAccounts(), syncTransactions(), syncBudgets(), syncStocks(), syncGoals()]);
         setSyncState('ok', 'Synced');
-      } else if (CONFIG.apiKey && !CONFIG.scriptUrl) {
-        setSyncState('ok', 'Read-only');
-        toast('Imported locally. Add Apps Script URL in Settings to enable push.');
       }
     } catch(err) {
       console.error(err);
@@ -3061,7 +3244,7 @@ async function forcePush() {
   } catch(e) {
     console.error(e);
     setSyncState('error', 'Error');
-    if (statusEl) statusEl.textContent = 'Push failed — verify Apps Script deployment + access ("Anyone") and Sheet credentials';
+    if (statusEl) statusEl.textContent = `Push failed — ${e.message || 'check Apps Script URL and re-deploy if needed'}`;
     toast('Push failed — check script URL/deployment and credentials');
   }
 }
@@ -3104,15 +3287,29 @@ function clearAllData() {
 const APPS_SCRIPT_CODE = `
 // Paste this into: Google Sheet → Extensions → Apps Script → Save → Deploy as Web App
 // Execute as: Me | Who has access: Anyone
+// If you already deployed before, create a NEW version: Deploy → Manage deployments → pencil → New version → Deploy
 
 function doPost(e) {
   try {
-    const data     = JSON.parse(e.postData.contents);
-    const ss       = SpreadsheetApp.openById(data.sheetId);
-    const action   = data.action || 'write';
-    const range    = data.range;
+    const data      = JSON.parse(e.postData.contents);
+    const ss        = SpreadsheetApp.openById(data.sheetId);
+    const action    = data.action || 'write';
+    const range     = data.range;
+    const parts     = range.includes('!') ? range.split('!') : [null, range];
+    const sheetName = parts[0];
+    const cellRange = parts.length > 1 ? parts[1] : range;
 
     if (action === 'read') {
+      if (sheetName) {
+        const sheet = ss.getSheetByName(sheetName);
+        if (!sheet) {
+          return ContentService.createTextOutput(JSON.stringify({ status: 'ok', values: [] }))
+            .setMimeType(ContentService.MimeType.JSON);
+        }
+        const values = sheet.getRange(cellRange).getValues();
+        return ContentService.createTextOutput(JSON.stringify({ status: 'ok', values: values }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
       const values = ss.getRange(range).getValues();
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok', values: values }))
         .setMimeType(ContentService.MimeType.JSON);
@@ -3121,17 +3318,22 @@ function doPost(e) {
     if (action === 'write') {
       const values   = data.values;
       const inputOpt = data.inputOption || 'RAW';
-      const sheet    = ss.getRange(range);
+      let sheet = sheetName ? ss.getSheetByName(sheetName) : ss.getSheets()[0];
+      if (!sheet) sheet = ss.insertSheet(sheetName);
+      const numRows = values.length;
+      const numCols = values[0] ? values[0].length : 1;
+      sheet.clearContents();
+      const target = sheet.getRange(1, 1, numRows, numCols);
       if (inputOpt === 'USER_ENTERED') {
-        sheet.setValues(values);
+        target.setValues(values);
       } else {
-        sheet.setValues(values);
+        target.setValues(values);
       }
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'Unsupported action' }))
+    return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'Unsupported action: ' + action }))
       .setMimeType(ContentService.MimeType.JSON);
   } catch(err) {
     return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: err.toString() }))
@@ -3165,7 +3367,8 @@ function showAppsScriptCode() {
         4. Click <strong>Save</strong> (floppy disk icon)<br>
         5. Click <strong>Deploy → New deployment</strong><br>
         6. Type: <strong>Web app</strong> · Execute as: <strong>Me</strong> · Access: <strong>Anyone</strong><br>
-        7. Click <strong>Deploy</strong> → copy the URL → paste it in Settings
+        7. Click <strong>Deploy</strong> → copy the URL → paste it in Settings<br><br>
+        <strong style="color:var(--text2)">Already deployed before?</strong> You must create a new version for changes to take effect: <strong>Deploy → Manage deployments → pencil icon → New version → Deploy</strong>.
       </div>
       <div style="position:relative">
         <textarea id="gas-code-area" readonly style="width:100%;height:220px;padding:12px;background:var(--bg-2);border:var(--border);border-radius:10px;color:var(--text3);font-size:11px;font-family:monospace;resize:none;line-height:1.5">${APPS_SCRIPT_CODE.trim()}</textarea>
@@ -3230,10 +3433,17 @@ loadConfig();
 loadLocal();
 renderAll();
 if (canReadRemotely()) {
-  // Show subtle loading indicator while pulling latest data from Sheets
+  // Show skeleton placeholders while pulling from Sheets
+  const metricsEl = document.getElementById('dash-metrics');
+  const bucketsEl = document.getElementById('dash-buckets');
+  if (metricsEl && !S.transactions.length) {
+    metricsEl.innerHTML = Array(7).fill('<div class="metric skeleton skel-metric"></div>').join('');
+  }
+  if (bucketsEl && !S.transactions.length) {
+    bucketsEl.innerHTML = Array(4).fill('<div class="bucket-card skeleton" style="height:90px"></div>').join('');
+  }
   setSyncState('syncing', 'Loading latest data...');
   loadAllFromSheets().then(() => {
-    // Date cache may be stale after sheet pull
     invalidateDateCache();
     renderAll();
   });
@@ -3333,6 +3543,10 @@ function editTransaction(id) {
   document.getElementById('edit-tx-due-field').style.display = tx.type === 'bill' ? 'block' : 'none';
   document.getElementById('edit-tx-due').value = tx.dueDate || '';
 
+  // Bucket
+  const bucketSel = document.getElementById('edit-tx-bucket');
+  if (bucketSel) bucketSel.value = tx.bucket || '';
+
   openModal('edit-tx-modal');
 }
 
@@ -3357,6 +3571,7 @@ async function saveEditTransaction() {
   const cat     = document.getElementById('edit-tx-cat').value;
   const account = document.getElementById('edit-tx-acc').value;
   const dueDate = document.getElementById('edit-tx-due').value;
+  const bucket  = document.getElementById('edit-tx-bucket').value;
 
   if (!desc || !amt || !isFinite(amt) || amt <= 0) { toast('Description and valid amount required'); return; }
 
@@ -3366,7 +3581,7 @@ async function saveEditTransaction() {
   S.transactions[idx] = {
     ...S.transactions[idx],
     date, desc, type, amount: Math.round(amt * 100) / 100,
-    cat, account, dueDate: dueDate || ''
+    cat, account, dueDate: dueDate || '', bucket: bucket || ''
   };
 
   invalidateDateCache();
