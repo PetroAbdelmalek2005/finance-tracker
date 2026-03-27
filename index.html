@@ -880,6 +880,12 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
         <option value="Other">Other</option>
       </select>
     </div>
+    <div class="field"><label>Currency</label>
+      <select id="acc-currency">
+        <option value="CAD">CAD – Canadian Dollar</option>
+        <option value="USD">USD – US Dollar</option>
+      </select>
+    </div>
     <div class="field"><label>Current Balance (negative = debt)</label><input id="acc-bal" type="number" step="0.01" placeholder="0.00"></div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('acc-modal')">Cancel</button>
@@ -1356,7 +1362,7 @@ async function loadAllFromSheets() {
 
     // Load all tabs concurrently to reduce initial sync latency
     const [acc, txs, bud, stk, gls] = await Promise.all([
-      sheetsRead(`${SHEET_NAMES.accounts}!A2:D`),
+      sheetsRead(`${SHEET_NAMES.accounts}!A2:E`),
       sheetsRead(`${SHEET_NAMES.transactions}!A2:L`),
       sheetsRead(`${SHEET_NAMES.budgets}!A2:C`),
       sheetsRead(`${SHEET_NAMES.stocks}!A2:F`),
@@ -1368,7 +1374,7 @@ async function loadAllFromSheets() {
       .filter(r => r && safeStr(r[0]) && safeStr(r[1]))
       .map(r => {
         const type = safeStr(r[2],'Other');
-        return { id: safeStr(r[0]), name: safeStr(r[1],'Unnamed'), type, balance: normalizeAccountBalance(type, safeNum(r[3])) };
+        return { id: safeStr(r[0]), name: safeStr(r[1],'Unnamed'), type, balance: normalizeAccountBalance(type, safeNum(r[3])), currency: safeStr(r[4], 'CAD') };
       });
 
     // Transactions
@@ -1406,7 +1412,7 @@ async function pushToSheets(sheetName, headers, rows) {
   if (!ok) throw new Error(`Write failed for ${sheetName}. Check Apps Script URL and deployment access.`);
 }
 
-async function syncAccounts() { await pushToSheets(SHEET_NAMES.accounts, ['ID','Name','Type','Balance'], S.accounts.map(a => [a.id, a.name, a.type, a.balance])); }
+async function syncAccounts() { await pushToSheets(SHEET_NAMES.accounts, ['ID','Name','Type','Balance','Currency'], S.accounts.map(a => [a.id, a.name, a.type, a.balance, a.currency || 'CAD'])); }
 async function syncTransactions() { await pushToSheets(SHEET_NAMES.transactions, ['ID','Date','Description','Type','Amount','Category','Account','XferDir','XferRef','DueDate','GoalId','Bucket'], S.transactions.map(t => [t.id, t.date, t.desc, t.type, t.amount, t.cat, t.account, t.xferDir||'', t.xferRef||'', t.dueDate||'', t.goalId||'', t.bucket||''])); }
 async function syncBudgets() { await pushToSheets(SHEET_NAMES.budgets, ['ID','Category','Amount'], S.budgets.map(b => [b.id, b.cat, b.amount])); }
 async function syncStocks() { await pushToSheets(SHEET_NAMES.stocks, ['ID','Ticker','Name','Shares','CostPerShare','CurrentPrice'], S.stocks.map(s => [s.id, s.ticker, s.name, s.shares, s.costPerShare, s.current])); }
@@ -1480,6 +1486,15 @@ const INCOME_CATS   = ['Salary','Freelance','Investments','Rental','Business','G
 const TRANSFER_CATS = ['Account Transfer','Savings Deposit','Investment Contribution','Debt Payment','Other Transfer'];
 const BILL_CATS     = ['Rent / Mortgage','Electricity','Gas','Water','Internet','Phone','Insurance','Car Payment','Subscription','Streaming','Gym','Other Bill'];
 const PALETTE = ['#4a7fcb','#1D9E75','#EF9F27','#E24B4A','#7F77DD','#D85A30','#5bb8a0','#D4537E','#639922','#8b5cf6'];
+
+let usdCadRate = 1.38; // fallback rate, refreshed async on load
+async function fetchUsdCadRate() {
+  try {
+    const r = await fetch('https://open.er-api.com/v6/latest/USD');
+    const d = await r.json();
+    if (d && d.rates && d.rates.CAD) { usdCadRate = d.rates.CAD; }
+  } catch(e) { /* keep fallback */ }
+}
 
 function fmt(n) { return '$' + Math.abs(n).toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 function fmtK(n) {
@@ -1705,8 +1720,17 @@ function getAccountCurrentBalance(accountOrName) {
   return (acc.balance || 0) + accountTransactionDelta(acc.name);
 }
 
+function getAccountCurrentBalanceCAD(accountOrName) {
+  const acc = typeof accountOrName === 'string'
+    ? S.accounts.find(a => a.name === accountOrName)
+    : accountOrName;
+  if (!acc) return 0;
+  const bal = getAccountCurrentBalance(acc);
+  return (acc.currency === 'USD') ? bal * usdCadRate : bal;
+}
+
 function netWorth() {
-  return S.accounts.reduce((s, a) => s + getAccountCurrentBalance(a), 0)
+  return S.accounts.reduce((s, a) => s + getAccountCurrentBalanceCAD(a), 0)
        + S.stocks.reduce((s, st) => s + st.shares * st.current, 0);
 }
 
@@ -1843,12 +1867,14 @@ function updateTxCats() {
 async function addAccount() {
   const name = document.getElementById('acc-name').value.trim();
   const type = document.getElementById('acc-type').value;
+  const currency = document.getElementById('acc-currency').value || 'CAD';
   const rawBal = parseFloat(document.getElementById('acc-bal').value);
   const balance = normalizeAccountBalance(type, rawBal);
   if (!name) { toast('Please enter a name'); return; }
-  S.accounts.push({ id: uid(), name, type, balance });
+  S.accounts.push({ id: uid(), name, type, balance, currency });
   saveLocal(); closeModal('acc-modal');
   ['acc-name','acc-bal'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('acc-currency').value = 'CAD';
   renderAll();
   setSyncState('syncing', 'Saving...');
   await syncAccounts();
@@ -1859,8 +1885,8 @@ async function addAccount() {
 function renderAccounts() {
   const statsEl = document.getElementById('acc-stats');
   if (statsEl) {
-    const totalAssets = S.accounts.reduce((s, a) => { const b = getAccountCurrentBalance(a); return b > 0 ? s + b : s; }, 0);
-    const totalLiab   = S.accounts.reduce((s, a) => { const b = getAccountCurrentBalance(a); return b < 0 ? s + Math.abs(b) : s; }, 0);
+    const totalAssets = S.accounts.reduce((s, a) => { const b = getAccountCurrentBalanceCAD(a); return b > 0 ? s + b : s; }, 0);
+    const totalLiab   = S.accounts.reduce((s, a) => { const b = getAccountCurrentBalanceCAD(a); return b < 0 ? s + Math.abs(b) : s; }, 0);
     const nw = totalAssets - totalLiab;
     statsEl.innerHTML = `
       <div class="metric green"><div class="metric-label">Total Assets</div><div class="metric-value pos">${fmt(totalAssets)}</div></div>
@@ -1869,25 +1895,38 @@ function renderAccounts() {
   }
   const el = document.getElementById('accounts-list');
   if (!S.accounts.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">🏦</div>No accounts yet. Add your chequing, savings, and credit cards.</div>'; return; }
-  el.innerHTML = S.accounts.map((a, i) => `
+  el.innerHTML = S.accounts.map((a, i) => {
+    const isUSD = (a.currency === 'USD');
+    const nativeBal = getAccountCurrentBalance(a);
+    const cadBal = isUSD ? nativeBal * usdCadRate : nativeBal;
+    const balSign = nativeBal < 0 ? '-' : '';
+    const cadSign = cadBal < 0 ? '-' : '';
+    const balDisplay = isUSD
+      ? `<span class="amount ${nativeBal < 0 ? 'neg' : 'pos'}" style="cursor:pointer" title="Click to edit opening balance (USD)" onclick="editBalance(${i})">US${balSign}${fmt(nativeBal)}</span><span style="color:var(--text4);font-size:11px;margin-left:4px">≈ CAD ${cadSign}${fmt(Math.abs(cadBal))}</span>`
+      : `<span class="amount ${nativeBal < 0 ? 'neg' : 'pos'}" style="cursor:pointer" title="Click to edit opening balance" onclick="editBalance(${i})">${balSign}${fmt(nativeBal)}</span>`;
+    const currencyBadge = isUSD ? ` <span class="badge" style="background:var(--amber-bg,#2a2010);color:#f5a623;font-size:10px">USD</span>` : '';
+    return `
     <div class="row" id="acc-row-${i}">
       <div class="row-left">
-        <div class="row-title">${a.name}</div>
-        <div class="row-sub"><span class="badge badge-${a.type === 'Credit Card' || a.type === 'Loan' ? 'red' : 'blue'}">${a.type}</span> · Opening ${fmt(a.balance)} · Activity ${(accountTransactionDelta(a.name) >= 0 ? '+' : '−') + fmt(accountTransactionDelta(a.name))}</div>
+        <div class="row-title">${a.name}${currencyBadge}</div>
+        <div class="row-sub"><span class="badge badge-${a.type === 'Credit Card' || a.type === 'Loan' ? 'red' : 'blue'}">${a.type}</span> · Opening ${isUSD ? 'US' : ''}${fmt(a.balance)} · Activity ${(accountTransactionDelta(a.name) >= 0 ? '+' : '−') + fmt(accountTransactionDelta(a.name))}${isUSD ? ' USD' : ''}</div>
       </div>
       <div class="row-right" id="acc-right-${i}">
-        <span class="amount ${getAccountCurrentBalance(a) < 0 ? 'neg' : 'pos'}" style="cursor:pointer" title="Click to edit opening balance" onclick="editBalance(${i})">${getAccountCurrentBalance(a) < 0 ? '-' : ''}${fmt(getAccountCurrentBalance(a))}</span>
+        ${balDisplay}
         <button class="btn btn-sm" style="padding:3px 9px;font-size:11px" onclick="editBalance(${i})">Edit</button>
         <button class="del" onclick="deleteItem('accounts',${i},syncAccounts)">×</button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function editBalance(i) {
   const a = S.accounts[i];
+  const isUSD = (a.currency === 'USD');
   const rightEl = document.getElementById(`acc-right-${i}`);
   // Replace the right side with an inline input + save/cancel
   rightEl.innerHTML = `
+    ${isUSD ? '<span style="color:var(--text4);font-size:11px;margin-right:4px">USD opening balance:</span>' : ''}
     <input id="bal-input-${i}" type="number" step="0.01" value="${a.balance}"
       style="width:120px;background:#0f1117;border:1px solid #4a7fcb;border-radius:6px;
              padding:5px 9px;color:#e8eaf0;font-size:13px;font-family:'DM Sans',sans-serif;"
@@ -2804,7 +2843,7 @@ function renderDash() {
     else if (t.type === 'expense' || t.type === 'bill') exp += t.amount;
   }
   const save = inc - exp;
-  const accountBalance = S.accounts.reduce((s, a) => s + getAccountCurrentBalance(a), 0);
+  const accountBalance = S.accounts.reduce((s, a) => s + getAccountCurrentBalanceCAD(a), 0);
   const nw = netWorth();
   const monthlyBudget = S.budgets.reduce((s, b) => s + b.amount, 0);
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
@@ -3469,6 +3508,7 @@ loadTheme();
 loadConfig();
 loadLocal();
 renderAll();
+fetchUsdCadRate().then(() => renderAll());
 if (canReadRemotely()) {
   // Show skeleton placeholders while pulling from Sheets
   const metricsEl = document.getElementById('dash-metrics');
