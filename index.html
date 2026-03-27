@@ -2739,10 +2739,7 @@ function renderDash() {
   const dailySpendLeft = monthlyBudget > 0 ? Math.round(((monthlyBudget - exp) / daysLeft) * 100) / 100 : 0;
 
   // Money Left Today
-  const totalBudget = S.budgets.reduce((s, b) => s + b.amount, 0);
-  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  const dayOfMonth  = now.getDate();
-  const daysLeft    = daysInMonth - dayOfMonth + 1;
+  const totalBudget = monthlyBudget;
   const budgetLeft  = totalBudget > 0 ? totalBudget - exp : 0;
   const moneyLeftToday = totalBudget > 0 ? budgetLeft / daysLeft : null;
 
