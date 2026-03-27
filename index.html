@@ -2740,22 +2740,19 @@ function renderDash() {
   document.getElementById('dash-month-label').textContent = now.toLocaleDateString('en-CA', { month: 'long', year: 'numeric' });
 
   const txm = thisMonthTxs();
-  const inc = txm.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-  const exp = txm.filter(t => t.type === 'expense' || t.type === 'bill').reduce((s, t) => s + t.amount, 0);
+  let inc = 0;
+  let exp = 0;
+  for (const t of txm) {
+    if (t.type === 'income') inc += t.amount;
+    else if (t.type === 'expense' || t.type === 'bill') exp += t.amount;
+  }
   const save = inc - exp;
   const accountBalance = S.accounts.reduce((s, a) => s + getAccountCurrentBalance(a), 0);
   const nw = netWorth();
-  const monthlyBudget = S.budgets.reduce((s, b) => s + b.amount, 0);
-  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  const daysLeft = Math.max(daysInMonth - now.getDate() + 1, 1);
-  const dailySpendLeft = monthlyBudget > 0 ? Math.round(((monthlyBudget - exp) / daysLeft) * 100) / 100 : 0;
-
-  // Money Left Today
   const totalBudget = S.budgets.reduce((s, b) => s + b.amount, 0);
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  const dayOfMonth  = now.getDate();
-  const daysLeft    = daysInMonth - dayOfMonth + 1;
-  const budgetLeft  = totalBudget > 0 ? totalBudget - exp : 0;
+  const daysLeft = Math.max(daysInMonth - now.getDate() + 1, 1);
+  const budgetLeft = totalBudget > 0 ? totalBudget - exp : 0;
   const moneyLeftToday = totalBudget > 0 ? budgetLeft / daysLeft : null;
 
   const mltValue = moneyLeftToday !== null
