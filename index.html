@@ -1571,7 +1571,7 @@ async function loadAllFromSheets() {
       sheetsRead(`${SHEET_NAMES.accounts}!A2:E`),
       sheetsRead(`${SHEET_NAMES.transactions}!A2:L`),
       sheetsRead(`${SHEET_NAMES.budgets}!A2:C`),
-      sheetsRead(`${SHEET_NAMES.stocks}!A2:F`),
+      sheetsRead(`${SHEET_NAMES.stocks}!A2:G`),
       sheetsRead(`${SHEET_NAMES.goals}!A2:G`)
     ]);
 
@@ -1597,7 +1597,7 @@ async function loadAllFromSheets() {
     // Stocks
     if (stk && stk.length) S.stocks = stk
       .filter(r => r && safeStr(r[0]) && safeStr(r[1]) && safeNum(r[3]) > 0)
-      .map(r => ({ id: safeStr(r[0]), ticker: safeStr(r[1]), name: safeStr(r[2],r[1]||'?'), shares: safeNum(r[3]), costPerShare: safeNum(r[4]), current: safeNum(r[5]) }));
+      .map(r => ({ id: safeStr(r[0]), ticker: safeStr(r[1]), name: safeStr(r[2],r[1]||'?'), shares: safeNum(r[3]), costPerShare: safeNum(r[4]), current: safeNum(r[5]), linkedAccount: safeStr(r[6]) }));
 
     // Goals
     if (gls && gls.length) S.goals = gls
