@@ -106,6 +106,19 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
 .metric-value.neg{color:var(--red);}
 .metric-trend{font-size:11px;color:var(--text4);margin-top:5px;}
 
+/* ── WEALTHSIMPLE HERO CARD ──────────────────────────────────── */
+.ws-hero{background:var(--bg-card);border:var(--border);border-radius:var(--radius-xl);padding:24px 22px 20px;box-shadow:var(--shadow-soft);margin-bottom:18px;}
+.ws-hero-label{font-size:11px;color:var(--text4);text-transform:uppercase;letter-spacing:.09em;font-weight:500;margin-bottom:10px;}
+.ws-hero-value{font-size:38px;font-weight:300;letter-spacing:-.03em;line-height:1;margin-bottom:18px;color:var(--text);}
+.ws-hero-value.pos{color:var(--green);}
+.ws-hero-value.neg{color:var(--red);}
+.ws-hero-sub{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.ws-hero-sub-item{background:var(--bg-2);border-radius:var(--radius-md);padding:10px 14px;}
+.ws-hero-sub-label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px;font-weight:500;}
+.ws-hero-sub-value{font-size:16px;font-weight:400;letter-spacing:-.02em;color:var(--text);}
+.ws-hero-sub-value.pos{color:var(--green);}
+.ws-hero-sub-value.neg{color:var(--red);}
+
 /* ── CARDS ───────────────────────────────────────────────────── */
 .card{background:var(--bg-card);border:var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:16px;box-shadow:var(--shadow-soft);transition:box-shadow .2s ease, border-color .2s ease;}
 .card:hover{box-shadow:var(--shadow);}
@@ -279,8 +292,9 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
   .metric{border-radius:14px;padding:14px 15px;}
   .metric-value{font-size:19px;}
   .metric-trend{font-size:10px;}
-  #invest-metrics,#acc-stats{grid-template-columns:repeat(3,1fr);gap:8px;}
-  #invest-metrics .metric-value,#acc-stats .metric-value{font-size:13px;}
+  .ws-hero{border-radius:var(--radius-lg);padding:18px 16px 16px;}
+  .ws-hero-value{font-size:30px;margin-bottom:14px;}
+  .ws-hero-sub-value{font-size:14px;}
   .grid-2{grid-template-columns:1fr;gap:0;}
 
   /* Charts — shorter on mobile */
@@ -542,7 +556,7 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
         <button class="btn btn-primary btn-sm" onclick="openModal('acc-modal')">+ Add Account</button>
       </div>
       <div class="tab-content-inner">
-      <div class="metrics" id="acc-stats" style="margin-bottom:14px"></div>
+      <div id="acc-stats"></div>
       <input id="acc-search" type="text" placeholder="Search accounts…"
         oninput="renderAccounts()"
         style="width:100%;box-sizing:border-box;background:var(--card);border:1px solid var(--border-color);border-radius:8px;padding:8px 12px;color:var(--text1);font-size:13px;margin-bottom:12px">
@@ -634,7 +648,7 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
         <span id="price-status-dot" style="width:6px;height:6px;border-radius:50%;background:#EF9F27;display:inline-block"></span>
         <span id="price-status-text">Fetching live prices...</span>
       </div>
-      <div class="metrics" id="invest-metrics"></div>
+      <div id="invest-metrics"></div>
       <div class="card" id="stocks-list"></div>
       <div class="grid-2" style="margin-top:18px">
         <div class="card">
@@ -2305,9 +2319,20 @@ function renderAccounts() {
     const totalLiab   = S.accounts.reduce((s, a) => { const b = getAccountCurrentBalanceCAD(a) + getAccountLinkedStocksValue(a.name); return b < 0 ? s + Math.abs(b) : s; }, 0);
     const nw = totalAssets - totalLiab;
     statsEl.innerHTML = `
-      <div class="metric green"><div class="metric-label">Total Assets</div><div class="metric-value pos">${fmt(totalAssets)}</div></div>
-      <div class="metric red"><div class="metric-label">Total Liabilities</div><div class="metric-value neg">${fmt(totalLiab)}</div></div>
-      <div class="metric blue"><div class="metric-label">Net Worth</div><div class="metric-value ${nw >= 0 ? 'pos' : 'neg'}">${nw < 0 ? '-' : ''}${fmt(Math.abs(nw))}</div></div>`;
+      <div class="ws-hero">
+        <div class="ws-hero-label">Net Worth</div>
+        <div class="ws-hero-value ${nw >= 0 ? 'pos' : 'neg'}">${nw < 0 ? '−' : ''}${fmt(Math.abs(nw))}</div>
+        <div class="ws-hero-sub">
+          <div class="ws-hero-sub-item">
+            <div class="ws-hero-sub-label">Total Assets</div>
+            <div class="ws-hero-sub-value pos">${fmt(totalAssets)}</div>
+          </div>
+          <div class="ws-hero-sub-item">
+            <div class="ws-hero-sub-label">Total Liabilities</div>
+            <div class="ws-hero-sub-value neg">${totalLiab > 0 ? '−' : ''}${fmt(totalLiab)}</div>
+          </div>
+        </div>
+      </div>`;
   }
 
   const el = document.getElementById('accounts-list');
@@ -2537,11 +2562,21 @@ function renderTx() {
   if (summaryEl) {
     if (!txs.length || (!totalInc && !totalExp)) { summaryEl.innerHTML = ''; }
     else {
-      const cards = [];
-      if (totalInc) cards.push(`<div class="tx-stat"><div class="tx-stat-label">Income</div><div class="tx-stat-value pos">+${fmt(totalInc)}</div></div>`);
-      if (totalExp) cards.push(`<div class="tx-stat"><div class="tx-stat-label">Expenses</div><div class="tx-stat-value neg">−${fmt(totalExp)}</div></div>`);
-      if (totalInc || totalExp) cards.push(`<div class="tx-stat"><div class="tx-stat-label">Net</div><div class="tx-stat-value ${net >= 0 ? 'pos' : 'neg'}">${net >= 0 ? '+' : '−'}${fmt(Math.abs(net))}</div></div>`);
-      summaryEl.innerHTML = `<div class="tx-stats-row">${cards.join('')}</div>`;
+      summaryEl.innerHTML = `
+        <div class="ws-hero">
+          <div class="ws-hero-label">Total Spending</div>
+          <div class="ws-hero-value neg">−${fmt(totalExp)}</div>
+          <div class="ws-hero-sub">
+            <div class="ws-hero-sub-item">
+              <div class="ws-hero-sub-label">Income</div>
+              <div class="ws-hero-sub-value pos">+${fmt(totalInc)}</div>
+            </div>
+            <div class="ws-hero-sub-item">
+              <div class="ws-hero-sub-label">Net</div>
+              <div class="ws-hero-sub-value ${net >= 0 ? 'pos' : 'neg'}">${net >= 0 ? '+' : '−'}${fmt(Math.abs(net))}</div>
+            </div>
+          </div>
+        </div>`;
     }
   }
   // Update filter active dot
@@ -3246,9 +3281,20 @@ function renderStocks() {
   const portCost = S.stocks.reduce((s, st) => s + st.shares * st.costPerShare, 0);
   const portGain = portVal - portCost;
   document.getElementById('invest-metrics').innerHTML = `
-    <div class="metric blue"><div class="metric-label">Portfolio Value</div><div class="metric-value">${fmt(portVal)}</div></div>
-    <div class="metric ${portGain >= 0 ? 'green' : 'red'}"><div class="metric-label">Total Gain / Loss</div><div class="metric-value ${portGain >= 0 ? 'pos' : 'neg'}">${portGain >= 0 ? '+' : ''}${fmt(portGain)}</div></div>
-    <div class="metric amber"><div class="metric-label">Return %</div><div class="metric-value ${portGain >= 0 ? 'pos' : 'neg'}">${portCost > 0 ? ((portGain/portCost)*100).toFixed(1) + '%' : '—'}</div></div>`;
+    <div class="ws-hero">
+      <div class="ws-hero-label">Portfolio Value</div>
+      <div class="ws-hero-value">${fmt(portVal)}</div>
+      <div class="ws-hero-sub">
+        <div class="ws-hero-sub-item">
+          <div class="ws-hero-sub-label">Total Gain / Loss</div>
+          <div class="ws-hero-sub-value ${portGain >= 0 ? 'pos' : 'neg'}">${portGain >= 0 ? '+' : '−'}${fmt(Math.abs(portGain))}</div>
+        </div>
+        <div class="ws-hero-sub-item">
+          <div class="ws-hero-sub-label">Return</div>
+          <div class="ws-hero-sub-value ${portGain >= 0 ? 'pos' : 'neg'}">${portCost > 0 ? ((portGain/portCost)*100).toFixed(1) + '%' : '—'}</div>
+        </div>
+      </div>
+    </div>`;
 }
 
 // ═══════════════════════════════════════════════
