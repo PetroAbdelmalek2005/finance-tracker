@@ -75,6 +75,7 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
 
 /* ── PAGE HEADER ─────────────────────────────────────────────── */
+.mob-header{display:none;}
 .page-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;flex-wrap:wrap;gap:10px;}
 .page-title{font-family:'DM Serif Display',serif;font-size:26px;color:var(--text);}
 .page-sub{font-size:13px;color:var(--text4);margin-top:2px;}
@@ -136,6 +137,18 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
 /* ── GRID ────────────────────────────────────────────────────── */
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
 @media(max-width:900px){.grid-2{grid-template-columns:1fr;}}
+
+/* ── TABLET (681px – 900px) ──────────────────────────────────── */
+@media(min-width:681px) and (max-width:900px){
+  .sidebar{width:180px;min-width:180px;}
+  .main{margin-left:180px;padding:24px 18px;}
+  .brand-name{font-size:16px;}
+  .brand-sub{display:none;}
+  .nav-btn{font-size:12px;padding:8px 8px;}
+  .page-title{font-size:22px;}
+  .metrics{grid-template-columns:1fr 1fr;}
+  .ws-hero-value{font-size:32px;}
+}
 
 /* ── CHARTS ──────────────────────────────────────────────────── */
 .chart-wrap{position:relative;width:100%;}
@@ -259,7 +272,7 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
     border-bottom:var(--border);
     position:sticky;top:0;z-index:9;
   }
-  .mob-header-title{font-family:'DM Serif Display',serif;font-size:20px;color:var(--text);}
+  .mob-header-title{font-family:'DM Serif Display',serif;font-size:24px;color:var(--text);}
   .mob-header-actions{display:flex;gap:8px;}
   .page-header{display:none;}
 
@@ -507,12 +520,14 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
         <div><div class="mob-header-title">Home</div></div>
         <div class="mob-header-actions">
           <button class="btn btn-primary btn-sm" onclick="openModal('tx-modal')">+ Add</button>
+          <button onclick="togglePrivacy()" class="btn btn-sm privacy-btn" style="padding:6px 9px" title="Hide numbers">👁</button>
           <button onclick="toggleTheme()" id="theme-btn" class="btn btn-sm" style="padding:6px 9px">🌙</button>
         </div>
       </div>
       <div class="page-header">
         <div><div class="page-title">Home</div><div class="page-sub" id="dash-date"></div></div>
         <div class="header-actions">
+          <button onclick="togglePrivacy()" class="btn btn-sm privacy-btn" style="padding:6px 9px" title="Hide numbers">👁</button>
           <button onclick="toggleTheme()" id="theme-btn-desk" class="btn btn-sm" style="padding:6px 9px">🌙</button>
           <button class="btn btn-primary btn-sm" onclick="openModal('tx-modal')">+ Transaction</button>
         </div>
@@ -613,12 +628,17 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
 
       <!-- BUDGET SECTION -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin:24px 0 10px">
-        <div style="font-size:16px;font-weight:600;color:var(--text1)">Budget</div>
+        <div style="font-family:'DM Serif Display',serif;font-size:18px;color:var(--text)">Budget</div>
         <div style="display:flex;align-items:center;gap:8px">
-          <select id="bud-month-sel" onchange="renderBudget();kill('bud');drawBudgetChart()" style="background:var(--bg-2);border:var(--border2);border-radius:8px;padding:5px 10px;color:var(--text3);font-size:12px;font-family:'DM Sans',sans-serif;"></select>
+          <div style="display:flex;align-items:center;gap:2px;background:var(--bg-2);border:var(--border2);border-radius:8px;padding:2px">
+            <button class="btn btn-sm" style="padding:3px 9px;font-size:14px;border:none" onclick="shiftBudgetMonth(-1)">‹</button>
+            <span id="bud-month-label" style="font-size:12px;color:var(--text3);min-width:108px;text-align:center;font-family:'DM Sans',sans-serif;padding:0 2px"></span>
+            <button class="btn btn-sm" style="padding:3px 9px;font-size:14px;border:none" id="bud-next-btn" onclick="shiftBudgetMonth(1)">›</button>
+          </div>
           <button class="btn btn-primary btn-sm" onclick="openBudgetModal()">+ Set Budget</button>
         </div>
       </div>
+      <select id="bud-month-sel" style="display:none" onchange="renderBudget();kill('bud');drawBudgetChart()"></select>
       <div class="card" id="budget-bars"></div>
       <div class="card" style="margin-top:14px">
         <div class="card-header"><span class="card-title">Budget Category Spend</span></div>
@@ -644,9 +664,9 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
         </div>
       </div>
       <div class="tab-content-inner">
-      <div id="price-status" style="display:none;font-size:12px;color:#555e78;margin-bottom:14px;display:flex;align-items:center;gap:8px">
-        <span id="price-status-dot" style="width:6px;height:6px;border-radius:50%;background:#EF9F27;display:inline-block"></span>
-        <span id="price-status-text">Fetching live prices...</span>
+      <div id="price-status" style="display:none;padding:10px 14px;border-radius:10px;margin-bottom:16px;background:var(--bg-2);border:1px solid var(--border-color);flex-direction:row;align-items:center;gap:10px">
+        <span id="price-status-dot" style="width:9px;height:9px;border-radius:50%;background:#EF9F27;flex-shrink:0;display:inline-block"></span>
+        <span id="price-status-text" style="font-size:13px;color:var(--text3);line-height:1.4">Fetching live prices...</span>
       </div>
       <div id="invest-metrics"></div>
       <div class="card" id="stocks-list"></div>
@@ -1213,11 +1233,11 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
       <div class="field"><label>Saved So Far ($)</label><input id="goal-current" type="number" step="0.01" placeholder="0.00"></div>
     </div>
     <div class="field">
-      <label>Linked Account <small style="color:#555e78;font-weight:400">(optional)</small></label>
-      <select id="goal-account"></select>
+      <label>Linked Accounts <small style="color:var(--text4);font-weight:400">(optional)</small></label>
+      <div id="goal-accounts-list" style="background:var(--bg-2);border:1px solid var(--border-color);border-radius:8px;padding:8px 10px;max-height:130px;overflow-y:auto;display:flex;flex-direction:column;gap:6px"></div>
     </div>
-    <div style="font-size:11px;color:#555e78;margin-top:-6px;margin-bottom:10px">
-      If you link an account, this goal's progress auto-tracks from that account balance.
+    <div style="font-size:11px;color:var(--text4);margin-top:-6px;margin-bottom:10px">
+      Select one or more accounts to auto-track progress from their combined balance.
     </div>
     <div class="field"><label>Target Date (optional)</label><input id="goal-date" type="date"></div>
     <div class="modal-footer">
@@ -1548,9 +1568,8 @@ function normalizeLinkedData() {
 
 function getGoalCurrent(goal) {
   if (!goal) return 0;
-  if (goal.linkedAccount) {
-    return Math.max(getAccountCurrentBalance(goal.linkedAccount), 0);
-  }
+  const accts = Array.isArray(goal.linkedAccount) ? goal.linkedAccount : (goal.linkedAccount ? [goal.linkedAccount] : []);
+  if (accts.length) return Math.max(accts.reduce((s, n) => s + getAccountCurrentBalance(n), 0), 0);
   return goal.current || 0;
 }
 
@@ -1863,13 +1882,15 @@ function uid() { return Date.now().toString(36) + Math.random().toString(36).sli
 // ═══════════════════════════════════════════════
 // HELPERS
 // ═══════════════════════════════════════════════
-const EXPENSE_CATS  = ['Housing','Food & Dining','Transport','Entertainment','Shopping','Health','Utilities','Subscriptions','Kids & Family','Education','Travel','Pets','Gifts & Donations','Personal Care','Other'];
+const EXPENSE_CATS  = ['Housing','Food & Dining','Transport','Entertainment','Shopping','Health','Utilities','Subscriptions','Kids & Family','Education','Travel','Pets','Gifts','Donations','Personal Care','Other'];
 const INCOME_CATS   = ['Salary','Freelance','Investments','Rental','Business','Gift','Other'];
 const TRANSFER_CATS = ['Account Transfer','Savings Deposit','Investment Contribution','Debt Payment','Other Transfer'];
 const BILL_CATS     = ['Rent / Mortgage','Electricity','Gas','Water','Internet','Phone','Insurance','Car Payment','Subscription','Streaming','Gym','Other Bill'];
 const PALETTE = ['#4a7fcb','#1D9E75','#EF9F27','#E24B4A','#7F77DD','#D85A30','#5bb8a0','#D4537E','#639922','#8b5cf6'];
 const ACCOUNT_TYPES = ['Chequing','Savings','Credit Card','FHSA','TFSA','RRSP','Loan','Other'];
 let accGroupOpen = {}; // collapse state per account type, defaults to open
+let stkGroupOpen = {}; // collapse state per investment account group, defaults to open
+let privacyMode  = false; // hide all monetary values when true
 
 let usdCadRate = 1.38; // fallback rate, refreshed async on load
 async function fetchUsdCadRate() {
@@ -1880,7 +1901,10 @@ async function fetchUsdCadRate() {
   } catch(e) { /* keep fallback */ }
 }
 
-function fmt(n) { return '$' + Math.abs(n).toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function fmt(n) {
+  if (privacyMode) return '••••';
+  return '$' + Math.abs(n).toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 function fmtK(n) {
   const sign = n < 0 ? '-' : '';
   const abs  = Math.abs(n);
@@ -2233,10 +2257,17 @@ function seedTxModal() {
 }
 
 function seedGoalModal() {
-  const accountSel = document.getElementById('goal-account');
-  if (!accountSel) return;
-  const opts = ['<option value="">Not linked (manual)</option>', ...S.accounts.map(a => `<option value="${a.name}">${a.name}</option>`)];
-  accountSel.innerHTML = opts.join('');
+  const list = document.getElementById('goal-accounts-list');
+  if (!list) return;
+  if (!S.accounts.length) {
+    list.innerHTML = '<span style="font-size:12px;color:var(--text4)">No accounts yet</span>';
+    return;
+  }
+  list.innerHTML = S.accounts.map(a => `
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--text3)">
+      <input type="checkbox" name="goal-account-cb" value="${a.name}" style="accent-color:var(--green)">
+      ${a.name} <span style="font-size:11px;color:var(--text4)">${a.type}</span>
+    </label>`).join('');
 }
 
 function updateTxCats() {
@@ -2713,18 +2744,39 @@ async function addBudget() {
 function populateBudgetMonths() {
   const now = new Date();
   const opts = [];
+  const existingSel = document.getElementById('bud-month-sel');
+  const kept = existingSel ? existingSel.value : '';
   for (let i = 0; i < 12; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const val = d.toISOString().slice(0,7);
     const label = d.toLocaleDateString('en-CA',{month:'long',year:'numeric'});
-    opts.push(`<option value="${val}"${i===0?' selected':''}>${label}</option>`);
+    const selected = kept ? val === kept : i === 0;
+    opts.push(`<option value="${val}"${selected?' selected':''}>${label}</option>`);
   }
   const html = opts.join('');
-  // Sync both desktop and mobile selectors
-  ['bud-month-sel','bud-month-sel-mob'].forEach(id => {
-    const sel = document.getElementById(id);
-    if (sel) { sel.innerHTML = html; }
-  });
+  const sel = document.getElementById('bud-month-sel');
+  if (sel) sel.innerHTML = html;
+  updateBudgetMonthLabel();
+}
+
+function updateBudgetMonthLabel() {
+  const sel = document.getElementById('bud-month-sel');
+  const lbl = document.getElementById('bud-month-label');
+  const nextBtn = document.getElementById('bud-next-btn');
+  if (!sel || !lbl) return;
+  const opt = sel.options[sel.selectedIndex];
+  if (opt) lbl.textContent = opt.text;
+  if (nextBtn) nextBtn.disabled = sel.selectedIndex === 0;
+}
+
+function shiftBudgetMonth(dir) {
+  const sel = document.getElementById('bud-month-sel');
+  if (!sel) return;
+  const idx = sel.selectedIndex + dir;
+  if (idx < 0 || idx >= sel.options.length) return;
+  sel.selectedIndex = idx;
+  updateBudgetMonthLabel();
+  renderBudget(); kill('bud'); drawBudgetChart();
 }
 
 function renderBudget() {
@@ -2755,6 +2807,7 @@ function renderBudget() {
       <div class="prog-bg"><div class="prog-fill" style="width:${pct.toFixed(1)}%;background:${color}"></div></div>
     </div>`;
   }).join('') + `<div style="text-align:right;margin-top:14px"><button class="btn btn-sm" onclick="openBudgetModal()">+ Add Category</button></div>`;
+  updateBudgetMonthLabel();
 }
 
 // ═══════════════════════════════════════════════
@@ -3270,11 +3323,18 @@ function renderStocks() {
     const acct = key !== '__unregistered__' ? S.accounts.find(a => a.name === key) : null;
     const acctType = acct ? acct.type : '';
     const label = key !== '__unregistered__' ? key : 'Unregistered';
-    const header = `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0 6px;border-bottom:1px solid #1e2540;margin-bottom:4px">
-      <span style="font-size:12px;font-weight:600;color:#8b92a8;text-transform:uppercase;letter-spacing:.05em">${label}${acctType ? ` <span class="badge badge-gray" style="font-size:9px;margin-left:4px">${acctType}</span>` : ''}</span>
-      <span style="font-size:12px;color:#c5cad8;font-weight:500">${fmt(groupVal)}</span>
+    const isOpen = stkGroupOpen[key] !== false;
+    const chevron = isOpen ? '▾' : '▸';
+    const safeKey = key.replace(/'/g, "\\'");
+    const header = `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0 6px;border-bottom:1px solid var(--border-color);margin-bottom:4px;cursor:pointer"
+      onclick="stkGroupOpen['${safeKey}']=!(stkGroupOpen['${safeKey}']!==false);renderStocks()">
+      <span style="display:flex;align-items:center;gap:6px">
+        <span style="font-size:11px;color:var(--text4)">${chevron}</span>
+        <span style="font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em">${label}${acctType ? ` <span class="badge badge-gray" style="font-size:9px;margin-left:4px">${acctType}</span>` : ''}</span>
+      </span>
+      <span style="font-size:12px;color:var(--text);font-weight:500">${fmt(groupVal)}</span>
     </div>`;
-    return header + entries.map(({ st, i }) => renderStockRow(st, i)).join('');
+    return header + (isOpen ? entries.map(({ st, i }) => renderStockRow(st, i)).join('') : '');
   }).join('');
 
   const portVal  = S.stocks.reduce((s, st) => s + st.shares * st.current, 0);
@@ -3347,11 +3407,12 @@ async function addGoal() {
   const target  = parseFloat(document.getElementById('goal-target').value);
   const current = parseFloat(document.getElementById('goal-current').value) || 0;
   const deadline= document.getElementById('goal-date').value;
-  const linkedAccount = (document.getElementById('goal-account').value || '').trim();
+  const linkedAccount = Array.from(document.querySelectorAll('input[name="goal-account-cb"]:checked')).map(el => el.value);
   if (!name || !target) { toast('Name and target required'); return; }
-  S.goals.push({ id: uid(), name, target, current, deadline, linkedAccount, trackMode: linkedAccount ? 'account' : 'manual' });
+  S.goals.push({ id: uid(), name, target, current, deadline, linkedAccount, trackMode: linkedAccount.length ? 'account' : 'manual' });
   saveLocal(); closeModal('goal-modal');
-  ['goal-name','goal-target','goal-current','goal-date','goal-account'].forEach(id => document.getElementById(id).value = '');
+  ['goal-name','goal-target','goal-current','goal-date'].forEach(id => document.getElementById(id).value = '');
+  document.querySelectorAll('input[name="goal-account-cb"]').forEach(cb => cb.checked = false);
   renderAll();
   setSyncState('syncing', 'Saving...');
   await syncGoals();
@@ -3412,7 +3473,8 @@ function renderGoals() {
     const color = PALETTE[i % PALETTE.length];
     const rem = g.target - current;
     const linkedNet = getGoalLinkedNet(g);
-    const linkedAccountLabel = g.linkedAccount ? `Linked account: ${g.linkedAccount}` : 'Manual goal tracking';
+    const accts = Array.isArray(g.linkedAccount) ? g.linkedAccount : (g.linkedAccount ? [g.linkedAccount] : []);
+    const linkedAccountLabel = accts.length ? `Linked: ${accts.join(', ')}` : 'Manual goal tracking';
     const linkedNetLabel = linkedNet ? ` · Tagged tx net: ${linkedNet >= 0 ? '+' : ''}${fmt(linkedNet)}` : '';
     const eta = goalETA(g);
     const etaHtml = eta
@@ -3428,7 +3490,7 @@ function renderGoals() {
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end">
           ${etaHtml}
           <span style="font-size:13px;color:#8b92a8">${fmt(current)} <span style="color:#3a4260">/ ${fmt(g.target)}</span></span>
-          ${g.linkedAccount ? '' : `<button class="btn btn-sm" style="font-size:11px;padding:3px 9px" onclick="openGoalContrib(${i})">+ Add</button>`}
+          ${accts.length ? '' : `<button class="btn btn-sm" style="font-size:11px;padding:3px 9px" onclick="openGoalContrib(${i})">+ Add</button>`}
           <button class="del" onclick="deleteItem('goals',${i},syncGoals)">×</button>
         </div>
       </div>
@@ -4161,6 +4223,7 @@ function toast(msg) {
 loadTheme();
 loadConfig();
 loadLocal();
+privacyMode = !!localStorage.getItem('ft_privacy');
 renderAll();
 fetchUsdCadRate().then(() => renderAll());
 if (canReadRemotely()) {
@@ -4198,6 +4261,13 @@ function toggleTheme() {
   const icon = isLight ? '🌙' : '☀️';
   ['theme-btn','theme-btn-desk'].forEach(id => { const b = document.getElementById(id); if (b) b.textContent = icon; });
   drawCharts(activeTab);
+}
+
+function togglePrivacy() {
+  privacyMode = !privacyMode;
+  localStorage.setItem('ft_privacy', privacyMode ? '1' : '');
+  document.querySelectorAll('.privacy-btn').forEach(b => { b.textContent = privacyMode ? '👁‍🗨' : '👁'; });
+  renderAll();
 }
 
 function loadTheme() {
