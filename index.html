@@ -3422,45 +3422,31 @@ function renderDash() {
   }).join('');
 }
 
-// ─── Bucket summary cards ──────────────────────────────────────
+// ─── Top spending categories (replaces bucket cards) ──────────
 function renderBucketCards(txm, totalExp) {
   const el = document.getElementById('dash-buckets');
   if (!el) return;
 
-  // Bucket definitions: label, colors, which transaction types count
-  const BUCKETS = [
-    { key: 'Bills',     label: 'Bills',     color: '#f04f4f', bg: 'var(--red-bg)',   icon: '🏠', match: t => t.type === 'bill' || t.bucket === 'Bills' },
-    { key: 'Spending',  label: 'Spending',  color: '#f5a623', bg: 'var(--amber-bg)', icon: '🛒', match: t => (t.type === 'expense' && (!t.bucket || t.bucket === 'Spending')) || t.bucket === 'Spending' },
-    { key: 'Savings',   label: 'Savings',   color: '#18b880', bg: 'var(--green-bg)', icon: '🏦', match: t => t.bucket === 'Savings' },
-    { key: 'Investing', label: 'Investing', color: '#4a82e4', bg: 'var(--blue-bg)',  icon: '📈', match: t => t.bucket === 'Investing' },
-  ];
+  const spendTxs = (txm || thisMonthTxs()).filter(t => t.type === 'expense' || t.type === 'bill');
+  const totalSpend = spendTxs.reduce((s, t) => s + t.amount, 0) || 1;
 
-  // For Bills/Spending use thisMonthTxs; for Savings/Investing look at all buckets
-  const spending = (txm || thisMonthTxs()).filter(t => t.type === 'expense' || t.type === 'bill');
-  const allMonthOutflow = spending.concat((txm || thisMonthTxs()).filter(t => t.bucket === 'Savings' || t.bucket === 'Investing'));
+  const byCat = {};
+  spendTxs.forEach(t => { byCat[t.cat] = (byCat[t.cat] || 0) + t.amount; });
+  const top4 = Object.entries(byCat).sort((a, b) => b[1] - a[1]).slice(0, 4);
 
-  const totals = BUCKETS.map(b => {
-    const amt = (txm || thisMonthTxs())
-      .filter(t => {
-        if (b.key === 'Bills')     return t.type === 'bill' || t.bucket === 'Bills';
-        if (b.key === 'Spending')  return t.type === 'expense' && t.bucket !== 'Bills' && t.bucket !== 'Savings' && t.bucket !== 'Investing';
-        return t.bucket === b.key;
-      })
-      .reduce((s, t) => s + t.amount, 0);
-    return { ...b, amt };
-  });
+  if (!top4.length) { el.innerHTML = ''; return; }
 
-  const grandTotal = totals.reduce((s, b) => s + b.amt, 0) || 1;
-
-  el.innerHTML = totals.map(b => {
-    const pct = Math.min((b.amt / grandTotal) * 100, 100);
-    return `<div class="bucket-card">
-      <div class="bucket-label">${b.icon} ${b.label}</div>
-      <div class="bucket-value" style="color:${b.color}">${fmtK(b.amt)}</div>
-      <div class="bucket-pct">${pct.toFixed(0)}% of outflow</div>
-      <div class="bucket-bar"><div class="bucket-bar-fill" style="width:${pct.toFixed(1)}%;background:${b.color}"></div></div>
-    </div>`;
-  }).join('');
+  el.innerHTML = `<div class="section-header">Top Categories</div><div class="buckets">` +
+    top4.map(([cat, amt], i) => {
+      const pct = Math.min((amt / totalSpend) * 100, 100);
+      const color = PALETTE[i % PALETTE.length];
+      return `<div class="bucket-card">
+        <div class="bucket-label">${cat}</div>
+        <div class="bucket-value" style="color:${color}">${fmtK(amt)}</div>
+        <div class="bucket-pct">${pct.toFixed(0)}% of spending</div>
+        <div class="bucket-bar"><div class="bucket-bar-fill" style="width:${pct.toFixed(1)}%;background:${color}"></div></div>
+      </div>`;
+    }).join('') + `</div>`;
 }
 
 // ─── Weekly insights (rules-based) ────────────────────────────
@@ -3609,19 +3595,23 @@ function last6Months() {
 
 function drawBar() {
   kill('bar');
-  const { months } = last6Months();
-  const inc = months.map(({ m, y }) => monthTxs(m,y).filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0));
-  const exp = months.map(({ m, y }) => monthTxs(m,y).filter(t => t.type === 'expense' || t.type === 'bill').reduce((s, t) => s + t.amount, 0));
-  const totalInc = inc.reduce((s, v) => s + v, 0);
-  const totalExp = exp.reduce((s, v) => s + v, 0);
+  const { labels, months } = last6Months();
+  const incData = months.map(({ m, y }) => monthTxs(m, y).filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0));
+  const expData = months.map(({ m, y }) => monthTxs(m, y).filter(t => t.type === 'expense' || t.type === 'bill').reduce((s, t) => s + t.amount, 0));
   const ctx = document.getElementById('chart-bar'); if (!ctx) return;
   charts['bar'] = new Chart(ctx, {
-    type: 'pie',
-    data: { labels: ['Income (last 6m)', 'Expenses (last 6m)'], datasets: [
-      { data: [totalInc, totalExp], backgroundColor: ['#1D9E75', '#E24B4A'], borderWidth: 0, hoverOffset: 4 }
+    type: 'bar',
+    data: { labels, datasets: [
+      { label: 'Income',   data: incData, backgroundColor: '#00c896', borderRadius: 4, borderSkipped: false },
+      { label: 'Expenses', data: expData, backgroundColor: '#ff4d4d', borderRadius: 4, borderSkipped: false }
     ]},
     options: { responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: 'right', labels: { color: chartColors().text, font: { size: 11 }, boxWidth: 9, padding: 8 } } } }
+      plugins: { legend: { position: 'top', labels: { color: chartColors().text, font: { size: 11 }, boxWidth: 9, padding: 8 } } },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: chartColors().text, font: { size: 11 } } },
+        y: { beginAtZero: true, grid: { color: chartColors().grid }, ticks: { color: chartColors().text, font: { size: 11 }, callback: v => fmtK(v), maxTicksLimit: 5 } }
+      }
+    }
   });
 }
 
