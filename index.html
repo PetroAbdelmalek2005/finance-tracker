@@ -517,9 +517,12 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
       </div>
       <div class="tab-content-inner">
       <div class="metrics" id="acc-stats" style="margin-bottom:14px"></div>
-      <div class="card" id="accounts-list"></div>
+      <input id="acc-search" type="text" placeholder="Search accounts…"
+        oninput="renderAccounts()"
+        style="width:100%;box-sizing:border-box;background:var(--card);border:1px solid var(--border-color);border-radius:8px;padding:8px 12px;color:var(--text1);font-size:13px;margin-bottom:12px">
+      <div id="accounts-list"></div>
       <div class="card" style="margin-top:18px">
-        <div class="card-header"><span class="card-title">Balance Distribution</span></div>
+        <div class="card-header"><span class="card-title">Balance by Account Type</span></div>
         <div class="chart-wrap h220"><canvas id="chart-accounts-pie"></canvas></div>
       </div>
       </div><!-- /tab-content-inner -->
@@ -938,7 +941,7 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
         <option value="Chequing">Chequing</option>
         <option value="Savings">Savings</option>
         <option value="Credit Card">Credit Card</option>
-        <option value="Investment">Investment</option>
+        <option value="FHSA">FHSA</option>
         <option value="TFSA">TFSA</option>
         <option value="RRSP">RRSP</option>
         <option value="Loan">Loan</option>
@@ -970,7 +973,7 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
         <option value="Chequing">Chequing</option>
         <option value="Savings">Savings</option>
         <option value="Credit Card">Credit Card</option>
-        <option value="Investment">Investment</option>
+        <option value="FHSA">FHSA</option>
         <option value="TFSA">TFSA</option>
         <option value="RRSP">RRSP</option>
         <option value="Loan">Loan</option>
@@ -1141,6 +1144,12 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
     <div class="field">
       <label>Current Price ($) <small style="color:#555e78;font-weight:400"> — auto-filled on selection</small></label>
       <input id="stk-price" type="number" step="0.01" placeholder="Auto-fetched on selection">
+    </div>
+    <div class="field">
+      <label>Trading Account <small style="color:#555e78;font-weight:400"> — optional</small></label>
+      <select id="stk-account" style="width:100%">
+        <option value="">— Unregistered / Cash account —</option>
+      </select>
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('stk-modal')">Cancel</button>
@@ -1476,6 +1485,8 @@ function saveLocal() {
 function loadLocal() {
   const d = localStorage.getItem(LSKEY);
   if (d) S = { ...S, ...JSON.parse(d) };
+  // Migrate legacy "Investment" account type to "FHSA"
+  S.accounts.forEach(a => { if (a.type === 'Investment') a.type = 'FHSA'; });
   normalizeLinkedData();
 }
 
@@ -1560,7 +1571,7 @@ async function loadAllFromSheets() {
       sheetsRead(`${SHEET_NAMES.accounts}!A2:E`),
       sheetsRead(`${SHEET_NAMES.transactions}!A2:L`),
       sheetsRead(`${SHEET_NAMES.budgets}!A2:C`),
-      sheetsRead(`${SHEET_NAMES.stocks}!A2:F`),
+      sheetsRead(`${SHEET_NAMES.stocks}!A2:G`),
       sheetsRead(`${SHEET_NAMES.goals}!A2:G`)
     ]);
 
@@ -1586,7 +1597,7 @@ async function loadAllFromSheets() {
     // Stocks
     if (stk && stk.length) S.stocks = stk
       .filter(r => r && safeStr(r[0]) && safeStr(r[1]) && safeNum(r[3]) > 0)
-      .map(r => ({ id: safeStr(r[0]), ticker: safeStr(r[1]), name: safeStr(r[2],r[1]||'?'), shares: safeNum(r[3]), costPerShare: safeNum(r[4]), current: safeNum(r[5]) }));
+      .map(r => ({ id: safeStr(r[0]), ticker: safeStr(r[1]), name: safeStr(r[2],r[1]||'?'), shares: safeNum(r[3]), costPerShare: safeNum(r[4]), current: safeNum(r[5]), linkedAccount: safeStr(r[6]) }));
 
     // Goals
     if (gls && gls.length) S.goals = gls
@@ -1610,7 +1621,7 @@ async function pushToSheets(sheetName, headers, rows) {
 async function syncAccounts() { await pushToSheets(SHEET_NAMES.accounts, ['ID','Name','Type','Balance','Currency'], S.accounts.map(a => [a.id, a.name, a.type, a.balance, a.currency || 'CAD'])); }
 async function syncTransactions() { await pushToSheets(SHEET_NAMES.transactions, ['ID','Date','Description','Type','Amount','Category','Account','XferDir','XferRef','DueDate','GoalId','Bucket'], S.transactions.map(t => [t.id, t.date, t.desc, t.type, t.amount, t.cat, t.account, t.xferDir||'', t.xferRef||'', t.dueDate||'', t.goalId||'', t.bucket||''])); }
 async function syncBudgets() { await pushToSheets(SHEET_NAMES.budgets, ['ID','Category','Amount'], S.budgets.map(b => [b.id, b.cat, b.amount])); }
-async function syncStocks() { await pushToSheets(SHEET_NAMES.stocks, ['ID','Ticker','Name','Shares','CostPerShare','CurrentPrice'], S.stocks.map(s => [s.id, s.ticker, s.name, s.shares, s.costPerShare, s.current])); }
+async function syncStocks() { await pushToSheets(SHEET_NAMES.stocks, ['ID','Ticker','Name','Shares','CostPerShare','CurrentPrice','LinkedAccount'], S.stocks.map(s => [s.id, s.ticker, s.name, s.shares, s.costPerShare, s.current, s.linkedAccount || ''])); }
 
 function toggleBuyMore(i) {
   const el = document.getElementById('buy-more-' + i);
@@ -1797,6 +1808,8 @@ const INCOME_CATS   = ['Salary','Freelance','Investments','Rental','Business','G
 const TRANSFER_CATS = ['Account Transfer','Savings Deposit','Investment Contribution','Debt Payment','Other Transfer'];
 const BILL_CATS     = ['Rent / Mortgage','Electricity','Gas','Water','Internet','Phone','Insurance','Car Payment','Subscription','Streaming','Gym','Other Bill'];
 const PALETTE = ['#4a7fcb','#1D9E75','#EF9F27','#E24B4A','#7F77DD','#D85A30','#5bb8a0','#D4537E','#639922','#8b5cf6'];
+const ACCOUNT_TYPES = ['Chequing','Savings','Credit Card','FHSA','TFSA','RRSP','Loan','Other'];
+let accGroupOpen = {}; // collapse state per account type, defaults to open
 
 let usdCadRate = 1.38; // fallback rate, refreshed async on load
 async function fetchUsdCadRate() {
@@ -2102,10 +2115,22 @@ function closeMoreSheet() {
 // ═══════════════════════════════════════════════
 // MODALS
 // ═══════════════════════════════════════════════
+function populateTradingAccounts() {
+  const sel = document.getElementById('stk-account');
+  if (!sel) return;
+  const tradingTypes = ['FHSA','TFSA','RRSP','Savings','Other'];
+  const opts = S.accounts
+    .filter(a => tradingTypes.includes(a.type))
+    .map(a => `<option value="${a.name}">${a.name} (${a.type})</option>`)
+    .join('');
+  sel.innerHTML = '<option value="">— Unregistered / Cash account —</option>' + opts;
+}
+
 function openModal(id) {
   if (id === 'tx-modal')     seedTxModal();
   if (id === 'goal-modal')   seedGoalModal();
   if (id === 'import-modal') { seedImportModal(); resetImport(); }
+  if (id === 'stk-modal')    populateTradingAccounts();
   const modal = document.getElementById(id);
   if (!modal) {
     console.warn('openModal called with missing id:', id);
@@ -2193,6 +2218,30 @@ async function addAccount() {
   toast('Account added');
 }
 
+function renderAccountRow(a, i) {
+  const isUSD = (a.currency === 'USD');
+  const nativeBal = getAccountCurrentBalance(a);
+  const cadBal = isUSD ? nativeBal * usdCadRate : nativeBal;
+  const balSign = nativeBal < 0 ? '-' : '';
+  const cadSign = cadBal < 0 ? '-' : '';
+  const balDisplay = isUSD
+    ? `<span class="amount ${nativeBal < 0 ? 'neg' : 'pos'}" style="cursor:pointer" title="Click to edit opening balance (USD)" onclick="editBalance(${i})">US${balSign}${fmt(nativeBal)}</span><span style="color:var(--text4);font-size:11px;margin-left:4px">≈ CAD ${cadSign}${fmt(Math.abs(cadBal))}</span>`
+    : `<span class="amount ${nativeBal < 0 ? 'neg' : 'pos'}" style="cursor:pointer" title="Click to edit opening balance" onclick="editBalance(${i})">${balSign}${fmt(nativeBal)}</span>`;
+  const currencyBadge = isUSD ? ` <span class="badge" style="background:var(--amber-bg,#2a2010);color:#f5a623;font-size:10px">USD</span>` : '';
+  return `
+  <div class="row" id="acc-row-${i}">
+    <div class="row-left">
+      <div class="row-title">${a.name}${currencyBadge}</div>
+      <div class="row-sub">Opening ${isUSD ? 'US' : ''}${fmt(a.balance)} · Activity ${(accountTransactionDelta(a.name) >= 0 ? '+' : '−') + fmt(accountTransactionDelta(a.name))}${isUSD ? ' USD' : ''}</div>
+    </div>
+    <div class="row-right" id="acc-right-${i}">
+      ${balDisplay}
+      <button class="btn btn-sm" style="padding:3px 9px;font-size:11px" onclick="openEditAccount(${i})">Edit</button>
+      <button class="del" onclick="deleteItem('accounts',${i},syncAccounts)">×</button>
+    </div>
+  </div>`;
+}
+
 function renderAccounts() {
   const statsEl = document.getElementById('acc-stats');
   if (statsEl) {
@@ -2204,31 +2253,61 @@ function renderAccounts() {
       <div class="metric red"><div class="metric-label">Total Liabilities</div><div class="metric-value neg">${fmt(totalLiab)}</div></div>
       <div class="metric blue"><div class="metric-label">Net Worth</div><div class="metric-value ${nw >= 0 ? 'pos' : 'neg'}">${nw < 0 ? '-' : ''}${fmt(Math.abs(nw))}</div></div>`;
   }
+
   const el = document.getElementById('accounts-list');
-  if (!S.accounts.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">🏦</div>No accounts yet. Add your chequing, savings, and credit cards.</div>'; return; }
-  el.innerHTML = S.accounts.map((a, i) => {
-    const isUSD = (a.currency === 'USD');
-    const nativeBal = getAccountCurrentBalance(a);
-    const cadBal = isUSD ? nativeBal * usdCadRate : nativeBal;
-    const balSign = nativeBal < 0 ? '-' : '';
-    const cadSign = cadBal < 0 ? '-' : '';
-    const balDisplay = isUSD
-      ? `<span class="amount ${nativeBal < 0 ? 'neg' : 'pos'}" style="cursor:pointer" title="Click to edit opening balance (USD)" onclick="editBalance(${i})">US${balSign}${fmt(nativeBal)}</span><span style="color:var(--text4);font-size:11px;margin-left:4px">≈ CAD ${cadSign}${fmt(Math.abs(cadBal))}</span>`
-      : `<span class="amount ${nativeBal < 0 ? 'neg' : 'pos'}" style="cursor:pointer" title="Click to edit opening balance" onclick="editBalance(${i})">${balSign}${fmt(nativeBal)}</span>`;
-    const currencyBadge = isUSD ? ` <span class="badge" style="background:var(--amber-bg,#2a2010);color:#f5a623;font-size:10px">USD</span>` : '';
+  if (!S.accounts.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">🏦</div>No accounts yet. Add your chequing, savings, and credit cards.</div>';
+    return;
+  }
+
+  const q = (document.getElementById('acc-search')?.value || '').toLowerCase();
+
+  const groupsHtml = ACCOUNT_TYPES.map(type => {
+    const group = S.accounts.filter(a => a.type === type);
+    if (!group.length) return '';
+    const filtered = q
+      ? group.filter(a => a.name.toLowerCase().includes(q) || type.toLowerCase().includes(q))
+      : group;
+    if (q && !filtered.length) return '';
+
+    const isOpen = accGroupOpen[type] !== false;
+    const groupTotal = group.reduce((s, a) => s + getAccountCurrentBalanceCAD(a), 0);
+    const sign = groupTotal < 0 ? 'neg' : 'pos';
+    const canvasId = `chart-type-pie-${type.replace(/ /g, '_')}`;
+
     return `
-    <div class="row" id="acc-row-${i}">
-      <div class="row-left">
-        <div class="row-title">${a.name}${currencyBadge}</div>
-        <div class="row-sub"><span class="badge badge-${a.type === 'Credit Card' || a.type === 'Loan' ? 'red' : 'blue'}">${a.type}</span> · Opening ${isUSD ? 'US' : ''}${fmt(a.balance)} · Activity ${(accountTransactionDelta(a.name) >= 0 ? '+' : '−') + fmt(accountTransactionDelta(a.name))}${isUSD ? ' USD' : ''}</div>
+    <div class="card" style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;padding-bottom:${isOpen ? '10px' : '0'}"
+           onclick="accGroupOpen['${type}']=!(accGroupOpen['${type}']!==false);renderAccounts()">
+        <span style="font-size:13px;font-weight:600;color:var(--text2)">${type}
+          <span class="badge badge-gray" style="margin-left:6px">${group.length}</span>
+        </span>
+        <span style="display:flex;align-items:center;gap:12px">
+          <span class="amount ${sign}" style="font-size:13px">${groupTotal < 0 ? '-' : ''}${fmt(Math.abs(groupTotal))}</span>
+          <span style="color:var(--text4);font-size:11px">${isOpen ? '▲' : '▼'}</span>
+        </span>
       </div>
-      <div class="row-right" id="acc-right-${i}">
-        ${balDisplay}
-        <button class="btn btn-sm" style="padding:3px 9px;font-size:11px" onclick="openEditAccount(${i})">Edit</button>
-        <button class="del" onclick="deleteItem('accounts',${i},syncAccounts)">×</button>
-      </div>
+      ${isOpen ? `
+        <div>
+          ${filtered.map(a => renderAccountRow(a, S.accounts.indexOf(a))).join('')}
+          ${group.length >= 2 ? `
+            <div style="margin-top:12px">
+              <div class="chart-wrap h160"><canvas id="${canvasId}"></canvas></div>
+            </div>` : ''}
+        </div>` : ''}
     </div>`;
   }).join('');
+
+  el.innerHTML = groupsHtml || '<div class="empty">No accounts match your search.</div>';
+
+  // Draw per-type mini pies (only when not searching, to keep search results clean)
+  if (!q) {
+    ACCOUNT_TYPES.forEach(type => {
+      if (accGroupOpen[type] === false) return;
+      const group = S.accounts.filter(a => a.type === type);
+      if (group.length >= 2) drawTypePie(type, group);
+    });
+  }
 }
 
 function editBalance(i) {
@@ -2908,11 +2987,14 @@ async function addStock() {
     else { toast('Could not fetch price — please enter it manually in the price field'); return; }
   }
 
-  S.stocks.push({ id: uid(), ticker, name: name || ticker, shares, costPerShare: cost, current: price });
+  const linkedAccount = document.getElementById('stk-account')?.value || '';
+  S.stocks.push({ id: uid(), ticker, name: name || ticker, shares, costPerShare: cost, current: price, linkedAccount });
   saveLocal(); closeModal('stk-modal');
   ['stk-ticker','stk-name','stk-ticker-manual','stk-name-manual','stk-shares','stk-cost','stk-price','stk-search'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
+  const stkAccEl = document.getElementById('stk-account');
+  if (stkAccEl) stkAccEl.value = '';
   document.getElementById('price-fetch-status').textContent = '';
   document.getElementById('stk-selected').style.display   = 'none';
   document.getElementById('stk-price-row').style.display  = 'none';
@@ -2952,7 +3034,7 @@ function renderStocks() {
               ${todayChg ? `<span class="badge ${cache.changePct >= 0 ? 'badge-green' : 'badge-red'}" style="font-size:9px">${todayChg}</span>` : ''}
               ${exch ? `<span class="badge badge-gray" style="font-size:9px">${exch}</span>` : ''}
             </div>
-            <div class="row-sub">${s.shares} units &middot; avg cost ${fmt(s.costPerShare)} ${curr} &middot; current ${fmt(s.current)} ${curr}</div>
+            <div class="row-sub">${s.shares} units &middot; avg cost ${fmt(s.costPerShare)} ${curr} &middot; current ${fmt(s.current)} ${curr}${s.linkedAccount ? ` &middot; <span class="badge badge-blue" style="font-size:9px">${s.linkedAccount}</span>` : ''}</div>
           </div>
           <div class="row-right">
             <div style="text-align:right">
@@ -3514,18 +3596,49 @@ function drawNetWorth() {
   });
 }
 
+function drawTypePie(type, accounts) {
+  const key = 'type-pie-' + type;
+  kill(key);
+  const canvasId = `chart-type-pie-${type.replace(/ /g, '_')}`;
+  const pos = accounts
+    .map(a => ({ ...a, bal: getAccountCurrentBalance(a) }))
+    .filter(a => a.bal > 0);
+  if (!pos.length) return;
+  const ctx = document.getElementById(canvasId); if (!ctx) return;
+  charts[key] = new Chart(ctx, {
+    type: 'pie',
+    data: {
+      labels: pos.map(a => a.name),
+      datasets: [{ data: pos.map(a => a.bal),
+        backgroundColor: pos.map((_, i) => PALETTE[i % PALETTE.length]),
+        borderWidth: 0, hoverOffset: 4 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'right', labels: { color: chartColors().text, font: { size: 11 }, boxWidth: 9, padding: 8 } } }
+    }
+  });
+}
+
 function drawAccountsPie() {
   kill('acc-pie');
-  const pos = S.accounts
-    .map(a => ({ ...a, currentBalance: getAccountCurrentBalance(a) }))
-    .filter(a => a.currentBalance > 0);
-  if (!pos.length) return;
+  // Overview pie: one slice per account type (always ≤ 8 slices)
+  const typeData = ACCOUNT_TYPES.map((t, i) => ({
+    name: t,
+    total: S.accounts
+      .filter(a => a.type === t)
+      .reduce((s, a) => s + Math.max(0, getAccountCurrentBalance(a)), 0),
+    color: PALETTE[i % PALETTE.length]
+  })).filter(d => d.total > 0);
+  if (!typeData.length) return;
   const ctx = document.getElementById('chart-accounts-pie'); if (!ctx) return;
   charts['acc-pie'] = new Chart(ctx, {
     type: 'pie',
     data: {
-      labels: pos.map(a => a.name),
-      datasets: [{ data: pos.map(a => a.currentBalance), backgroundColor: PALETTE.slice(0, pos.length), borderWidth: 0, hoverOffset: 4 }]
+      labels: typeData.map(d => d.name),
+      datasets: [{ data: typeData.map(d => d.total),
+        backgroundColor: typeData.map(d => d.color),
+        borderWidth: 0, hoverOffset: 4 }]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
