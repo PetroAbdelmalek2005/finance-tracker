@@ -2809,27 +2809,35 @@ async function tickerSearch(query) {
     dd.innerHTML = '<div class="tdrop-msg">Searching...</div>';
     tickerDropFocusIdx = -1;
 
-    const yahooSearchUrl = 'https://query2.finance.yahoo.com/v1/finance/search?q=' + encodeURIComponent(query) + '&quotesCount=8&newsCount=0&listsCount=0';
-    const corsProxies = [
-      url => url,
-      url => 'https://corsproxy.io/?url=' + encodeURIComponent(url),
-      url => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
+    // Normalize results into a common shape regardless of API source
+    const normalizeV1 = d => (d && d.quotes ? d.quotes : [])
+      .filter(q => q.symbol && ['EQUITY','ETF','MUTUALFUND','CRYPTOCURRENCY','INDEX'].includes(q.quoteType))
+      .map(q => ({ symbol: q.symbol, longname: q.longname || q.shortname, exchDisp: q.exchDisp || q.exchange, typeDisp: q.typeDisp || q.quoteType }));
+
+    const normalizeAutoc = d => {
+      const typeMap = { E:'EQUITY', ET:'ETF', S:'ETF', M:'MUTUALFUND', I:'INDEX', C:'CRYPTOCURRENCY' };
+      return ((d && d.ResultSet && d.ResultSet.Result) || [])
+        .filter(q => q.symbol)
+        .map(q => ({ symbol: q.symbol, longname: q.name, exchDisp: q.exchDisp || q.exch, typeDisp: q.typeDisp || typeMap[q.type] || q.type }));
+    };
+
+    const enc = encodeURIComponent;
+    const v1Url    = 'https://query2.finance.yahoo.com/v1/finance/search?q=' + enc(query) + '&quotesCount=8&newsCount=0&listsCount=0';
+    const autocUrl = 'https://autoc.finance.yahoo.com/autoc?query=' + enc(query) + '&region=1&lang=en';
+    const proxy    = url => 'https://corsproxy.io/?url=' + enc(url);
+
+    const strategies = [
+      { url: v1Url,           parse: normalizeV1 },
+      { url: autocUrl,        parse: normalizeAutoc },
+      { url: proxy(v1Url),    parse: normalizeV1 },
+      { url: proxy(autocUrl), parse: normalizeAutoc },
     ];
+
     let quotes = [];
-
-    const parseQuotes = d => (d && d.quotes ? d.quotes : []).filter(q =>
-      q.symbol && q.quoteType &&
-      ['EQUITY','ETF','MUTUALFUND','CRYPTOCURRENCY','INDEX'].includes(q.quoteType)
-    );
-
-    for (const proxy of corsProxies) {
+    for (const s of strategies) {
       try {
-        const r = await fetch(proxy(yahooSearchUrl), { signal: AbortSignal.timeout(5000), headers: { 'Accept': 'application/json' } });
-        if (r.ok) {
-          const d = await r.json();
-          quotes = parseQuotes(d);
-          if (quotes.length > 0) break;
-        }
+        const r = await fetch(s.url, { signal: AbortSignal.timeout(5000) });
+        if (r.ok) { quotes = s.parse(await r.json()); if (quotes.length) break; }
       } catch(e) {}
     }
 
