@@ -75,6 +75,7 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
 
 /* ── PAGE HEADER ─────────────────────────────────────────────── */
+.mob-header{display:none;}
 .page-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;flex-wrap:wrap;gap:10px;}
 .page-title{font-family:'DM Serif Display',serif;font-size:26px;color:var(--text);}
 .page-sub{font-size:13px;color:var(--text4);margin-top:2px;}
@@ -136,6 +137,18 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
 /* ── GRID ────────────────────────────────────────────────────── */
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
 @media(max-width:900px){.grid-2{grid-template-columns:1fr;}}
+
+/* ── TABLET (681px – 900px) ──────────────────────────────────── */
+@media(min-width:681px) and (max-width:900px){
+  .sidebar{width:180px;min-width:180px;}
+  .main{margin-left:180px;padding:24px 18px;}
+  .brand-name{font-size:16px;}
+  .brand-sub{display:none;}
+  .nav-btn{font-size:12px;padding:8px 8px;}
+  .page-title{font-size:22px;}
+  .metrics{grid-template-columns:1fr 1fr;}
+  .ws-hero-value{font-size:32px;}
+}
 
 /* ── CHARTS ──────────────────────────────────────────────────── */
 .chart-wrap{position:relative;width:100%;}
@@ -514,6 +527,7 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
       <div class="page-header">
         <div><div class="page-title">Home</div><div class="page-sub" id="dash-date"></div></div>
         <div class="header-actions">
+          <button onclick="togglePrivacy()" class="btn btn-sm privacy-btn" style="padding:6px 9px" title="Hide numbers">👁</button>
           <button onclick="toggleTheme()" id="theme-btn-desk" class="btn btn-sm" style="padding:6px 9px">🌙</button>
           <button class="btn btn-primary btn-sm" onclick="openModal('tx-modal')">+ Transaction</button>
         </div>
