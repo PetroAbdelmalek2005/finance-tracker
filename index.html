@@ -112,12 +112,6 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
 .ws-hero-value{font-size:38px;font-weight:300;letter-spacing:-.03em;line-height:1;margin-bottom:18px;color:var(--text);}
 .ws-hero-value.pos{color:var(--green);}
 .ws-hero-value.neg{color:var(--red);}
-.ws-hero-sub{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-.ws-hero-sub-item{background:var(--bg-2);border-radius:var(--radius-md);padding:10px 14px;}
-.ws-hero-sub-label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px;font-weight:500;}
-.ws-hero-sub-value{font-size:16px;font-weight:400;letter-spacing:-.02em;color:var(--text);}
-.ws-hero-sub-value.pos{color:var(--green);}
-.ws-hero-sub-value.neg{color:var(--red);}
 
 /* ── CARDS ───────────────────────────────────────────────────── */
 .card{background:var(--bg-card);border:var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:16px;box-shadow:var(--shadow-soft);transition:box-shadow .2s ease, border-color .2s ease;}
@@ -292,9 +286,9 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
   .metric{border-radius:14px;padding:14px 15px;}
   .metric-value{font-size:19px;}
   .metric-trend{font-size:10px;}
-  .ws-hero{border-radius:var(--radius-lg);padding:18px 16px 16px;}
-  .ws-hero-value{font-size:30px;margin-bottom:14px;}
-  .ws-hero-sub-value{font-size:14px;}
+  .ws-hero{border-radius:var(--radius-lg);padding:22px 16px 20px;}
+  .ws-hero-value{font-size:34px;}
+  .ws-tile-value{font-size:18px;}
   .grid-2{grid-template-columns:1fr;gap:0;}
 
   /* Charts — shorter on mobile */
@@ -371,6 +365,8 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
 .ws-tile:hover{transform:translateY(-2px);box-shadow:var(--shadow);}
 .ws-tile-label{font-size:13px;color:var(--text3);margin-bottom:8px;font-weight:400;}
 .ws-tile-value{font-size:22px;font-weight:300;color:var(--text);letter-spacing:-.02em;margin-bottom:12px;}
+.ws-tile-value.pos{color:var(--green);}
+.ws-tile-value.neg{color:var(--red);}
 .ws-pill{display:inline-flex;align-items:center;gap:5px;background:var(--green-bg);color:var(--green);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:500;}
 .ws-pill.red{background:var(--red-bg);color:var(--red);}
 .ws-pill.amber{background:var(--amber-bg);color:var(--amber);}
@@ -2318,19 +2314,25 @@ function renderAccounts() {
     const totalAssets = S.accounts.reduce((s, a) => { const b = getAccountCurrentBalanceCAD(a) + getAccountLinkedStocksValue(a.name); return b > 0 ? s + b : s; }, 0);
     const totalLiab   = S.accounts.reduce((s, a) => { const b = getAccountCurrentBalanceCAD(a) + getAccountLinkedStocksValue(a.name); return b < 0 ? s + Math.abs(b) : s; }, 0);
     const nw = totalAssets - totalLiab;
+    const assetCount = S.accounts.filter(a => (getAccountCurrentBalanceCAD(a) + getAccountLinkedStocksValue(a.name)) > 0).length;
+    const liabCount  = S.accounts.filter(a => (getAccountCurrentBalanceCAD(a) + getAccountLinkedStocksValue(a.name)) < 0).length;
+    const nowAcc = new Date();
     statsEl.innerHTML = `
       <div class="ws-hero">
         <div class="ws-hero-label">Net Worth</div>
         <div class="ws-hero-value ${nw >= 0 ? 'pos' : 'neg'}">${nw < 0 ? '−' : ''}${fmt(Math.abs(nw))}</div>
-        <div class="ws-hero-sub">
-          <div class="ws-hero-sub-item">
-            <div class="ws-hero-sub-label">Total Assets</div>
-            <div class="ws-hero-sub-value pos">${fmt(totalAssets)}</div>
-          </div>
-          <div class="ws-hero-sub-item">
-            <div class="ws-hero-sub-label">Total Liabilities</div>
-            <div class="ws-hero-sub-value neg">${totalLiab > 0 ? '−' : ''}${fmt(totalLiab)}</div>
-          </div>
+        <div class="ws-hero-sub">As of ${nowAcc.toLocaleDateString('en-CA',{month:'long',day:'numeric',year:'numeric'})}</div>
+      </div>
+      <div class="ws-tiles">
+        <div class="ws-tile">
+          <div class="ws-tile-label">Total Assets</div>
+          <div class="ws-tile-value pos">${fmt(totalAssets)}</div>
+          <div class="ws-pill">${assetCount} account${assetCount !== 1 ? 's' : ''}</div>
+        </div>
+        <div class="ws-tile">
+          <div class="ws-tile-label">Total Liabilities</div>
+          <div class="ws-tile-value${totalLiab > 0 ? ' neg' : ''}">${totalLiab > 0 ? '−' : ''}${fmt(totalLiab)}</div>
+          <div class="ws-pill ${totalLiab > 0 ? 'red' : 'neutral'}">${totalLiab > 0 ? liabCount + ' debt' + (liabCount !== 1 ? 's' : '') : 'Debt free'}</div>
         </div>
       </div>`;
   }
@@ -2562,19 +2564,23 @@ function renderTx() {
   if (summaryEl) {
     if (!txs.length || (!totalInc && !totalExp)) { summaryEl.innerHTML = ''; }
     else {
+      const expCount = txs.filter(t => t.type === 'expense' || t.type === 'bill').length;
       summaryEl.innerHTML = `
         <div class="ws-hero">
           <div class="ws-hero-label">Total Spending</div>
           <div class="ws-hero-value neg">−${fmt(totalExp)}</div>
-          <div class="ws-hero-sub">
-            <div class="ws-hero-sub-item">
-              <div class="ws-hero-sub-label">Income</div>
-              <div class="ws-hero-sub-value pos">+${fmt(totalInc)}</div>
-            </div>
-            <div class="ws-hero-sub-item">
-              <div class="ws-hero-sub-label">Net</div>
-              <div class="ws-hero-sub-value ${net >= 0 ? 'pos' : 'neg'}">${net >= 0 ? '+' : '−'}${fmt(Math.abs(net))}</div>
-            </div>
+          <div class="ws-hero-sub">This period</div>
+        </div>
+        <div class="ws-tiles">
+          <div class="ws-tile">
+            <div class="ws-tile-label">Income</div>
+            <div class="ws-tile-value pos">+${fmt(totalInc)}</div>
+            <div class="ws-pill">This period</div>
+          </div>
+          <div class="ws-tile">
+            <div class="ws-tile-label">Net</div>
+            <div class="ws-tile-value ${net >= 0 ? 'pos' : 'neg'}">${net >= 0 ? '+' : '−'}${fmt(Math.abs(net))}</div>
+            <div class="ws-pill ${net >= 0 ? '' : 'red'}">${net >= 0 ? 'Surplus' : 'Deficit'}</div>
           </div>
         </div>`;
     }
@@ -3280,19 +3286,23 @@ function renderStocks() {
   const portVal  = S.stocks.reduce((s, st) => s + st.shares * st.current, 0);
   const portCost = S.stocks.reduce((s, st) => s + st.shares * st.costPerShare, 0);
   const portGain = portVal - portCost;
+  const retPct = portCost > 0 ? ((portGain / portCost) * 100).toFixed(1) : null;
   document.getElementById('invest-metrics').innerHTML = `
     <div class="ws-hero">
       <div class="ws-hero-label">Portfolio Value</div>
       <div class="ws-hero-value">${fmt(portVal)}</div>
-      <div class="ws-hero-sub">
-        <div class="ws-hero-sub-item">
-          <div class="ws-hero-sub-label">Total Gain / Loss</div>
-          <div class="ws-hero-sub-value ${portGain >= 0 ? 'pos' : 'neg'}">${portGain >= 0 ? '+' : '−'}${fmt(Math.abs(portGain))}</div>
-        </div>
-        <div class="ws-hero-sub-item">
-          <div class="ws-hero-sub-label">Return</div>
-          <div class="ws-hero-sub-value ${portGain >= 0 ? 'pos' : 'neg'}">${portCost > 0 ? ((portGain/portCost)*100).toFixed(1) + '%' : '—'}</div>
-        </div>
+      <div class="ws-hero-sub">${S.stocks.length} holding${S.stocks.length !== 1 ? 's' : ''}</div>
+    </div>
+    <div class="ws-tiles">
+      <div class="ws-tile">
+        <div class="ws-tile-label">Total Gain / Loss</div>
+        <div class="ws-tile-value ${portGain >= 0 ? 'pos' : 'neg'}">${portGain >= 0 ? '+' : '−'}${fmt(Math.abs(portGain))}</div>
+        <div class="ws-pill ${portGain >= 0 ? '' : 'red'}">${portGain >= 0 ? 'In profit' : 'At a loss'}</div>
+      </div>
+      <div class="ws-tile">
+        <div class="ws-tile-label">Return</div>
+        <div class="ws-tile-value ${portGain >= 0 ? 'pos' : 'neg'}">${retPct !== null ? retPct + '%' : '—'}</div>
+        <div class="ws-pill neutral">Since inception</div>
       </div>
     </div>`;
 }
