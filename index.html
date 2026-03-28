@@ -279,6 +279,8 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
   .metric{border-radius:14px;padding:14px 15px;}
   .metric-value{font-size:19px;}
   .metric-trend{font-size:10px;}
+  #invest-metrics,#acc-stats{grid-template-columns:repeat(3,1fr);gap:8px;}
+  #invest-metrics .metric-value,#acc-stats .metric-value{font-size:13px;}
   .grid-2{grid-template-columns:1fr;gap:0;}
 
   /* Charts — shorter on mobile */
@@ -3201,10 +3203,9 @@ function renderStocks() {
   const portCost = S.stocks.reduce((s, st) => s + st.shares * st.costPerShare, 0);
   const portGain = portVal - portCost;
   document.getElementById('invest-metrics').innerHTML = `
-    <div class="metric blue"><div class="metric-label">Portfolio Value</div><div class="metric-value">${fmtK(portVal)}</div></div>
-    <div class="metric ${portGain >= 0 ? 'green' : 'red'}"><div class="metric-label">Total Gain / Loss</div><div class="metric-value ${portGain >= 0 ? 'pos' : 'neg'}">${portGain >= 0 ? '+' : ''}${fmtK(portGain)}</div></div>
-    <div class="metric amber"><div class="metric-label">Return %</div><div class="metric-value ${portGain >= 0 ? 'pos' : 'neg'}">${portCost > 0 ? ((portGain/portCost)*100).toFixed(1) + '%' : '—'}</div></div>
-    <div class="metric"><div class="metric-label">Holdings</div><div class="metric-value">${S.stocks.length}</div></div>`;
+    <div class="metric blue"><div class="metric-label">Portfolio Value</div><div class="metric-value">${fmt(portVal)}</div></div>
+    <div class="metric ${portGain >= 0 ? 'green' : 'red'}"><div class="metric-label">Total Gain / Loss</div><div class="metric-value ${portGain >= 0 ? 'pos' : 'neg'}">${portGain >= 0 ? '+' : ''}${fmt(portGain)}</div></div>
+    <div class="metric amber"><div class="metric-label">Return %</div><div class="metric-value ${portGain >= 0 ? 'pos' : 'neg'}">${portCost > 0 ? ((portGain/portCost)*100).toFixed(1) + '%' : '—'}</div></div>`;
 }
 
 // ═══════════════════════════════════════════════
