@@ -228,6 +228,17 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
 .chg.up{color:var(--green);}
 .chg.dn{color:var(--red);}
 
+/* ── PRIVACY MODE ────────────────────────────────────────────── */
+.privacy-btn{color:var(--text4);}
+.privacy-btn.active{color:var(--text);background:var(--bg-2);}
+body.privacy .pos{color:var(--text3)!important;}
+body.privacy .neg{color:var(--text3)!important;}
+body.privacy .ws-hero-value.pos,body.privacy .ws-hero-value.neg{color:var(--text)!important;}
+body.privacy .ws-hero-sub-value.pos,body.privacy .ws-hero-sub-value.neg{color:var(--text3)!important;}
+body.privacy .metric-value.pos,body.privacy .metric-value.neg{color:var(--text)!important;}
+body.privacy .chg.up,body.privacy .chg.dn{color:var(--text4)!important;}
+body.privacy .badge-green,body.privacy .badge-red{background:var(--bg-3)!important;color:var(--text4)!important;}
+
 /* ── TICKER DROPDOWN ─────────────────────────────────────────── */
 .tdrop-item{display:flex;align-items:center;padding:12px 14px;cursor:pointer;border-bottom:var(--border);transition:background .1s;}
 .tdrop-item:last-child{border-bottom:none;}
@@ -520,14 +531,14 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
         <div><div class="mob-header-title">Home</div></div>
         <div class="mob-header-actions">
           <button class="btn btn-primary btn-sm" onclick="openModal('tx-modal')">+ Add</button>
-          <button onclick="togglePrivacy()" class="btn btn-sm privacy-btn" style="padding:6px 9px" title="Hide numbers">👁</button>
+          <button onclick="togglePrivacy()" class="btn btn-sm privacy-btn" style="padding:7px 8px" title="Hide numbers"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
           <button onclick="toggleTheme()" id="theme-btn" class="btn btn-sm" style="padding:6px 9px">🌙</button>
         </div>
       </div>
       <div class="page-header">
         <div><div class="page-title">Home</div><div class="page-sub" id="dash-date"></div></div>
         <div class="header-actions">
-          <button onclick="togglePrivacy()" class="btn btn-sm privacy-btn" style="padding:6px 9px" title="Hide numbers">👁</button>
+          <button onclick="togglePrivacy()" class="btn btn-sm privacy-btn" style="padding:7px 8px" title="Hide numbers"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
           <button onclick="toggleTheme()" id="theme-btn-desk" class="btn btn-sm" style="padding:6px 9px">🌙</button>
           <button class="btn btn-primary btn-sm" onclick="openModal('tx-modal')">+ Transaction</button>
         </div>
@@ -1906,11 +1917,16 @@ function fmt(n) {
   return '$' + Math.abs(n).toLocaleString('en-CA', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 function fmtK(n) {
+  if (privacyMode) return '••••';
   const sign = n < 0 ? '-' : '';
   const abs  = Math.abs(n);
   if (abs >= 1000000) return sign + '$' + (abs/1000000).toFixed(1) + 'M';
   if (abs >= 1000)    return sign + '$' + (abs/1000 % 1 === 0 ? (abs/1000).toFixed(0) : (abs/1000).toFixed(1)) + 'k';
   return sign + '$' + abs.toFixed(0);
+}
+function fmtPct(n, decimals = 0) {
+  if (privacyMode) return '••%';
+  return n.toFixed(decimals) + '%';
 }
 function isLiabilityType(type) {
   return type === 'Credit Card' || type === 'Loan';
@@ -2791,20 +2807,21 @@ function renderBudget() {
     const spent = monthTxs(bM - 1, bY).filter(t => (t.type === 'expense' || t.type === 'bill') && t.cat === b.cat).reduce((s, t) => s + t.amount, 0);
     const pct = Math.min((spent / b.amount) * 100, 100);
     const color = PALETTE[i % PALETTE.length];
-    const statusColor = pct > 90 ? '#E24B4A' : pct > 70 ? '#EF9F27' : '#1D9E75';
+    const statusColor = privacyMode ? 'var(--text4)' : (pct > 90 ? '#E24B4A' : pct > 70 ? '#EF9F27' : '#1D9E75');
     const remaining = Math.max(b.amount - spent, 0);
+    const remainingLabel = remaining > 0 ? fmt(remaining) + ' left' : (privacyMode ? '••••' : 'Over budget!');
     return `<div class="prog-row" style="position:relative">
       <div class="prog-header">
         <span class="prog-label" style="display:flex;align-items:center;gap:7px"><span style="width:8px;height:8px;border-radius:50%;background:${color};display:inline-block"></span>${b.cat}</span>
         <div style="display:flex;align-items:center;gap:10px">
           <span class="prog-amounts">${fmt(spent)} <span style="color:#3a4260">/ ${fmt(b.amount)}</span>
-            <span style="color:${statusColor};margin-left:6px;font-size:11px">${remaining > 0 ? fmt(remaining) + ' left' : 'Over budget!'}</span>
+            <span style="color:${statusColor};margin-left:6px;font-size:11px">${remainingLabel}</span>
           </span>
           <button class="btn btn-sm" style="font-size:10px;padding:2px 7px" onclick="openBudgetModal('${b.cat}','${b.amount}')" title="Edit">Edit</button>
           <button class="del" onclick="deleteItem('budgets',${i},syncBudgets)" title="Delete">×</button>
         </div>
       </div>
-      <div class="prog-bg"><div class="prog-fill" style="width:${pct.toFixed(1)}%;background:${color}"></div></div>
+      <div class="prog-bg"><div class="prog-fill" style="width:${privacyMode ? 0 : pct.toFixed(1)}%;background:${color}"></div></div>
     </div>`;
   }).join('') + `<div style="text-align:right;margin-top:14px"><button class="btn btn-sm" onclick="openBudgetModal()">+ Add Category</button></div>`;
   updateBudgetMonthLabel();
@@ -3247,9 +3264,10 @@ function renderStocks() {
     const val      = s.shares * s.current;
     const cost     = s.shares * s.costPerShare;
     const gain     = val - cost;
-    const pct      = cost > 0 ? ((gain / cost) * 100).toFixed(1) : '0.0';
+    const pct      = cost > 0 ? ((gain / cost) * 100) : 0;
     const cache    = priceCache[s.ticker];
-    const todayChg = cache ? `${cache.changePct >= 0 ? '+' : ''}${cache.changePct.toFixed(2)}% today` : '';
+    const todayChg = cache ? (privacyMode ? '•• today' : `${cache.changePct >= 0 ? '+' : ''}${cache.changePct.toFixed(2)}% today`) : '';
+    const todayBadgeClass = cache && !privacyMode ? (cache.changePct >= 0 ? 'badge-green' : 'badge-red') : 'badge-gray';
     const exch     = cache && cache.exchange ? cache.exchange : '';
     const curr     = cache && cache.currency ? cache.currency : '';
     const acct     = s.linkedAccount ? S.accounts.find(a => a.name === s.linkedAccount) : null;
@@ -3261,7 +3279,7 @@ function renderStocks() {
           <div class="row-left" style="cursor:pointer" onclick="toggleStockDetail(${i})">
             <div class="row-title" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
               <span class="badge badge-blue">${s.ticker}</span> ${s.name}
-              ${todayChg ? `<span class="badge ${cache.changePct >= 0 ? 'badge-green' : 'badge-red'}" style="font-size:9px">${todayChg}</span>` : ''}
+              ${todayChg ? `<span class="badge ${todayBadgeClass}" style="font-size:9px">${todayChg}</span>` : ''}
               ${exch ? `<span class="badge badge-gray" style="font-size:9px">${exch}</span>` : ''}
               <span style="color:var(--text4);font-size:10px">ⓘ</span>
             </div>
@@ -3270,7 +3288,7 @@ function renderStocks() {
           <div class="row-right">
             <div style="text-align:right">
               <div class="amount neutral">${fmt(val)}</div>
-              <div class="chg ${gain >= 0 ? 'up' : 'dn'}">${gain >= 0 ? '+' : ''}${fmtK(gain)} (${pct}% total)</div>
+              <div class="chg ${gain >= 0 ? 'up' : 'dn'}">${privacyMode ? '' : gain >= 0 ? '+' : ''}${fmtK(gain)} (${fmtPct(pct, 1)} total)</div>
             </div>
             <button class="btn btn-sm" style="font-size:11px;padding:3px 8px" onclick="toggleBuyMore(${i})">+ Buy more</button>
             <button class="del" onclick="deleteItem('stocks',${i},syncStocks)">×</button>
@@ -3347,11 +3365,11 @@ function renderStocks() {
       <div class="ws-hero-sub">
         <div class="ws-hero-sub-item">
           <div class="ws-hero-sub-label">Total Gain / Loss</div>
-          <div class="ws-hero-sub-value ${portGain >= 0 ? 'pos' : 'neg'}">${portGain >= 0 ? '+' : '−'}${fmt(Math.abs(portGain))}</div>
+          <div class="ws-hero-sub-value ${portGain >= 0 ? 'pos' : 'neg'}">${privacyMode ? '' : portGain >= 0 ? '+' : '−'}${fmt(Math.abs(portGain))}</div>
         </div>
         <div class="ws-hero-sub-item">
           <div class="ws-hero-sub-label">Return</div>
-          <div class="ws-hero-sub-value ${portGain >= 0 ? 'pos' : 'neg'}">${portCost > 0 ? ((portGain/portCost)*100).toFixed(1) + '%' : '—'}</div>
+          <div class="ws-hero-sub-value ${portGain >= 0 ? 'pos' : 'neg'}">${portCost > 0 ? fmtPct((portGain/portCost)*100, 1) : '—'}</div>
         </div>
       </div>
     </div>`;
@@ -3494,9 +3512,9 @@ function renderGoals() {
           <button class="del" onclick="deleteItem('goals',${i},syncGoals)">×</button>
         </div>
       </div>
-      <div class="prog-bg"><div class="prog-fill" style="width:${pct.toFixed(1)}%;background:${color}"></div></div>
+      <div class="prog-bg"><div class="prog-fill" style="width:${privacyMode ? 0 : pct.toFixed(1)}%;background:${color}"></div></div>
       <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:#3a4260">
-        <span>${pct.toFixed(0)}% complete</span>
+        <span>${fmtPct(pct)} complete</span>
         <span>${fmt(Math.max(rem,0))} remaining</span>
       </div>
       <div id="goal-contrib-${i}" style="display:none;margin-top:12px;padding:12px;background:#0f1117;border-radius:8px;border:1px solid #2e3650">
@@ -3568,8 +3586,8 @@ function renderDash() {
   const budgetPct = totalBudget > 0 ? Math.min(Math.round((exp / totalBudget) * 100), 100) : 0;
   const portfolioVal = S.stocks.reduce((s, st) => s + st.shares * st.current, 0);
 
-  const spendPillClass = budgetRemaining === null ? 'neutral' : budgetRemaining >= 0 ? '' : 'red';
-  const spendPillText = budgetRemaining !== null ? `${budgetPct}% of budget used` : `${fmtK(exp)} spent`;
+  const spendPillClass = (privacyMode || budgetRemaining === null) ? 'neutral' : budgetRemaining >= 0 ? '' : 'red';
+  const spendPillText = budgetRemaining !== null ? `${fmtPct(budgetPct)} of budget used` : `${fmtK(exp)} spent`;
   const spendTileValue = budgetRemaining !== null ? fmtK(budgetRemaining) : fmtK(exp);
   const spendTileLabel = budgetRemaining !== null ? 'Budget Remaining' : 'Spent This Month';
   const investPillClass = portfolioVal > 0 ? '' : 'neutral';
@@ -3607,6 +3625,7 @@ function renderDash() {
     if (t.type === 'income')            { amtClass = 'pos';     amtPrefix = '+'; }
     else if (t.type === 'transfer')     { amtClass = 'neutral'; amtPrefix = t.xferDir === 'in' ? '→' : '←'; }
     else                                { amtClass = 'neg';     amtPrefix = '−'; }
+    const displayPrefix = privacyMode ? '' : amtPrefix + ' ';
     const badge = t.type === 'transfer' ? ' <span class="badge badge-blue" style="font-size:9px">Transfer</span>'
                 : t.type === 'bill'     ? ' <span class="badge badge-red"  style="font-size:9px">Bill</span>'
                 : '';
@@ -3615,7 +3634,7 @@ function renderDash() {
         <div class="row-title" style="display:flex;align-items:center;gap:4px">${t.desc}${badge}</div>
         <div class="row-sub">${t.cat} · ${t.date}</div>
       </div>
-      <span class="amount ${amtClass}">${amtPrefix} ${fmt(t.amount)}</span>
+      <span class="amount ${amtClass}">${displayPrefix}${fmt(t.amount)}</span>
     </div>`;
   }).join('');
 }
@@ -4224,7 +4243,9 @@ loadTheme();
 loadConfig();
 loadLocal();
 privacyMode = !!localStorage.getItem('ft_privacy');
+document.body.classList.toggle('privacy', privacyMode);
 renderAll();
+applyPrivacyButtons();
 fetchUsdCadRate().then(() => renderAll());
 if (canReadRemotely()) {
   // Show skeleton placeholders while pulling from Sheets
@@ -4263,10 +4284,19 @@ function toggleTheme() {
   drawCharts(activeTab);
 }
 
+const EYE_ICON     = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+const EYE_OFF_ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`;
+function applyPrivacyButtons() {
+  document.querySelectorAll('.privacy-btn').forEach(b => {
+    b.innerHTML = privacyMode ? EYE_OFF_ICON : EYE_ICON;
+    b.classList.toggle('active', privacyMode);
+  });
+}
 function togglePrivacy() {
   privacyMode = !privacyMode;
   localStorage.setItem('ft_privacy', privacyMode ? '1' : '');
-  document.querySelectorAll('.privacy-btn').forEach(b => { b.textContent = privacyMode ? '👁‍🗨' : '👁'; });
+  document.body.classList.toggle('privacy', privacyMode);
+  applyPrivacyButtons();
   renderAll();
 }
 
