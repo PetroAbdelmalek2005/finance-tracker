@@ -26,14 +26,14 @@
 
 /* ── THEME VARIABLES ─────────────────────────────────────────── */
 :root{
-  --bg-base:#0b0e18;--bg-card:#121828;--bg-input:#0b0e18;--bg-2:#1a2035;--bg-3:#1e2840;--bg-4:#232d48;
-  --border:1px solid #1e2535;--border2:1px solid #2a3550;--border3:1px solid #3a4870;
-  --text:#eaeef8;--text2:#c8cedf;--text3:#8892aa;--text4:#50607a;--text5:#303d55;
-  --green:#18b880;--red:#f04f4f;--blue:#4a82e4;--amber:#f5a623;--purple:#8b5cf6;
-  --green-bg:#082818;--red-bg:#280a0a;--blue-bg:#0a1830;--amber-bg:#281800;
-  --radius-sm:8px;--radius-md:12px;--radius-lg:16px;--radius-xl:20px;
-  --shadow:0 8px 24px rgba(0,0,0,.28);
-  --shadow-soft:0 4px 14px rgba(0,0,0,.18);
+  --bg-base:#0a0a0a;--bg-card:#1c1c1e;--bg-input:#141414;--bg-2:#1c1c1e;--bg-3:#252525;--bg-4:#2e2e2e;
+  --border:1px solid transparent;--border2:1px solid #2a2a2a;--border3:1px solid #333333;
+  --text:#ffffff;--text2:#e0e0e0;--text3:#999999;--text4:#666666;--text5:#444444;
+  --green:#00c896;--red:#ff4d4d;--blue:#4a82e4;--amber:#f5a623;--purple:#8b5cf6;
+  --green-bg:#003d2a;--red-bg:#2a0000;--blue-bg:#0a1830;--amber-bg:#281800;
+  --radius-sm:10px;--radius-md:14px;--radius-lg:20px;--radius-xl:24px;
+  --shadow:0 8px 24px rgba(0,0,0,.5);
+  --shadow-soft:0 4px 14px rgba(0,0,0,.3);
 }
 body.light{
   --bg-base:#f0f2f8;--bg-card:#ffffff;--bg-input:#f8f9fc;--bg-2:#eaecf4;--bg-3:#e0e4ef;--bg-4:#d4d9e8;
@@ -344,6 +344,25 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
 .summary-cards .bucket-card{padding:12px 14px;}
 .summary-cards .bucket-value{font-size:20px;line-height:1.2;}
 .summary-cards .bucket-pct{min-height:34px;}
+/* ── WEALTHSIMPLE HERO BALANCE ───────────────────────────── */
+.ws-hero{text-align:center;padding:32px 20px 28px;}
+.ws-hero-label{font-size:12px;color:var(--text4);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;}
+.ws-hero-value{font-family:'DM Serif Display',serif;font-size:48px;font-weight:400;color:var(--text);letter-spacing:-.02em;line-height:1;}
+.ws-hero-sub{font-size:13px;color:var(--text4);margin-top:8px;}
+/* ── WEALTHSIMPLE TWO TILES ──────────────────────────────── */
+.ws-tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;}
+.ws-tile{background:var(--bg-card);border-radius:var(--radius-xl);padding:20px 18px;cursor:default;transition:transform .2s ease,box-shadow .2s ease;}
+.ws-tile:hover{transform:translateY(-2px);box-shadow:var(--shadow);}
+.ws-tile-label{font-size:13px;color:var(--text3);margin-bottom:8px;font-weight:400;}
+.ws-tile-value{font-size:22px;font-weight:300;color:var(--text);letter-spacing:-.02em;margin-bottom:12px;}
+.ws-pill{display:inline-flex;align-items:center;gap:5px;background:var(--green-bg);color:var(--green);border-radius:20px;padding:4px 10px;font-size:12px;font-weight:500;}
+.ws-pill.red{background:var(--red-bg);color:var(--red);}
+.ws-pill.amber{background:var(--amber-bg);color:var(--amber);}
+.ws-pill.neutral{background:var(--bg-3);color:var(--text3);}
+/* ── SECTION HEADER ──────────────────────────────────────── */
+.section-header{font-size:18px;font-weight:600;color:var(--text);margin:22px 0 12px;}
+/* ── BUCKET CARD BORDER OVERRIDE ─────────────────────────── */
+.bucket-card{border:none;}
 
 /* ── INSIGHTS ────────────────────────────────────────────────── */
 .insight-row{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:var(--border);}
@@ -463,39 +482,38 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
     <!-- DASHBOARD -->
     <div id="tab-dashboard" class="tab active">
       <div class="mob-header">
-        <div><div class="mob-header-title">Dashboard</div></div>
+        <div><div class="mob-header-title">Home</div></div>
         <div class="mob-header-actions">
           <button class="btn btn-primary btn-sm" onclick="openModal('tx-modal')">+ Add</button>
           <button onclick="toggleTheme()" id="theme-btn" class="btn btn-sm" style="padding:6px 9px">🌙</button>
         </div>
       </div>
       <div class="page-header">
-        <div><div class="page-title">Dashboard</div><div class="page-sub" id="dash-date"></div></div>
+        <div><div class="page-title">Home</div><div class="page-sub" id="dash-date"></div></div>
         <div class="header-actions">
           <button onclick="toggleTheme()" id="theme-btn-desk" class="btn btn-sm" style="padding:6px 9px">🌙</button>
           <button class="btn btn-primary btn-sm" onclick="openModal('tx-modal')">+ Transaction</button>
         </div>
       </div>
       <div class="tab-content-inner">
+      <div class="ws-hero" id="dash-hero"></div>
+      <div class="ws-tiles" id="dash-tiles"></div>
       <div id="dash-bills-alert"></div>
-      <div class="summary-cards" id="dash-metrics"></div>
-      <div class="buckets" id="dash-buckets"></div>
+      <div id="dash-buckets"></div>
       <div id="dash-insights"></div>
-      <div class="grid-2">
-        <div class="card">
-          <div class="card-header"><span class="card-title">Income vs Expenses</span><span id="dash-month-label" class="badge badge-gray"></span></div>
-          <div class="chart-wrap h200"><canvas id="chart-bar"></canvas></div>
-        </div>
-        <div class="card">
-          <div class="card-header"><span class="card-title">Spending Breakdown</span></div>
-          <div class="chart-wrap h200"><canvas id="chart-donut"></canvas></div>
-        </div>
-      </div>
       <div class="card">
+        <div class="card-header"><span class="card-title">Income vs Expenses</span><span id="dash-month-label" class="badge badge-gray"></span></div>
+        <div class="chart-wrap h200"><canvas id="chart-bar"></canvas></div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <div class="card-header"><span class="card-title">Spending Breakdown</span></div>
+        <div class="chart-wrap h200"><canvas id="chart-donut"></canvas></div>
+      </div>
+      <div class="card" style="margin-top:14px">
         <div class="card-header"><span class="card-title">Net Worth Trend</span></div>
         <div class="chart-wrap h220"><canvas id="chart-networth"></canvas></div>
       </div>
-      <div class="card">
+      <div class="card" style="margin-top:14px">
         <div class="card-header">
           <span class="card-title">Recent Transactions</span>
           <button class="btn btn-sm" onclick="showTab('transactions',null)">View all</button>
@@ -912,7 +930,7 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
     <div class="field" id="edit-tx-due-field" style="display:none">
       <label>Due Date</label><input id="edit-tx-due" type="date">
     </div>
-    <div class="field">
+    <div class="field" style="display:none">
       <label>Spending Bucket <small style="color:#555e78;font-weight:400">(optional)</small></label>
       <select id="edit-tx-bucket">
         <option value="">Unassigned</option>
@@ -1034,7 +1052,7 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
       <label>Linked Goal <small style="color:#555e78;font-weight:400">(optional)</small></label>
       <select id="tx-goal"></select>
     </div>
-    <div class="field" id="tx-bucket-field">
+    <div class="field" id="tx-bucket-field" style="display:none">
       <label>Spending Bucket <small style="color:#555e78;font-weight:400">(optional)</small></label>
       <select id="tx-bucket">
         <option value="">Unassigned</option>
@@ -3404,44 +3422,38 @@ function renderDash() {
   const save = inc - exp;
   const accountBalance = S.accounts.reduce((s, a) => s + getAccountCurrentBalanceCAD(a), 0);
   const nw = netWorth();
-  const monthlyBudget = S.budgets.reduce((s, b) => s + b.amount, 0);
-  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  const daysLeft = Math.max(daysInMonth - now.getDate() + 1, 1);
-  const dailySpendLeft = monthlyBudget > 0 ? Math.round(((monthlyBudget - exp) / daysLeft) * 100) / 100 : 0;
+  // Hero: Net Worth
+  document.getElementById('dash-hero').innerHTML = `
+    <div class="ws-hero-label">Total Net Worth</div>
+    <div class="ws-hero-value">${fmt(nw)}</div>
+    <div class="ws-hero-sub">As of ${now.toLocaleDateString('en-CA',{month:'long',day:'numeric',year:'numeric'})}</div>`;
 
-  // Money Left Today
-  const totalBudget = monthlyBudget;
-  const budgetLeft  = totalBudget > 0 ? totalBudget - exp : 0;
-  const moneyLeftToday = totalBudget > 0 ? budgetLeft / daysLeft : null;
+  // Two tiles: Spend + Invest
+  const totalBudget = S.budgets.reduce((s, b) => s + b.amount, 0);
+  const budgetRemaining = totalBudget > 0 ? totalBudget - exp : null;
+  const budgetPct = totalBudget > 0 ? Math.min(Math.round((exp / totalBudget) * 100), 100) : 0;
+  const portfolioVal = S.stocks.reduce((s, st) => s + st.shares * st.current, 0);
 
-  const mltValue = moneyLeftToday !== null
-    ? `${moneyLeftToday >= 0 ? '' : '−'}${fmtK(moneyLeftToday)}`
-    : 'Set budgets';
-  const mltSub = moneyLeftToday !== null
-    ? `Daily allowance · ${daysLeft}d left`
-    : 'Add budgets to see daily allowance';
+  const spendPillClass = budgetRemaining === null ? 'neutral' : budgetRemaining >= 0 ? '' : 'red';
+  const spendPillText = budgetRemaining !== null ? `${budgetPct}% of budget used` : `${fmtK(exp)} spent`;
+  const spendTileValue = budgetRemaining !== null ? fmtK(budgetRemaining) : fmtK(exp);
+  const spendTileLabel = budgetRemaining !== null ? 'Budget Remaining' : 'Spent This Month';
+  const investPillClass = portfolioVal > 0 ? '' : 'neutral';
+  const investPillText = portfolioVal > 0 ? `${S.stocks.length} holding${S.stocks.length !== 1 ? 's' : ''}` : 'No holdings';
 
-  document.getElementById('dash-metrics').innerHTML = `
-    <div class="bucket-card">
-      <div class="bucket-label">Net Worth</div>
-      <div class="bucket-value" style="color:${nw >= 0 ? 'var(--green)' : 'var(--red)'}">${fmtK(nw)}</div>
-      <div class="bucket-pct">Accounts + portfolio</div>
+  document.getElementById('dash-tiles').innerHTML = `
+    <div class="ws-tile">
+      <div class="ws-tile-label">${spendTileLabel}</div>
+      <div class="ws-tile-value">${spendTileValue}</div>
+      <div class="ws-pill ${spendPillClass}">${spendPillText}</div>
     </div>
-    <div class="bucket-card">
-      <div class="bucket-label">Account Balance</div>
-      <div class="bucket-value" style="color:${accountBalance >= 0 ? 'var(--green)' : 'var(--red)'}">${fmtK(accountBalance)}</div>
-      <div class="bucket-pct">All cash + debt accounts</div>
-    </div>
-    <div class="bucket-card">
-      <div class="bucket-label">Net Saving (${now.toLocaleDateString('en-CA',{month:'short'})})</div>
-      <div class="bucket-value" style="color:${save >= 0 ? 'var(--green)' : 'var(--red)'}">${save >= 0 ? '+' : ''}${fmtK(save)}</div>
-      <div class="bucket-pct">Income − Expenses</div>
-    </div>
-    <div class="bucket-card">
-      <div class="bucket-label">Money Left Today</div>
-      <div class="bucket-value" style="color:${moneyLeftToday === null ? 'var(--text4)' : moneyLeftToday >= 0 ? 'var(--green)' : 'var(--red)'}">${mltValue}</div>
-      <div class="bucket-pct">${mltSub}</div>
+    <div class="ws-tile">
+      <div class="ws-tile-label">Portfolio</div>
+      <div class="ws-tile-value">${fmtK(portfolioVal)}</div>
+      <div class="ws-pill ${investPillClass}">${investPillText}</div>
     </div>`;
+
+  document.getElementById('dash-month-label').textContent = 'Last 6 months';
 
   // Bucket summary cards
   renderBucketCards(txm, exp);
@@ -3474,45 +3486,31 @@ function renderDash() {
   }).join('');
 }
 
-// ─── Bucket summary cards ──────────────────────────────────────
+// ─── Top spending categories (replaces bucket cards) ──────────
 function renderBucketCards(txm, totalExp) {
   const el = document.getElementById('dash-buckets');
   if (!el) return;
 
-  // Bucket definitions: label, colors, which transaction types count
-  const BUCKETS = [
-    { key: 'Bills',     label: 'Bills',     color: '#f04f4f', bg: 'var(--red-bg)',   icon: '🏠', match: t => t.type === 'bill' || t.bucket === 'Bills' },
-    { key: 'Spending',  label: 'Spending',  color: '#f5a623', bg: 'var(--amber-bg)', icon: '🛒', match: t => (t.type === 'expense' && (!t.bucket || t.bucket === 'Spending')) || t.bucket === 'Spending' },
-    { key: 'Savings',   label: 'Savings',   color: '#18b880', bg: 'var(--green-bg)', icon: '🏦', match: t => t.bucket === 'Savings' },
-    { key: 'Investing', label: 'Investing', color: '#4a82e4', bg: 'var(--blue-bg)',  icon: '📈', match: t => t.bucket === 'Investing' },
-  ];
+  const spendTxs = (txm || thisMonthTxs()).filter(t => t.type === 'expense' || t.type === 'bill');
+  const totalSpend = spendTxs.reduce((s, t) => s + t.amount, 0) || 1;
 
-  // For Bills/Spending use thisMonthTxs; for Savings/Investing look at all buckets
-  const spending = (txm || thisMonthTxs()).filter(t => t.type === 'expense' || t.type === 'bill');
-  const allMonthOutflow = spending.concat((txm || thisMonthTxs()).filter(t => t.bucket === 'Savings' || t.bucket === 'Investing'));
+  const byCat = {};
+  spendTxs.forEach(t => { byCat[t.cat] = (byCat[t.cat] || 0) + t.amount; });
+  const top4 = Object.entries(byCat).sort((a, b) => b[1] - a[1]).slice(0, 4);
 
-  const totals = BUCKETS.map(b => {
-    const amt = (txm || thisMonthTxs())
-      .filter(t => {
-        if (b.key === 'Bills')     return t.type === 'bill' || t.bucket === 'Bills';
-        if (b.key === 'Spending')  return t.type === 'expense' && t.bucket !== 'Bills' && t.bucket !== 'Savings' && t.bucket !== 'Investing';
-        return t.bucket === b.key;
-      })
-      .reduce((s, t) => s + t.amount, 0);
-    return { ...b, amt };
-  });
+  if (!top4.length) { el.innerHTML = ''; return; }
 
-  const grandTotal = totals.reduce((s, b) => s + b.amt, 0) || 1;
-
-  el.innerHTML = totals.map(b => {
-    const pct = Math.min((b.amt / grandTotal) * 100, 100);
-    return `<div class="bucket-card">
-      <div class="bucket-label">${b.icon} ${b.label}</div>
-      <div class="bucket-value" style="color:${b.color}">${fmtK(b.amt)}</div>
-      <div class="bucket-pct">${pct.toFixed(0)}% of outflow</div>
-      <div class="bucket-bar"><div class="bucket-bar-fill" style="width:${pct.toFixed(1)}%;background:${b.color}"></div></div>
-    </div>`;
-  }).join('');
+  el.innerHTML = `<div class="section-header">Top Categories</div><div class="buckets">` +
+    top4.map(([cat, amt], i) => {
+      const pct = Math.min((amt / totalSpend) * 100, 100);
+      const color = PALETTE[i % PALETTE.length];
+      return `<div class="bucket-card">
+        <div class="bucket-label">${cat}</div>
+        <div class="bucket-value" style="color:${color}">${fmtK(amt)}</div>
+        <div class="bucket-pct">${pct.toFixed(0)}% of spending</div>
+        <div class="bucket-bar"><div class="bucket-bar-fill" style="width:${pct.toFixed(1)}%;background:${color}"></div></div>
+      </div>`;
+    }).join('') + `</div>`;
 }
 
 // ─── Weekly insights (rules-based) ────────────────────────────
@@ -3661,19 +3659,23 @@ function last6Months() {
 
 function drawBar() {
   kill('bar');
-  const { months } = last6Months();
-  const inc = months.map(({ m, y }) => monthTxs(m,y).filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0));
-  const exp = months.map(({ m, y }) => monthTxs(m,y).filter(t => t.type === 'expense' || t.type === 'bill').reduce((s, t) => s + t.amount, 0));
-  const totalInc = inc.reduce((s, v) => s + v, 0);
-  const totalExp = exp.reduce((s, v) => s + v, 0);
+  const { labels, months } = last6Months();
+  const incData = months.map(({ m, y }) => monthTxs(m, y).filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0));
+  const expData = months.map(({ m, y }) => monthTxs(m, y).filter(t => t.type === 'expense' || t.type === 'bill').reduce((s, t) => s + t.amount, 0));
   const ctx = document.getElementById('chart-bar'); if (!ctx) return;
   charts['bar'] = new Chart(ctx, {
-    type: 'pie',
-    data: { labels: ['Income (last 6m)', 'Expenses (last 6m)'], datasets: [
-      { data: [totalInc, totalExp], backgroundColor: ['#1D9E75', '#E24B4A'], borderWidth: 0, hoverOffset: 4 }
+    type: 'bar',
+    data: { labels, datasets: [
+      { label: 'Income',   data: incData, backgroundColor: '#00c896', borderRadius: 4, borderSkipped: false },
+      { label: 'Expenses', data: expData, backgroundColor: '#ff4d4d', borderRadius: 4, borderSkipped: false }
     ]},
     options: { responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: 'right', labels: { color: chartColors().text, font: { size: 11 }, boxWidth: 9, padding: 8 } } } }
+      plugins: { legend: { position: 'top', labels: { color: chartColors().text, font: { size: 11 }, boxWidth: 9, padding: 8 } } },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: chartColors().text, font: { size: 11 } } },
+        y: { beginAtZero: true, grid: { color: chartColors().grid }, ticks: { color: chartColors().text, font: { size: 11 }, callback: v => fmtK(v), maxTicksLimit: 5 } }
+      }
+    }
   });
 }
 
