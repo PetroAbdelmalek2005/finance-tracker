@@ -2721,6 +2721,31 @@ async function readPricesSheet() {
   return result;
 }
 
+// Fetch a single stock price directly from Yahoo Finance using CORS proxies.
+// Returns { price, changePct, currency, name } or null on failure.
+async function fetchPriceViaYahoo(symbol) {
+  const base = 'https://query2.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(symbol) + '?interval=1d&range=1d';
+  const corsProxies = [
+    url => url,
+    url => 'https://corsproxy.io/?url=' + encodeURIComponent(url),
+    url => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
+  ];
+  for (const proxy of corsProxies) {
+    try {
+      const r = await fetch(proxy(base), { signal: AbortSignal.timeout(6000), headers: { 'Accept': 'application/json' } });
+      if (!r.ok) continue;
+      const d = await r.json();
+      const meta = d?.chart?.result?.[0]?.meta;
+      if (!meta || !meta.regularMarketPrice) continue;
+      const price     = meta.regularMarketPrice;
+      const prevClose = meta.chartPreviousClose || meta.previousClose || price;
+      const changePct = prevClose ? ((price - prevClose) / prevClose) * 100 : 0;
+      return { price, changePct, currency: meta.currency || 'USD', name: meta.longName || meta.shortName || symbol };
+    } catch(e) {}
+  }
+  return null;
+}
+
 async function refreshPrices(manual = false) {
   if (!S.stocks.length) return;
   if (!manual && lastPriceRefresh && (Date.now() - lastPriceRefresh) < 5 * 60 * 1000) return;
@@ -2735,9 +2760,32 @@ async function refreshPrices(manual = false) {
   if (refreshBtn) refreshBtn.textContent = '↻ Updating...';
 
   if (!CONFIG.scriptUrl || !CONFIG.sheetId) {
-    if (statusTxt) statusTxt.textContent = 'Connect Google Sheets in Settings to enable live prices';
-    if (statusDot) statusDot.style.background = '#EF9F27';
+    // Fall back to Yahoo Finance directly when Google Sheets is not configured
+    if (statusTxt) statusTxt.textContent = 'Fetching prices via Yahoo Finance...';
+    let updated = 0, failed = 0;
+    for (const stock of S.stocks) {
+      const data = await fetchPriceViaYahoo(stock.ticker);
+      if (data && data.price > 0) {
+        priceCache[stock.ticker] = data;
+        stock.current = data.price;
+        if (!stock.name || stock.name === stock.ticker) stock.name = data.name;
+        updated++;
+      } else {
+        failed++;
+      }
+    }
+    lastPriceRefresh = Date.now();
+    saveLocal();
+    const now = new Date().toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit' });
+    if (statusDot) statusDot.style.background = updated === 0 ? '#E24B4A' : '#1D9E75';
+    if (statusTxt) {
+      if (failed === 0)       statusTxt.textContent = `All ${updated} prices updated via Yahoo Finance · ${now}`;
+      else if (updated === 0) statusTxt.textContent = `Prices unavailable — market may be closed`;
+      else                    statusTxt.textContent = `${updated} updated, ${failed} unavailable · ${now}`;
+    }
     if (refreshBtn) refreshBtn.textContent = '↻ Refresh';
+    renderStocks();
+    drawCharts('investments');
     return;
   }
 
@@ -2894,6 +2942,7 @@ async function selectTicker(idx) {
   statusEl.style.color = '#EF9F27';
 
   let data = null;
+  let source = '';
 
   if (CONFIG.scriptUrl && CONFIG.sheetId) {
     statusEl.textContent = 'Looking up via Google Finance...';
@@ -2909,6 +2958,15 @@ async function selectTicker(idx) {
     await new Promise(res => setTimeout(res, 3000));
     const prices = await readPricesSheet();
     data = prices[q.symbol] || null;
+    if (data) source = 'Google Finance';
+  }
+
+  // Fall back to Yahoo Finance if Google Sheets is not configured or returned no data
+  if (!data) {
+    statusEl.textContent = 'Fetching price via Yahoo Finance...';
+    statusEl.style.color = '#EF9F27';
+    data = await fetchPriceViaYahoo(q.symbol);
+    if (data) source = 'Yahoo Finance';
   }
 
   if (data) {
@@ -2916,14 +2974,14 @@ async function selectTicker(idx) {
     if (!document.getElementById('stk-cost').value) {
       document.getElementById('stk-cost').value = data.price.toFixed(2);
     }
-    statusEl.textContent = '✓ Price fetched via Google Finance';
+    statusEl.textContent = `✓ Price fetched via ${source}`;
     statusEl.style.color = '#1D9E75';
     priceRow.style.display = 'block';
     const chgSign = data.changePct >= 0 ? '+' : '';
     priceBanner.textContent = q.symbol + ' · $' + data.price.toFixed(2) + ' · ' + chgSign + data.changePct.toFixed(2) + '% today' + (data.currency && data.currency !== 'USD' ? ' · ' + data.currency : '');
     setTimeout(() => document.getElementById('stk-shares').focus(), 100);
   } else {
-    statusEl.textContent = CONFIG.scriptUrl ? 'Could not fetch — enter price manually below' : 'Connect Google Sheets in Settings to auto-fetch prices';
+    statusEl.textContent = 'Could not fetch price — enter it manually below';
     statusEl.style.color = '#E24B4A';
     priceRow.style.display = 'none';
     setTimeout(() => document.getElementById('stk-price').focus(), 100);
