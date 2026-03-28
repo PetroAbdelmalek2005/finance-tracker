@@ -363,11 +363,17 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
 .filter-bar-input{width:100%;background:var(--bg-2);border:var(--border);border-radius:8px;padding:9px 13px;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;}
 .filter-bar-input:focus{outline:none;border-color:var(--blue);}
 .filter-bar-input::placeholder{color:var(--text4);}
+.btn-filter-toggle{position:relative;flex-shrink:0;display:flex;align-items:center;justify-content:center;width:38px;height:38px;background:var(--bg-2);border:var(--border);border-radius:8px;color:var(--text3);cursor:pointer;transition:background .2s,border-color .2s,color .2s;}
+.btn-filter-toggle:hover,.btn-filter-toggle.active{background:var(--blue-bg);border-color:var(--blue);color:var(--blue);}
+.filter-active-dot{position:absolute;top:7px;right:7px;width:6px;height:6px;background:var(--blue);border-radius:50%;display:none;}
 .filter-selects{display:flex;gap:8px;flex-wrap:wrap;}
 .filter-bar-select{flex:1;min-width:120px;background:var(--bg-2);border:var(--border);border-radius:8px;padding:7px 28px 7px 10px;color:var(--text3);font-size:12px;font-family:'DM Sans',sans-serif;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7' viewBox='0 0 10 7'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%238892aa' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;cursor:pointer;}
 .filter-bar-select:focus{outline:none;border-color:var(--blue);}
 .filter-bar-select option{background:var(--bg-2);color:var(--text);}
-#tx-summary{font-size:11px;color:var(--text5);margin-top:10px;}
+.tx-stats-row{display:flex;gap:8px;margin-top:12px;}
+.tx-stat{flex:1;background:var(--bg-2);border:var(--border);border-radius:10px;padding:10px 12px;}
+.tx-stat-label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;font-weight:500;}
+.tx-stat-value{font-size:15px;font-weight:500;letter-spacing:-.02em;}
 
 /* ── MORE SHEET (mobile) ─────────────────────────────────────── */
 .more-sheet-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:19;}
@@ -548,10 +554,14 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
       </div>
       <div class="tab-content-inner">
       <div class="card" style="padding:14px 16px;margin-bottom:14px">
-        <div style="margin-bottom:10px">
-          <input id="f-search" oninput="queueRenderTx()" placeholder="Search transactions..." class="filter-bar-input">
+        <div style="display:flex;gap:8px;align-items:center">
+          <input id="f-search" oninput="queueRenderTx()" placeholder="Search transactions..." class="filter-bar-input" style="margin-bottom:0">
+          <button class="btn-filter-toggle" id="filter-toggle-btn" onclick="toggleTxFilters()" title="Filters">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+            <span class="filter-active-dot" id="filter-active-dot"></span>
+          </button>
         </div>
-        <div class="filter-selects">
+        <div class="filter-selects" id="tx-filters-panel" style="display:none;margin-top:10px">
           <select id="f-type" onchange="renderTx()" class="filter-bar-select">
             <option value="">All types</option><option value="income">Income</option><option value="expense">Expense</option><option value="transfer">Transfer</option><option value="bill">Bill Payment</option>
           </select>
@@ -2305,14 +2315,15 @@ function renderAccounts() {
 
     return `
     <div class="card" style="margin-bottom:12px">
-      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;padding-bottom:${isOpen ? '10px' : '0'}"
+      <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;padding-bottom:${isOpen ? '12px' : '0'}"
            onclick="accGroupOpen['${type}']=!(accGroupOpen['${type}']!==false);renderAccounts()">
-        <span style="font-size:13px;font-weight:600;color:var(--text2)">${type}
-          <span class="badge badge-gray" style="margin-left:6px">${group.length}</span>
+        <span style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:15px;font-weight:700;color:var(--text);letter-spacing:-.01em">${type}</span>
+          <span class="badge badge-gray">${group.length}</span>
         </span>
-        <span style="display:flex;align-items:center;gap:12px">
-          <span class="amount ${sign}" style="font-size:13px">${groupTotal < 0 ? '-' : ''}${fmt(Math.abs(groupTotal))}</span>
-          <span style="color:var(--text4);font-size:11px">${isOpen ? '▲' : '▼'}</span>
+        <span style="display:flex;align-items:center;gap:10px">
+          <span class="amount ${sign}" style="font-size:14px;font-weight:600">${groupTotal < 0 ? '-' : ''}${fmt(Math.abs(groupTotal))}</span>
+          <span style="color:var(--text4);font-size:12px">${isOpen ? '▲' : '▼'}</span>
         </span>
       </div>
       ${isOpen ? `
@@ -2502,19 +2513,25 @@ function renderTx() {
     else if (t.type === 'transfer' && t.xferDir === 'out') totalXfer += t.amount;
   }
 
-  // Summary line — transfers excluded from totals (not real income/expense)
+  // Summary cards — transfers excluded from totals (not real income/expense)
   const net        = totalInc - totalExp;
   const summaryEl  = document.getElementById('tx-summary');
   if (summaryEl) {
-    if (!txs.length) { summaryEl.textContent = ''; }
+    if (!txs.length || (!totalInc && !totalExp)) { summaryEl.innerHTML = ''; }
     else {
-      let s = txs.length + ' transaction' + (txs.length>1?'s':'');
-      if (totalInc)  s += ' · Income '   + fmt(totalInc);
-      if (totalExp)  s += ' · Expenses '  + fmt(totalExp);
-      if (totalXfer) s += ' · Transfers ' + fmt(totalXfer);
-      if (totalInc || totalExp) s += ' · Net ' + (net >= 0 ? '+' : '') + fmt(net);
-      summaryEl.textContent = s;
+      const cards = [];
+      if (totalInc) cards.push(`<div class="tx-stat"><div class="tx-stat-label">Income</div><div class="tx-stat-value pos">+${fmt(totalInc)}</div></div>`);
+      if (totalExp) cards.push(`<div class="tx-stat"><div class="tx-stat-label">Expenses</div><div class="tx-stat-value neg">−${fmt(totalExp)}</div></div>`);
+      if (totalInc || totalExp) cards.push(`<div class="tx-stat"><div class="tx-stat-label">Net</div><div class="tx-stat-value ${net >= 0 ? 'pos' : 'neg'}">${net >= 0 ? '+' : '−'}${fmt(Math.abs(net))}</div></div>`);
+      summaryEl.innerHTML = `<div class="tx-stats-row">${cards.join('')}</div>`;
     }
+  }
+  // Update filter active dot
+  const dot = document.getElementById('filter-active-dot');
+  if (dot) {
+    const hasFilter = document.getElementById('f-type').value || document.getElementById('f-cat').value ||
+                      document.getElementById('f-acc').value || document.getElementById('f-month').value;
+    dot.style.display = hasFilter ? 'block' : 'none';
   }
 
   const el = document.getElementById('tx-list');
@@ -2566,6 +2583,14 @@ function renderTx() {
     return `<option value="${m}">${label}</option>`;
   }).join('');
   fc.value = cv; fa.value = av; fm.value = mv;
+}
+
+function toggleTxFilters() {
+  const panel = document.getElementById('tx-filters-panel');
+  const btn   = document.getElementById('filter-toggle-btn');
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : '';
+  btn.classList.toggle('active', !isOpen);
 }
 
 // ═══════════════════════════════════════════════
