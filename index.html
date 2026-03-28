@@ -646,38 +646,90 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
       <div class="tab-content-inner">
 
       <div class="settings-card">
-        <div class="settings-title">Google Sheets Connection</div>
-        <div class="settings-desc">Your data syncs to a Google Sheet so it's available on all devices. Update your credentials here if needed.</div>
-        <div class="field"><label>Spreadsheet ID</label><input id="set-sheet-id" placeholder="1BxiMVs0XRA..."></div>
-        <div class="field"><label>Apps Script URL <span style="color:var(--text4);font-size:10px;font-weight:400">(see Setup Guide below)</span></label><input id="set-script-url" placeholder="https://script.google.com/macros/s/.../exec"></div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
-          <button class="btn btn-primary btn-sm" onclick="updateConfig()">Save Credentials</button>
-          <button class="btn btn-sm" onclick="testConnection()">Test Connection</button>
-          <button class="btn btn-sm" onclick="runConnectionDiagnostics()">Run Diagnostics</button>
+        <div class="settings-title">Sync Provider</div>
+        <div class="settings-desc">Choose how to keep your data in sync across devices. All options are free.</div>
+
+        <!-- Provider selector -->
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+          <label style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--bg-2);border:var(--border2);border-radius:10px;cursor:pointer">
+            <input type="radio" name="sync-provider" value="gist" onchange="showProviderPanel('gist');updateConfig()" style="margin-top:2px;accent-color:var(--green)">
+            <div><div style="font-size:13px;font-weight:500;color:var(--text)">GitHub Gist</div><div style="font-size:11px;color:var(--text3);margin-top:2px">Free · No custom code · Just a GitHub account + token · Best choice</div></div>
+          </label>
+          <label style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--bg-2);border:var(--border2);border-radius:10px;cursor:pointer">
+            <input type="radio" name="sync-provider" value="jsonbin" onchange="showProviderPanel('jsonbin');updateConfig()" style="margin-top:2px;accent-color:var(--green)">
+            <div><div style="font-size:13px;font-weight:500;color:var(--text)">JSONBin.io</div><div style="font-size:11px;color:var(--text3);margin-top:2px">Free · No GitHub needed · Simple API key · 200 KB limit</div></div>
+          </label>
+          <label style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--bg-2);border:var(--border2);border-radius:10px;cursor:pointer">
+            <input type="radio" name="sync-provider" value="sheets" onchange="showProviderPanel('sheets');updateConfig()" style="margin-top:2px;accent-color:var(--green)">
+            <div><div style="font-size:13px;font-weight:500;color:var(--text)">Google Sheets</div><div style="font-size:11px;color:var(--text3);margin-top:2px">Requires deploying a custom Apps Script — more setup</div></div>
+          </label>
+          <label style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--bg-2);border:var(--border2);border-radius:10px;cursor:pointer">
+            <input type="radio" name="sync-provider" value="none" onchange="showProviderPanel('none');updateConfig()" style="margin-top:2px;accent-color:var(--green)">
+            <div><div style="font-size:13px;font-weight:500;color:var(--text)">Local only</div><div style="font-size:11px;color:var(--text3);margin-top:2px">No cloud sync — data stays on this device only</div></div>
+          </label>
         </div>
-        <div id="conn-diagnostics" style="display:none;margin-top:10px;padding:10px 12px;background:var(--bg-2);border:var(--border2);border-radius:10px;font-size:11px;line-height:1.6;color:var(--text3);white-space:pre-wrap"></div>
-        <div style="margin-top:14px;padding:12px 14px;background:var(--blue-bg);border-radius:10px;font-size:12px;color:var(--blue);line-height:1.6">
-          <strong>How to get your Apps Script URL:</strong><br>
-          In your Google Sheet → Extensions → Apps Script → paste the script code → Deploy → New deployment → Web App → Execute as: Me → Who has access: Anyone → Deploy → copy the URL.
-          <br><a href="javascript:void(0)" onclick="showAppsScriptCode()" style="color:var(--blue);font-weight:500">Show me the script code →</a>
+
+        <!-- GitHub Gist panel -->
+        <div id="sync-panel-gist" style="display:none">
+          <div style="margin-bottom:12px;padding:10px 12px;background:var(--blue-bg);border-radius:10px;font-size:12px;color:var(--blue);line-height:1.7">
+            <strong>Setup (2 minutes):</strong><br>
+            1. Go to <strong>github.com → Settings → Developer Settings → Personal access tokens → Tokens (classic)</strong><br>
+            2. Generate new token → check <strong>gist</strong> scope → copy the token<br>
+            3. Go to <strong>gist.github.com</strong> → New gist → set to <strong>Secret</strong> → create → copy the Gist ID from the URL
+          </div>
+          <div class="field"><label>GitHub Personal Access Token</label><input id="set-gist-token" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" oninput="updateConfig()"></div>
+          <div class="field"><label>Gist ID <span style="color:var(--text4);font-size:10px">(from the URL: gist.github.com/username/<strong>THIS_PART</strong>)</span></label><input id="set-gist-id" placeholder="a1b2c3d4e5f6..." oninput="updateConfig()"></div>
+          <button class="btn btn-primary btn-sm" onclick="testGist()">Test Gist Connection</button>
+          <div id="gist-test-status" style="font-size:11px;color:var(--text3);margin-top:8px;min-height:14px"></div>
+        </div>
+
+        <!-- JSONBin panel -->
+        <div id="sync-panel-jsonbin" style="display:none">
+          <div style="margin-bottom:12px;padding:10px 12px;background:var(--blue-bg);border-radius:10px;font-size:12px;color:var(--blue);line-height:1.7">
+            <strong>Setup (2 minutes):</strong><br>
+            1. Sign up at <strong>jsonbin.io</strong> (free)<br>
+            2. Dashboard → <strong>API Keys</strong> → copy your Secret Key<br>
+            3. Dashboard → <strong>Bins → Create Bin</strong> → set name, make Private → copy the Bin ID
+          </div>
+          <div class="field"><label>JSONBin Secret Key</label><input id="set-jb-key" type="password" placeholder="$2b$10$..." oninput="updateConfig()"></div>
+          <div class="field"><label>Bin ID</label><input id="set-jb-id" placeholder="64a1b2c3d4e5f6..." oninput="updateConfig()"></div>
+          <button class="btn btn-primary btn-sm" onclick="testJsonbin()">Test JSONBin Connection</button>
+          <div id="jb-test-status" style="font-size:11px;color:var(--text3);margin-top:8px;min-height:14px"></div>
+        </div>
+
+        <!-- Google Sheets panel -->
+        <div id="sync-panel-sheets" style="display:none">
+          <div style="margin-bottom:12px;padding:10px 12px;background:var(--blue-bg);border-radius:10px;font-size:12px;color:var(--blue);line-height:1.7">
+            <strong>Setup:</strong> Google Sheet → Extensions → Apps Script → paste the script → Deploy → Web App → Execute as Me → Access: Anyone → copy URL.
+            <br><a href="javascript:void(0)" onclick="showAppsScriptCode()" style="color:var(--blue);font-weight:500">Show script code →</a>
+          </div>
+          <div class="field"><label>Spreadsheet ID <span style="color:var(--text4);font-size:10px">(paste full URL or just the ID — we'll extract it)</span></label><input id="set-sheet-id" placeholder="1BxiMVs0XRA..." oninput="updateConfig()"></div>
+          <div class="field"><label>Apps Script URL</label><input id="set-script-url" placeholder="https://script.google.com/macros/s/.../exec" oninput="updateConfig()"></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primary btn-sm" onclick="updateConfig();toast('Saved')">Save</button>
+            <button class="btn btn-sm" onclick="testConnection()">Test Connection</button>
+            <button class="btn btn-sm" onclick="runConnectionDiagnostics()">Run Diagnostics</button>
+          </div>
+          <div id="conn-diagnostics" style="display:none;margin-top:10px;padding:10px 12px;background:var(--bg-2);border:var(--border2);border-radius:10px;font-size:11px;line-height:1.6;color:var(--text3);white-space:pre-wrap"></div>
+        </div>
+
+        <!-- Local only panel -->
+        <div id="sync-panel-none" style="display:none">
+          <div style="font-size:12px;color:var(--text3);padding:8px 0">No sync configured. Your data is stored locally on this device only.</div>
         </div>
       </div>
 
       <div class="settings-card">
-        <div class="settings-title">Google Sheets Sync</div>
-        <div class="settings-desc">Manually push your local data up to Google Sheets, or pull fresh data down from Google Sheets to this device. Use Push if you've made changes locally that haven't synced. Use Pull if another device has newer data.</div>
+        <div class="settings-title">Sync</div>
+        <div class="settings-desc">Push sends your local data to the cloud. Pull replaces local data with what's in the cloud. Auto-sync does this automatically.</div>
         <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;cursor:pointer">
           <input type="checkbox" id="set-auto-sync" onchange="updateConfig()"
                  style="width:16px;height:16px;accent-color:var(--green)" checked>
-          <span style="font-size:13px">Auto-sync changes to Google Sheets</span>
+          <span style="font-size:13px">Auto-sync changes</span>
         </label>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-primary btn-sm" onclick="forcePush()">
-            ↑ Push all data to Sheets
-          </button>
-          <button class="btn btn-sm" onclick="forcePull()">
-            ↓ Pull all data from Sheets
-          </button>
+          <button class="btn btn-primary btn-sm" onclick="forcePush()">↑ Push all data</button>
+          <button class="btn btn-sm" onclick="forcePull()">↓ Pull all data</button>
         </div>
         <div id="manual-sync-status" style="font-size:11px;color:#555e78;margin-top:10px;min-height:16px"></div>
       </div>
@@ -1135,9 +1187,24 @@ const SHEET_NAMES = {
   prices:       'Prices'   // auto-managed tab for GoogleFinance() live prices
 };
 
-let CONFIG = { sheetId: '', scriptUrl: '', autoSync: true };
+let CONFIG = {
+  sheetId: '', scriptUrl: '', autoSync: true,
+  syncProvider: 'sheets',   // 'sheets' | 'gist' | 'jsonbin' | 'none'
+  gistToken: '', gistId: '',
+  jsonbinKey: '', jsonbinId: ''
+};
+function normalizeSheetId(input) {
+  const clean = (input || '').trim();
+  const m = clean.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+  return m ? m[1] : clean;
+}
 function canReadViaScript() { return !!(CONFIG.scriptUrl && CONFIG.sheetId); }
-function canReadRemotely() { return canReadViaScript(); }
+function canReadRemotely() {
+  if (CONFIG.syncProvider === 'gist')    return !!(CONFIG.gistToken && CONFIG.gistId);
+  if (CONFIG.syncProvider === 'jsonbin') return !!(CONFIG.jsonbinKey && CONFIG.jsonbinId);
+  if (CONFIG.syncProvider === 'sheets')  return canReadViaScript();
+  return false;
+}
 function hasSheetsCredentials() { return !!(CONFIG.sheetId && CONFIG.scriptUrl); }
 function missingSheetsCredentialsMessage() { return 'Add Spreadsheet ID and Apps Script URL first'; }
 function normalizeScriptUrl(url) {
@@ -1167,8 +1234,14 @@ function loadConfig() {
   const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
   setVal('set-sheet-id',   CONFIG.sheetId);
   setVal('set-script-url', CONFIG.scriptUrl);
+  setVal('set-gist-token', CONFIG.gistToken);
+  setVal('set-gist-id',    CONFIG.gistId);
+  setVal('set-jb-key',     CONFIG.jsonbinKey);
+  setVal('set-jb-id',      CONFIG.jsonbinId);
   const autoSyncEl = document.getElementById('set-auto-sync');
   if (autoSyncEl) autoSyncEl.checked = CONFIG.autoSync !== false;
+  const providerEl = document.querySelector(`input[name="sync-provider"][value="${CONFIG.syncProvider || 'sheets'}"]`);
+  if (providerEl) { providerEl.checked = true; showProviderPanel(CONFIG.syncProvider || 'sheets'); }
 
   // Also hide banner if credentials are saved
   if (canReadRemotely()) {
@@ -1177,7 +1250,7 @@ function loadConfig() {
 }
 
 function saveConfig() {
-  CONFIG.sheetId   = document.getElementById('cfg-sheet-id').value.trim();
+  CONFIG.sheetId   = normalizeSheetId(document.getElementById('cfg-sheet-id').value);
   CONFIG.scriptUrl = normalizeScriptUrl(document.getElementById('cfg-script-url').value);
   if (!hasSheetsCredentials()) {
     toast(missingSheetsCredentialsMessage());
@@ -1205,20 +1278,82 @@ function skipConfig() {
 }
 
 function updateConfig() {
-  CONFIG.sheetId   = document.getElementById('set-sheet-id').value.trim();
-  CONFIG.scriptUrl = normalizeScriptUrl((document.getElementById('set-script-url').value || '').trim());
-  CONFIG.autoSync  = document.getElementById('set-auto-sync')?.checked ?? true;
+  CONFIG.sheetId    = normalizeSheetId(document.getElementById('set-sheet-id')?.value || '');
+  CONFIG.scriptUrl  = normalizeScriptUrl((document.getElementById('set-script-url')?.value || '').trim());
+  CONFIG.autoSync   = document.getElementById('set-auto-sync')?.checked ?? true;
+  CONFIG.gistToken  = (document.getElementById('set-gist-token')?.value || '').trim();
+  CONFIG.gistId     = (document.getElementById('set-gist-id')?.value || '').trim();
+  CONFIG.jsonbinKey = (document.getElementById('set-jb-key')?.value || '').trim();
+  CONFIG.jsonbinId  = (document.getElementById('set-jb-id')?.value || '').trim();
+  const checked = document.querySelector('input[name="sync-provider"]:checked');
+  if (checked) CONFIG.syncProvider = checked.value;
+  // Mirror sheet ID back to show normalized value
+  const sheetIdEl = document.getElementById('set-sheet-id');
+  if (sheetIdEl && CONFIG.sheetId) sheetIdEl.value = CONFIG.sheetId;
   persistConfig();
-  toast('Credentials saved');
+  toast('Settings saved');
 }
 
 function pullConfigFromSettingsForm() {
   const sheetEl  = document.getElementById('set-sheet-id');
   const scriptEl = document.getElementById('set-script-url');
   if (!sheetEl || !scriptEl) return;
-  CONFIG.sheetId   = (sheetEl.value || '').trim();
+  CONFIG.sheetId   = normalizeSheetId(sheetEl.value);
   CONFIG.scriptUrl = normalizeScriptUrl((scriptEl.value || '').trim());
   persistConfig();
+}
+
+async function testGist() {
+  const statusEl = document.getElementById('gist-test-status');
+  if (!CONFIG.gistToken || !CONFIG.gistId) {
+    if (statusEl) statusEl.textContent = 'Enter your token and Gist ID first.';
+    return;
+  }
+  if (statusEl) statusEl.textContent = 'Testing…';
+  try {
+    const r = await fetch(`https://api.github.com/gists/${CONFIG.gistId}`, {
+      headers: { 'Authorization': `Bearer ${CONFIG.gistToken}` }
+    });
+    if (r.ok) {
+      if (statusEl) statusEl.style.color = '#18b880';
+      if (statusEl) statusEl.textContent = '✓ Connected — Gist is readable';
+      setSyncState('ok', 'Connected');
+      toast('Gist connection works ✓');
+    } else {
+      const msg = r.status === 404 ? 'Gist not found — check the Gist ID' : r.status === 401 ? 'Token invalid or expired' : `HTTP ${r.status}`;
+      if (statusEl) { statusEl.style.color = '#f04f4f'; statusEl.textContent = `✗ ${msg}`; }
+      setSyncState('error', 'Error');
+    }
+  } catch(e) {
+    if (statusEl) { statusEl.style.color = '#f04f4f'; statusEl.textContent = 'Network error — check connection'; }
+    setSyncState('error', 'Error');
+  }
+}
+
+async function testJsonbin() {
+  const statusEl = document.getElementById('jb-test-status');
+  if (!CONFIG.jsonbinKey || !CONFIG.jsonbinId) {
+    if (statusEl) statusEl.textContent = 'Enter your API key and Bin ID first.';
+    return;
+  }
+  if (statusEl) statusEl.textContent = 'Testing…';
+  try {
+    const r = await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.jsonbinId}/latest`, {
+      headers: { 'X-Access-Key': CONFIG.jsonbinKey }
+    });
+    if (r.ok) {
+      if (statusEl) { statusEl.style.color = '#18b880'; statusEl.textContent = '✓ Connected — Bin is readable'; }
+      setSyncState('ok', 'Connected');
+      toast('JSONBin connection works ✓');
+    } else {
+      const msg = r.status === 401 ? 'Invalid API key' : r.status === 404 ? 'Bin not found — check the Bin ID' : `HTTP ${r.status}`;
+      if (statusEl) { statusEl.style.color = '#f04f4f'; statusEl.textContent = `✗ ${msg}`; }
+      setSyncState('error', 'Error');
+    }
+  } catch(e) {
+    if (statusEl) { statusEl.style.color = '#f04f4f'; statusEl.textContent = 'Network error — check connection'; }
+    setSyncState('error', 'Error');
+  }
 }
 
 async function testConnection() {
@@ -1284,7 +1419,13 @@ async function runConnectionDiagnostics() {
         } else {
           lines.push({ text: 'Read test (Apps Script): FAIL', type: 'fail' });
           lines.push({ text: `Read error: ${d.message || 'Unknown error'}`, type: 'fail' });
-          lines.push({ text: 'Hint: Re-deploy your Apps Script — Deploy → Manage deployments → pencil icon → New version → Deploy', type: 'hint' });
+          const msg = d.message || '';
+          if (msg.includes('Bad value') || msg.includes('sheetId is missing')) {
+            lines.push({ text: 'Hint: "Bad value" = the Spreadsheet ID is empty or invalid. Paste just the ID from the Sheet URL (the part after /d/ and before /edit), or paste the full URL — the app will extract it.', type: 'hint' });
+            lines.push({ text: 'Hint: If this is a new deployment, open Apps Script editor → Run any function once → grant Spreadsheet permission → then re-deploy.', type: 'hint' });
+          } else {
+            lines.push({ text: 'Hint: Re-deploy your Apps Script — Deploy → Manage deployments → pencil icon → New version → Deploy', type: 'hint' });
+          }
         }
       }
     } catch(e) {
@@ -1520,7 +1661,7 @@ async function syncGoals() { await pushToSheets(SHEET_NAMES.goals, ['ID','Name',
 
 async function syncNow() {
   setSyncState('syncing', 'Syncing...');
-  await loadAllFromSheets();
+  await providerPull();
 }
 
 function setSyncState(state, label) {
@@ -1538,17 +1679,16 @@ const AUTO_SYNC_INTERVAL_MS     = 120000; // 2 minutes
 const VISIBILITY_SYNC_COOLDOWN_MS = 30000; // 30 seconds
 
 function schedulePush() {
-  if (!CONFIG.autoSync || !CONFIG.scriptUrl) return;
+  if (!CONFIG.autoSync || !canReadRemotely()) return;
   clearTimeout(_pushTimer);
   _pushTimer = setTimeout(async () => {
     setSyncState('syncing', 'Auto-saving...');
     try {
-      await Promise.all([syncAccounts(), syncTransactions(), syncBudgets(), syncStocks(), syncGoals()]);
+      await providerPush();
       _lastSyncTime = Date.now();
       setSyncState('ok', 'Synced');
     } catch(e) {
       setSyncState('error', 'Auto-save failed');
-      // Queue a background retry when connectivity is restored
       if ('serviceWorker' in navigator && 'SyncManager' in window) {
         navigator.serviceWorker.ready.then(reg => reg.sync.register('ft-sync').catch(() => {}));
       }
@@ -1559,7 +1699,7 @@ function schedulePush() {
 function startPeriodicSync() {
   setInterval(async () => {
     if (!CONFIG.autoSync || !canReadRemotely() || document.hidden) return;
-    await loadAllFromSheets();
+    await providerPull();
     _lastSyncTime = Date.now();
   }, AUTO_SYNC_INTERVAL_MS);
 
@@ -1567,8 +1707,83 @@ function startPeriodicSync() {
     if (document.hidden || !CONFIG.autoSync || !canReadRemotely()) return;
     if (Date.now() - _lastSyncTime < VISIBILITY_SYNC_COOLDOWN_MS) return;
     setSyncState('syncing', 'Checking for updates...');
-    await loadAllFromSheets();
+    await providerPull();
     _lastSyncTime = Date.now();
+  });
+}
+
+// ── GitHub Gist sync ─────────────────────────────────────────────
+async function gistPush() {
+  if (!CONFIG.gistToken || !CONFIG.gistId) throw new Error('GitHub Gist not configured');
+  const r = await fetch(`https://api.github.com/gists/${CONFIG.gistId}`, {
+    method: 'PATCH',
+    headers: { 'Authorization': `Bearer ${CONFIG.gistToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ files: { 'ft_data.json': { content: JSON.stringify(S) } } })
+  });
+  if (!r.ok) throw new Error(`Gist push failed (${r.status})`);
+}
+async function gistPull() {
+  if (!CONFIG.gistToken || !CONFIG.gistId) return;
+  setSyncState('syncing', 'Loading...');
+  const r = await fetch(`https://api.github.com/gists/${CONFIG.gistId}`, {
+    headers: { 'Authorization': `Bearer ${CONFIG.gistToken}` }
+  });
+  if (!r.ok) { setSyncState('error', 'Gist pull failed'); return; }
+  const d = await r.json();
+  const raw = d.files?.['ft_data.json']?.content;
+  if (!raw) { setSyncState('ok', 'Synced'); return; }
+  S = { ...S, ...JSON.parse(raw) };
+  normalizeLinkedData();
+  invalidateDateCache();
+  localStorage.setItem(LSKEY, JSON.stringify(S)); // direct save — skip schedulePush to avoid loop
+  renderAll();
+  setSyncState('ok', 'Synced');
+}
+
+// ── JSONBin sync ──────────────────────────────────────────────────
+async function jsonbinPush() {
+  if (!CONFIG.jsonbinKey || !CONFIG.jsonbinId) throw new Error('JSONBin not configured');
+  const r = await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.jsonbinId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'X-Access-Key': CONFIG.jsonbinKey },
+    body: JSON.stringify(S)
+  });
+  if (!r.ok) throw new Error(`JSONBin push failed (${r.status})`);
+}
+async function jsonbinPull() {
+  if (!CONFIG.jsonbinKey || !CONFIG.jsonbinId) return;
+  setSyncState('syncing', 'Loading...');
+  const r = await fetch(`https://api.jsonbin.io/v3/b/${CONFIG.jsonbinId}/latest`, {
+    headers: { 'X-Access-Key': CONFIG.jsonbinKey }
+  });
+  if (!r.ok) { setSyncState('error', 'JSONBin pull failed'); return; }
+  const d = await r.json();
+  if (!d.record) { setSyncState('ok', 'Synced'); return; }
+  S = { ...S, ...d.record };
+  normalizeLinkedData();
+  invalidateDateCache();
+  localStorage.setItem(LSKEY, JSON.stringify(S)); // direct save — skip schedulePush to avoid loop
+  renderAll();
+  setSyncState('ok', 'Synced');
+}
+
+// ── Provider router ───────────────────────────────────────────────
+async function providerPush() {
+  if (CONFIG.syncProvider === 'gist')    return gistPush();
+  if (CONFIG.syncProvider === 'jsonbin') return jsonbinPush();
+  if (CONFIG.syncProvider === 'sheets') {
+    await Promise.all([syncAccounts(), syncTransactions(), syncBudgets(), syncStocks(), syncGoals()]);
+  }
+}
+async function providerPull() {
+  if (CONFIG.syncProvider === 'gist')    return gistPull();
+  if (CONFIG.syncProvider === 'jsonbin') return jsonbinPull();
+  if (CONFIG.syncProvider === 'sheets')  return loadAllFromSheets();
+}
+function showProviderPanel(provider) {
+  ['sheets', 'gist', 'jsonbin'].forEach(p => {
+    const el = document.getElementById(`sync-panel-${p}`);
+    if (el) el.style.display = p === provider ? '' : 'none';
   });
 }
 
@@ -3408,9 +3623,9 @@ function importData(e) {
       S = { ...S, ...data };
       saveLocal(); renderAll();
       toast('Data imported successfully');
-      if (CONFIG.scriptUrl && CONFIG.sheetId) {
+      if (canReadRemotely()) {
         setSyncState('syncing', 'Pushing...');
-        await Promise.all([syncAccounts(), syncTransactions(), syncBudgets(), syncStocks(), syncGoals()]);
+        await providerPush();
         setSyncState('ok', 'Synced');
       }
     } catch(err) {
@@ -3422,58 +3637,46 @@ function importData(e) {
 }
 
 async function forcePush() {
-  pullConfigFromSettingsForm();
+  updateConfig(); // read current form values
   const statusEl = document.getElementById('manual-sync-status');
-  if (!CONFIG.sheetId) {
-    if (statusEl) statusEl.textContent = 'No Sheet ID saved. Add it above first.';
-    toast('No credentials — add your Sheet ID first'); return;
+  if (!canReadRemotely()) {
+    if (statusEl) statusEl.textContent = 'No sync credentials configured. Add them above first.';
+    toast('No sync credentials — configure a provider first'); return;
   }
-  if (!CONFIG.scriptUrl) {
-    setSyncState('error', 'Write not set');
-    if (statusEl) statusEl.textContent = 'Push requires Apps Script URL. Add it in Settings and deploy as Web App.';
-    toast('Push needs Apps Script URL (write endpoint)');
-    return;
-  }
-  if (statusEl) statusEl.textContent = 'Pushing all local data to Google Sheets...';
+  if (statusEl) statusEl.textContent = 'Pushing all local data…';
   setSyncState('syncing', 'Pushing...');
   try {
-    await Promise.all([
-      syncAccounts(),
-      syncTransactions(),
-      syncBudgets(),
-      syncStocks(),
-      syncGoals()
-    ]);
+    await providerPush();
     setSyncState('ok', 'Synced');
     const now = new Date().toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit' });
-    if (statusEl) statusEl.textContent = `✓ All data pushed to Google Sheets · ${now}`;
-    toast('All data pushed to Google Sheets');
+    if (statusEl) statusEl.textContent = `✓ All data pushed · ${now}`;
+    toast('All data pushed');
   } catch(e) {
     console.error(e);
     setSyncState('error', 'Error');
-    if (statusEl) statusEl.textContent = `Push failed — ${e.message || 'check Apps Script URL and re-deploy if needed'}`;
-    toast('Push failed — check script URL/deployment and credentials');
+    if (statusEl) statusEl.textContent = `Push failed — ${e.message}`;
+    toast('Push failed — check credentials');
   }
 }
 
 async function forcePull() {
-  pullConfigFromSettingsForm();
+  updateConfig();
   const statusEl = document.getElementById('manual-sync-status');
-  if (!canReadRemotely() || !hasSheetsCredentials()) {
-    if (statusEl) statusEl.textContent = missingSheetsCredentialsMessage();
-    toast(`No read credentials — ${missingSheetsCredentialsMessage().toLowerCase()}`); return;
+  if (!canReadRemotely()) {
+    if (statusEl) statusEl.textContent = 'No sync credentials configured. Add them above first.';
+    toast('No sync credentials — configure a provider first'); return;
   }
-  if (!confirm('This will replace all local data with what\'s in your Google Sheet. Any unsynced local changes will be lost. Continue?')) return;
-  if (statusEl) statusEl.textContent = 'Pulling all data from Google Sheets...';
+  if (!confirm('This will replace all local data with what\'s in your sync store. Any unsynced local changes will be lost. Continue?')) return;
+  if (statusEl) statusEl.textContent = 'Pulling all data…';
   setSyncState('syncing', 'Pulling...');
   try {
-    await loadAllFromSheets();
+    await providerPull();
     const now = new Date().toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit' });
-    if (statusEl) statusEl.textContent = `✓ All data pulled from Google Sheets · ${now}`;
-    toast('Data pulled from Google Sheets');
+    if (statusEl) statusEl.textContent = `✓ All data pulled · ${now}`;
+    toast('Data pulled');
   } catch(e) {
     setSyncState('error', 'Error');
-    if (statusEl) statusEl.textContent = 'Pull failed — check your connection and credentials';
+    if (statusEl) statusEl.textContent = `Pull failed — ${e.message || 'check credentials'}`;
     toast('Pull failed');
   }
 }
@@ -3492,16 +3695,34 @@ function clearAllData() {
 // The Google Apps Script web app that handles writes.
 // User pastes this into their Google Sheet's Apps Script editor once.
 const APPS_SCRIPT_CODE = `
-// Paste this into: Google Sheet → Extensions → Apps Script → Save → Deploy as Web App
+// Paste into: Google Sheet → Extensions → Apps Script → Save → Deploy as Web App
 // Execute as: Me | Who has access: Anyone
-// If you already deployed before, create a NEW version: Deploy → Manage deployments → pencil → New version → Deploy
+// IMPORTANT: After pasting, click Run on any function first to grant Spreadsheet permission,
+// THEN deploy. If already deployed, create a NEW version to apply changes.
+
+function respond_(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
 
 function doPost(e) {
   try {
-    const data      = JSON.parse(e.postData.contents);
-    const ss        = SpreadsheetApp.openById(data.sheetId);
-    const action    = data.action || 'write';
-    const range     = data.range;
+    if (!e.postData || !e.postData.contents) {
+      return respond_({ status: 'error', message: 'No POST body received. Check your Apps Script URL and re-deploy.' });
+    }
+    const data = JSON.parse(e.postData.contents);
+
+    // Accept full Google Sheets URL or bare ID
+    let sheetId = (data.sheetId || '').toString().trim();
+    const idMatch = sheetId.match(/\\/spreadsheets\\/d\\/([a-zA-Z0-9_-]+)/);
+    if (idMatch) sheetId = idMatch[1];
+    if (!sheetId) return respond_({ status: 'error', message: 'sheetId is missing. Make sure the Spreadsheet ID is saved in the app Settings.' });
+
+    const ss     = SpreadsheetApp.openById(sheetId);
+    const action = data.action || 'write';
+    const range  = data.range || '';
+    if (!range) return respond_({ status: 'error', message: 'range is missing' });
+
     const parts     = range.includes('!') ? range.split('!') : [null, range];
     const sheetName = parts[0];
     const cellRange = parts.length > 1 ? parts[1] : range;
@@ -3509,48 +3730,30 @@ function doPost(e) {
     if (action === 'read') {
       if (sheetName) {
         const sheet = ss.getSheetByName(sheetName);
-        if (!sheet) {
-          return ContentService.createTextOutput(JSON.stringify({ status: 'ok', values: [] }))
-            .setMimeType(ContentService.MimeType.JSON);
-        }
-        const values = sheet.getRange(cellRange).getValues();
-        return ContentService.createTextOutput(JSON.stringify({ status: 'ok', values: values }))
-          .setMimeType(ContentService.MimeType.JSON);
+        if (!sheet) return respond_({ status: 'ok', values: [] });
+        return respond_({ status: 'ok', values: sheet.getRange(cellRange).getValues() });
       }
-      const values = ss.getRange(range).getValues();
-      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', values: values }))
-        .setMimeType(ContentService.MimeType.JSON);
+      return respond_({ status: 'ok', values: ss.getRange(range).getValues() });
     }
 
     if (action === 'write') {
-      const values   = data.values;
-      const inputOpt = data.inputOption || 'RAW';
+      const values = data.values;
+      if (!Array.isArray(values) || !values.length) return respond_({ status: 'error', message: 'values array is empty' });
       let sheet = sheetName ? ss.getSheetByName(sheetName) : ss.getSheets()[0];
       if (!sheet) sheet = ss.insertSheet(sheetName);
-      const numRows = values.length;
-      const numCols = values[0] ? values[0].length : 1;
       sheet.clearContents();
-      const target = sheet.getRange(1, 1, numRows, numCols);
-      if (inputOpt === 'USER_ENTERED') {
-        target.setValues(values);
-      } else {
-        target.setValues(values);
-      }
-      return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
-        .setMimeType(ContentService.MimeType.JSON);
+      sheet.getRange(1, 1, values.length, values[0] ? values[0].length : 1).setValues(values);
+      return respond_({ status: 'ok' });
     }
 
-    return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'Unsupported action: ' + action }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return respond_({ status: 'error', message: 'Unsupported action: ' + action });
   } catch(err) {
-    return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: err.toString() }))
-      .setMimeType(ContentService.MimeType.JSON);
+    return respond_({ status: 'error', message: err.toString() });
   }
 }
 
 function doGet(e) {
-  return ContentService.createTextOutput(JSON.stringify({ status: 'ok', message: 'Finance Tracker Script is running' }))
-    .setMimeType(ContentService.MimeType.JSON);
+  return respond_({ status: 'ok', message: 'Finance Tracker Script v2 is running', version: 2 });
 }
 `;
 
@@ -3651,7 +3854,7 @@ if (canReadRemotely()) {
     bucketsEl.innerHTML = Array(4).fill('<div class="bucket-card skeleton" style="height:90px"></div>').join('');
   }
   setSyncState('syncing', 'Loading latest data...');
-  loadAllFromSheets().then(() => {
+  providerPull().then(() => {
     invalidateDateCache();
     renderAll();
     _lastSyncTime = Date.now();
