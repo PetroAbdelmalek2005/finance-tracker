@@ -1146,9 +1146,9 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
       <input id="stk-price" type="number" step="0.01" placeholder="Auto-fetched on selection">
     </div>
     <div class="field">
-      <label>Trading Account <small style="color:#555e78;font-weight:400"> — optional</small></label>
+      <label>Trading Account <span style="color:var(--accent)">*</span></label>
       <select id="stk-account" style="width:100%">
-        <option value="">— Unregistered / Cash account —</option>
+        <option value="" disabled selected>— Select an account —</option>
       </select>
     </div>
     <div class="modal-footer">
@@ -1631,6 +1631,8 @@ function toggleBuyMore(i) {
   S.stocks.forEach((_, j) => {
     const other = document.getElementById('buy-more-' + j);
     if (other) other.style.display = 'none';
+    const det = document.getElementById('stk-detail-' + j);
+    if (det) det.style.display = 'none';
   });
   if (!isOpen) {
     el.style.display = 'block';
@@ -1640,6 +1642,20 @@ function toggleBuyMore(i) {
     const sharesInput = document.getElementById('bm-shares-' + i);
     if (sharesInput) sharesInput.focus();
   }
+}
+
+function toggleStockDetail(i) {
+  const el = document.getElementById('stk-detail-' + i);
+  if (!el) return;
+  const isOpen = el.style.display !== 'none';
+  // Close all panels first
+  S.stocks.forEach((_, j) => {
+    const bm = document.getElementById('buy-more-' + j);
+    if (bm) bm.style.display = 'none';
+    const det = document.getElementById('stk-detail-' + j);
+    if (det) det.style.display = 'none';
+  });
+  if (!isOpen) el.style.display = 'block';
 }
 
 async function buyMore(i) {
@@ -2053,6 +2069,12 @@ function getAccountCurrentBalanceCAD(accountOrName) {
   return (acc.currency === 'USD') ? bal * usdCadRate : bal;
 }
 
+function getAccountLinkedStocksValue(accountName) {
+  return S.stocks
+    .filter(st => st.linkedAccount === accountName)
+    .reduce((s, st) => s + st.shares * st.current, 0);
+}
+
 function netWorth() {
   return S.accounts.reduce((s, a) => s + getAccountCurrentBalanceCAD(a), 0)
        + S.stocks.reduce((s, st) => s + st.shares * st.current, 0);
@@ -2123,7 +2145,7 @@ function populateTradingAccounts() {
     .filter(a => tradingTypes.includes(a.type))
     .map(a => `<option value="${a.name}">${a.name} (${a.type})</option>`)
     .join('');
-  sel.innerHTML = '<option value="">— Unregistered / Cash account —</option>' + opts;
+  sel.innerHTML = '<option value="" disabled selected>— Select an account —</option>' + opts;
 }
 
 function openModal(id) {
@@ -2221,18 +2243,22 @@ async function addAccount() {
 function renderAccountRow(a, i) {
   const isUSD = (a.currency === 'USD');
   const nativeBal = getAccountCurrentBalance(a);
+  const linkedStocksVal = getAccountLinkedStocksValue(a.name);
+  const totalNative = nativeBal + linkedStocksVal;
   const cadBal = isUSD ? nativeBal * usdCadRate : nativeBal;
-  const balSign = nativeBal < 0 ? '-' : '';
-  const cadSign = cadBal < 0 ? '-' : '';
+  const totalCAD = isUSD ? totalNative * usdCadRate : totalNative;
+  const totalSign = totalNative < 0 ? '-' : '';
+  const totalCadSign = totalCAD < 0 ? '-' : '';
   const balDisplay = isUSD
-    ? `<span class="amount ${nativeBal < 0 ? 'neg' : 'pos'}" style="cursor:pointer" title="Click to edit opening balance (USD)" onclick="editBalance(${i})">US${balSign}${fmt(nativeBal)}</span><span style="color:var(--text4);font-size:11px;margin-left:4px">≈ CAD ${cadSign}${fmt(Math.abs(cadBal))}</span>`
-    : `<span class="amount ${nativeBal < 0 ? 'neg' : 'pos'}" style="cursor:pointer" title="Click to edit opening balance" onclick="editBalance(${i})">${balSign}${fmt(nativeBal)}</span>`;
+    ? `<span class="amount ${totalNative < 0 ? 'neg' : 'pos'}" style="cursor:pointer" title="Click to edit opening balance (USD)" onclick="editBalance(${i})">US${totalSign}${fmt(Math.abs(totalNative))}</span><span style="color:var(--text4);font-size:11px;margin-left:4px">≈ CAD ${totalCadSign}${fmt(Math.abs(totalCAD))}</span>`
+    : `<span class="amount ${totalNative < 0 ? 'neg' : 'pos'}" style="cursor:pointer" title="Click to edit opening balance" onclick="editBalance(${i})">${totalSign}${fmt(Math.abs(totalNative))}</span>`;
   const currencyBadge = isUSD ? ` <span class="badge" style="background:var(--amber-bg,#2a2010);color:#f5a623;font-size:10px">USD</span>` : '';
+  const holdingsSub = linkedStocksVal > 0 ? ` · Holdings ${fmt(linkedStocksVal)}` : '';
   return `
   <div class="row" id="acc-row-${i}">
     <div class="row-left">
       <div class="row-title">${a.name}${currencyBadge}</div>
-      <div class="row-sub">Opening ${isUSD ? 'US' : ''}${fmt(a.balance)} · Activity ${(accountTransactionDelta(a.name) >= 0 ? '+' : '−') + fmt(accountTransactionDelta(a.name))}${isUSD ? ' USD' : ''}</div>
+      <div class="row-sub">Opening ${isUSD ? 'US' : ''}${fmt(a.balance)} · Activity ${(accountTransactionDelta(a.name) >= 0 ? '+' : '−') + fmt(accountTransactionDelta(a.name))}${isUSD ? ' USD' : ''}${holdingsSub}</div>
     </div>
     <div class="row-right" id="acc-right-${i}">
       ${balDisplay}
@@ -2245,8 +2271,8 @@ function renderAccountRow(a, i) {
 function renderAccounts() {
   const statsEl = document.getElementById('acc-stats');
   if (statsEl) {
-    const totalAssets = S.accounts.reduce((s, a) => { const b = getAccountCurrentBalanceCAD(a); return b > 0 ? s + b : s; }, 0);
-    const totalLiab   = S.accounts.reduce((s, a) => { const b = getAccountCurrentBalanceCAD(a); return b < 0 ? s + Math.abs(b) : s; }, 0);
+    const totalAssets = S.accounts.reduce((s, a) => { const b = getAccountCurrentBalanceCAD(a) + getAccountLinkedStocksValue(a.name); return b > 0 ? s + b : s; }, 0);
+    const totalLiab   = S.accounts.reduce((s, a) => { const b = getAccountCurrentBalanceCAD(a) + getAccountLinkedStocksValue(a.name); return b < 0 ? s + Math.abs(b) : s; }, 0);
     const nw = totalAssets - totalLiab;
     statsEl.innerHTML = `
       <div class="metric green"><div class="metric-label">Total Assets</div><div class="metric-value pos">${fmt(totalAssets)}</div></div>
@@ -2271,7 +2297,7 @@ function renderAccounts() {
     if (q && !filtered.length) return '';
 
     const isOpen = accGroupOpen[type] !== false;
-    const groupTotal = group.reduce((s, a) => s + getAccountCurrentBalanceCAD(a), 0);
+    const groupTotal = group.reduce((s, a) => s + getAccountCurrentBalanceCAD(a) + getAccountLinkedStocksValue(a.name), 0);
     const sign = groupTotal < 0 ? 'neg' : 'pos';
     const canvasId = `chart-type-pie-${type.replace(/ /g, '_')}`;
 
@@ -3055,6 +3081,7 @@ async function addStock() {
   }
 
   const linkedAccount = document.getElementById('stk-account')?.value || '';
+  if (!linkedAccount) { toast('Please select a trading account'); return; }
   S.stocks.push({ id: uid(), ticker, name: name || ticker, shares, costPerShare: cost, current: price, linkedAccount });
   saveLocal(); closeModal('stk-modal');
   ['stk-ticker','stk-name','stk-ticker-manual','stk-name-manual','stk-shares','stk-cost','stk-price','stk-search'].forEach(id => {
@@ -3082,7 +3109,8 @@ function renderStocks() {
     return;
   }
 
-  el.innerHTML = S.stocks.map((s, i) => {
+  // Build a render helper for a single stock row
+  function renderStockRow(s, i) {
     const val      = s.shares * s.current;
     const cost     = s.shares * s.costPerShare;
     const gain     = val - cost;
@@ -3091,17 +3119,20 @@ function renderStocks() {
     const todayChg = cache ? `${cache.changePct >= 0 ? '+' : ''}${cache.changePct.toFixed(2)}% today` : '';
     const exch     = cache && cache.exchange ? cache.exchange : '';
     const curr     = cache && cache.currency ? cache.currency : '';
+    const acct     = s.linkedAccount ? S.accounts.find(a => a.name === s.linkedAccount) : null;
+    const acctType = acct ? acct.type : '';
 
     return `
       <div class="row" id="stk-row-${i}" style="flex-direction:column;align-items:stretch;gap:0">
         <div style="display:flex;justify-content:space-between;align-items:center;width:100%">
-          <div class="row-left">
+          <div class="row-left" style="cursor:pointer" onclick="toggleStockDetail(${i})">
             <div class="row-title" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
               <span class="badge badge-blue">${s.ticker}</span> ${s.name}
               ${todayChg ? `<span class="badge ${cache.changePct >= 0 ? 'badge-green' : 'badge-red'}" style="font-size:9px">${todayChg}</span>` : ''}
               ${exch ? `<span class="badge badge-gray" style="font-size:9px">${exch}</span>` : ''}
+              <span style="color:var(--text4);font-size:10px">ⓘ</span>
             </div>
-            <div class="row-sub">${s.shares} units &middot; avg cost ${fmt(s.costPerShare)} ${curr} &middot; current ${fmt(s.current)} ${curr}${s.linkedAccount ? ` &middot; <span class="badge badge-blue" style="font-size:9px">${s.linkedAccount}</span>` : ''}</div>
+            <div class="row-sub">${s.shares} units &middot; avg cost ${fmt(s.costPerShare)}${curr ? ' ' + curr : ''} &middot; current ${fmt(s.current)}${curr ? ' ' + curr : ''}</div>
           </div>
           <div class="row-right">
             <div style="text-align:right">
@@ -3110,6 +3141,17 @@ function renderStocks() {
             </div>
             <button class="btn btn-sm" style="font-size:11px;padding:3px 8px" onclick="toggleBuyMore(${i})">+ Buy more</button>
             <button class="del" onclick="deleteItem('stocks',${i},syncStocks)">×</button>
+          </div>
+        </div>
+        <div id="stk-detail-${i}" style="display:none;margin-top:10px;padding:12px;background:#0f1117;border-radius:8px;border:1px solid #2e3650">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">
+            <div><div style="font-size:10px;color:#555e78;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Account</div><div style="font-size:13px;color:#c5cad8">${s.linkedAccount || 'Unregistered'}${acctType ? ` <span class="badge badge-gray" style="font-size:9px">${acctType}</span>` : ''}</div></div>
+            <div><div style="font-size:10px;color:#555e78;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Market Value</div><div style="font-size:13px;color:#c5cad8">${fmt(val)}${curr ? ' ' + curr : ''}</div></div>
+            <div><div style="font-size:10px;color:#555e78;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Cost Basis</div><div style="font-size:13px;color:#c5cad8">${fmt(cost)}${curr ? ' ' + curr : ''}</div></div>
+            <div><div style="font-size:10px;color:#555e78;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Total Gain / Loss</div><div style="font-size:13px;color:${gain >= 0 ? 'var(--pos,#4ade80)' : 'var(--neg,#f87171)'}">${gain >= 0 ? '+' : ''}${fmt(gain)} (${pct}%)</div></div>
+            ${todayChg ? `<div><div style="font-size:10px;color:#555e78;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Today's Change</div><div style="font-size:13px;color:${cache.changePct >= 0 ? 'var(--pos,#4ade80)' : 'var(--neg,#f87171)'}">${todayChg}</div></div>` : ''}
+            ${exch ? `<div><div style="font-size:10px;color:#555e78;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Exchange</div><div style="font-size:13px;color:#c5cad8">${exch}</div></div>` : ''}
+            ${curr ? `<div><div style="font-size:10px;color:#555e78;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Currency</div><div style="font-size:13px;color:#c5cad8">${curr}</div></div>` : ''}
           </div>
         </div>
         <div id="buy-more-${i}" style="display:none;margin-top:10px;padding:12px;background:#0f1117;border-radius:8px;border:1px solid #2e3650">
@@ -3131,6 +3173,28 @@ function renderStocks() {
           </div>
         </div>
       </div>`;
+  }
+
+  // Group stocks by linkedAccount
+  const groups = {};
+  const groupOrder = [];
+  S.stocks.forEach((st, i) => {
+    const key = st.linkedAccount || '__unregistered__';
+    if (!groups[key]) { groups[key] = []; groupOrder.push(key); }
+    groups[key].push({ st, i });
+  });
+
+  el.innerHTML = groupOrder.map(key => {
+    const entries = groups[key];
+    const groupVal = entries.reduce((s, { st }) => s + st.shares * st.current, 0);
+    const acct = key !== '__unregistered__' ? S.accounts.find(a => a.name === key) : null;
+    const acctType = acct ? acct.type : '';
+    const label = key !== '__unregistered__' ? key : 'Unregistered';
+    const header = `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0 6px;border-bottom:1px solid #1e2540;margin-bottom:4px">
+      <span style="font-size:12px;font-weight:600;color:#8b92a8;text-transform:uppercase;letter-spacing:.05em">${label}${acctType ? ` <span class="badge badge-gray" style="font-size:9px;margin-left:4px">${acctType}</span>` : ''}</span>
+      <span style="font-size:12px;color:#c5cad8;font-weight:500">${fmt(groupVal)}</span>
+    </div>`;
+    return header + entries.map(({ st, i }) => renderStockRow(st, i)).join('');
   }).join('');
 
   const portVal  = S.stocks.reduce((s, st) => s + st.shares * st.current, 0);
