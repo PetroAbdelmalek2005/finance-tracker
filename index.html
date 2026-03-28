@@ -2809,20 +2809,29 @@ async function tickerSearch(query) {
     dd.innerHTML = '<div class="tdrop-msg">Searching...</div>';
     tickerDropFocusIdx = -1;
 
-    const searchUrl = 'https://query2.finance.yahoo.com/v1/finance/search?q=' + encodeURIComponent(query) + '&quotesCount=8&newsCount=0&listsCount=0';
+    const yahooSearchUrl = 'https://query2.finance.yahoo.com/v1/finance/search?q=' + encodeURIComponent(query) + '&quotesCount=8&newsCount=0&listsCount=0';
+    const corsProxies = [
+      url => url,
+      url => 'https://corsproxy.io/?url=' + encodeURIComponent(url),
+      url => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url),
+    ];
     let quotes = [];
 
-    // Try direct first
-    try {
-      const r = await fetch(searchUrl, { signal: AbortSignal.timeout(4000), headers: { 'Accept': 'application/json' } });
-      if (r.ok) {
-        const d = await r.json();
-        quotes = (d && d.quotes ? d.quotes : []).filter(q =>
-          q.symbol && q.quoteType &&
-          ['EQUITY','ETF','MUTUALFUND','CRYPTOCURRENCY','INDEX'].includes(q.quoteType)
-        );
-      }
-    } catch(e) {}
+    const parseQuotes = d => (d && d.quotes ? d.quotes : []).filter(q =>
+      q.symbol && q.quoteType &&
+      ['EQUITY','ETF','MUTUALFUND','CRYPTOCURRENCY','INDEX'].includes(q.quoteType)
+    );
+
+    for (const proxy of corsProxies) {
+      try {
+        const r = await fetch(proxy(yahooSearchUrl), { signal: AbortSignal.timeout(5000), headers: { 'Accept': 'application/json' } });
+        if (r.ok) {
+          const d = await r.json();
+          quotes = parseQuotes(d);
+          if (quotes.length > 0) break;
+        }
+      } catch(e) {}
+    }
 
     tickerResults = quotes;
 
