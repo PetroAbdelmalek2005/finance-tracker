@@ -11,6 +11,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 /* ── CONFIG BANNER ───────────────────────────────────────────── */
 #config-banner{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:999;align-items:center;justify-content:center;padding:20px;}
@@ -408,7 +409,28 @@ body.privacy-on .metric-value.pos,body.privacy-on .metric-value.neg{color:var(--
 .insight-text{font-size:13px;color:var(--text2);}
 .insight-sub{font-size:11px;color:var(--text4);margin-top:2px;}
 
-/* ── COUNT-UP ANIMATION ──────────────────────────────────────── */
+/* ── GOOGLE SIGN-IN SCREEN ──────────────────────────────────────── */
+#google-signin-screen{display:none;position:fixed;inset:0;background:var(--bg-base);z-index:1000;align-items:center;justify-content:center;padding:20px;}
+#google-signin-screen.show{display:flex;}
+.signin-card{background:var(--bg-card);border:var(--border2);border-radius:var(--radius-xl);padding:44px 36px;width:100%;max-width:360px;text-align:center;box-shadow:var(--shadow);}
+.signin-logo{font-family:'DM Serif Display',serif;font-size:34px;color:var(--text);margin-bottom:2px;}
+.signin-sub{font-size:10px;color:var(--text5);text-transform:uppercase;letter-spacing:.12em;margin-bottom:30px;}
+.signin-tagline{font-size:13px;color:var(--text3);margin-bottom:30px;line-height:1.75;}
+.google-signin-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:12px 20px;background:#fff;border:1px solid #dadce0;border-radius:10px;color:#3c4043;font-size:14px;font-family:'DM Sans',sans-serif;cursor:pointer;font-weight:500;transition:box-shadow .2s;margin-bottom:14px;}
+.google-signin-btn:hover{box-shadow:0 2px 10px rgba(0,0,0,.18);}
+.signin-skip{background:none;border:none;color:var(--text4);font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;padding:6px;text-decoration:underline;text-underline-offset:3px;}
+.signin-skip:hover{color:var(--text3);}
+/* User chip in sidebar */
+.user-chip{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg-2);border:var(--border2);border-radius:10px;margin-bottom:6px;}
+.user-avatar{width:26px;height:26px;border-radius:50%;object-fit:cover;flex-shrink:0;}
+.user-avatar-fallback{width:26px;height:26px;border-radius:50%;background:var(--blue);color:#fff;font-size:11px;font-weight:600;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.user-info{flex:1;min-width:0;}
+.user-name-label{font-size:11px;color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.user-email-label{font-size:10px;color:var(--text4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.user-signout-btn{background:none;border:none;color:var(--text4);cursor:pointer;padding:2px;font-size:14px;line-height:1;border-radius:4px;flex-shrink:0;}
+.user-signout-btn:hover{color:var(--red);}
+
+/* ── COUNT-UP ANIMATION ──────────────────────────────────────────── */
 @keyframes metricIn{from{opacity:0;transform:translateY(5px);}to{opacity:1;transform:translateY(0);}}
 .metric-value{animation:metricIn .35s ease both;}
 
@@ -452,18 +474,17 @@ body.privacy-on .metric-value.pos,body.privacy-on .metric-value.neg{color:var(--
 </head>
 <body>
 
-<!-- CONFIG BANNER (shown on first run) -->
-<div id="config-banner" class="show">
-  <div class="config-box">
-    <h2>Connect to Google Sheets</h2>
-    <p>Paste your Google Sheets credentials below to sync across devices. Or skip and use the app locally.</p>
-    <a href="javascript:void(0)" onclick="skipConfig()" style="display:block;text-align:center;color:var(--blue);font-size:13px;margin-bottom:16px;padding:8px;background:var(--bg-3);border-radius:8px;text-decoration:none">Skip for now — use local storage only</a>
-    <label>Spreadsheet ID</label>
-    <input id="cfg-sheet-id" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74...">
-    <label>Apps Script URL <span style="opacity:.7;font-weight:400;font-size:10px">(see Settings → Setup Guide)</span></label>
-    <input id="cfg-script-url" placeholder="https://script.google.com/macros/s/.../exec">
-    <button class="config-save" onclick="saveConfig()">Connect & Launch</button>
-    <p class="config-note">Your credentials are stored only on this device. Never shared.</p>
+<!-- GOOGLE SIGN-IN SCREEN -->
+<div id="google-signin-screen" class="show">
+  <div class="signin-card">
+    <div class="signin-logo">Finance</div>
+    <div class="signin-sub">Personal Tracker</div>
+    <p class="signin-tagline">Sign in with Google to sync your finances across all your devices. Your data is stored privately in your own Google Drive — no setup required.</p>
+    <button class="google-signin-btn" onclick="signInWithGoogle()">
+      <svg width="18" height="18" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.29-8.16 2.29-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Sign in with Google
+    </button>
+    <button class="signin-skip" onclick="continueWithoutAccount()">Continue without an account (local only)</button>
   </div>
 </div>
 
@@ -510,6 +531,7 @@ body.privacy-on .metric-value.pos,body.privacy-on .metric-value.neg{color:var(--
       </button>
     </nav>
     <div class="sidebar-footer">
+      <div id="user-chip" class="user-chip" style="display:none"></div>
       <button class="sync-btn" onclick="syncNow()" style="margin-bottom:6px">
         <span class="sync-dot" id="sync-dot"></span>
         <span id="sync-label">Synced</span>
@@ -727,6 +749,10 @@ body.privacy-on .metric-value.pos,body.privacy-on .metric-value.neg{color:var(--
         <!-- Provider selector -->
         <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
           <label style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--bg-2);border:var(--border2);border-radius:10px;cursor:pointer">
+            <input type="radio" name="sync-provider" value="drive" onchange="showProviderPanel('drive');updateConfig()" style="margin-top:2px;accent-color:var(--green)">
+            <div><div style="font-size:13px;font-weight:500;color:var(--text)">Google Drive <span style="font-size:10px;background:var(--green-bg);color:var(--green);padding:2px 7px;border-radius:4px;margin-left:6px;font-weight:500">Recommended</span></div><div style="font-size:11px;color:var(--text3);margin-top:2px">Sign in with Google — zero setup — stored privately in your Drive</div></div>
+          </label>
+          <label style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--bg-2);border:var(--border2);border-radius:10px;cursor:pointer">
             <input type="radio" name="sync-provider" value="gist" onchange="showProviderPanel('gist');updateConfig()" style="margin-top:2px;accent-color:var(--green)">
             <div><div style="font-size:13px;font-weight:500;color:var(--text)">GitHub Gist</div><div style="font-size:11px;color:var(--text3);margin-top:2px">Free · No custom code · Just a GitHub account + token · Best choice</div></div>
           </label>
@@ -786,6 +812,11 @@ body.privacy-on .metric-value.pos,body.privacy-on .metric-value.neg{color:var(--
             <button class="btn btn-sm" onclick="runConnectionDiagnostics()">Run Diagnostics</button>
           </div>
           <div id="conn-diagnostics" style="display:none;margin-top:10px;padding:10px 12px;background:var(--bg-2);border:var(--border2);border-radius:10px;font-size:11px;line-height:1.6;color:var(--text3);white-space:pre-wrap"></div>
+        </div>
+
+        <!-- Google Drive panel -->
+        <div id="sync-panel-drive" style="display:none">
+          <div id="drive-settings-content"></div>
         </div>
 
         <!-- Local only panel -->
@@ -1257,6 +1288,271 @@ body.privacy-on .metric-value.pos,body.privacy-on .metric-value.neg{color:var(--
 
 <script>
 // ═══════════════════════════════════════════════
+// GOOGLE AUTH & DRIVE SYNC
+// ═══════════════════════════════════════════════
+// ▸ ONE-TIME DEVELOPER SETUP (users do nothing):
+//   1. console.cloud.google.com → New Project
+//   2. Enable "Google Drive API"
+//   3. APIs & Services → Credentials → Create OAuth 2.0 Client ID (Web application)
+//   4. Add your app's domain to "Authorized JavaScript origins"
+//   5. Replace the string below with your Client ID
+const GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com';
+const DRIVE_SCOPE      = 'https://www.googleapis.com/auth/drive.appdata profile email';
+const DRIVE_FILE_NAME  = 'ft_data.json';
+
+let _googleUser     = null;  // { name, email, picture }
+let _driveToken     = null;  // OAuth access token string
+let _driveTokenExp  = 0;     // timestamp (ms) when token expires
+let _driveFileId    = null;  // cached Drive file ID in appDataFolder
+let _tokenClient    = null;  // GIS token client instance
+let _tokenResolvers = [];    // promise resolvers waiting for a fresh token
+
+function initGoogleAuth() {
+  if (typeof google === 'undefined' || !google?.accounts?.oauth2) {
+    setTimeout(initGoogleAuth, 250);
+    return;
+  }
+  _tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: DRIVE_SCOPE,
+    callback: _onDriveTokenReceived,
+    error_callback: _onDriveTokenError
+  });
+  // Restore saved user for instant UI on return visits
+  const saved = localStorage.getItem('ft_google_user');
+  if (saved) {
+    try { _googleUser = JSON.parse(saved); } catch(e) {}
+  }
+  if (_googleUser) {
+    _renderUserChip();
+    _hideDriveSignIn();
+    _tokenClient.requestAccessToken({ prompt: 'none' }); // silent refresh
+  } else if (localStorage.getItem('ft_skipped_config') !== '1') {
+    _showDriveSignIn();
+  }
+}
+
+function signInWithGoogle() {
+  if (!_tokenClient) { toast('Google sign-in initializing — try again in a moment'); return; }
+  _tokenClient.requestAccessToken({ prompt: 'select_account' });
+}
+
+async function _onDriveTokenReceived(tokenResponse) {
+  if (tokenResponse?.error) { _onDriveTokenError(tokenResponse); return; }
+  _driveToken   = tokenResponse.access_token;
+  _driveTokenExp = Date.now() + (tokenResponse.expires_in - 60) * 1000;
+  _scheduleTokenRefresh(tokenResponse.expires_in);
+
+  // Fetch user info if not already cached
+  if (!_googleUser?.email) {
+    try {
+      const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: `Bearer ${_driveToken}` }
+      });
+      const u = await r.json();
+      _googleUser = { name: u.name || 'Google User', email: u.email || '', picture: u.picture || '' };
+      localStorage.setItem('ft_google_user', JSON.stringify(_googleUser));
+    } catch(e) {
+      if (!_googleUser) _googleUser = { name: 'Google User', email: '', picture: '' };
+    }
+  }
+
+  _renderUserChip();
+  _hideDriveSignIn();
+  CONFIG.syncProvider = 'drive';
+  persistConfig();
+
+  // Pull latest data from Drive
+  setSyncState('syncing', 'Loading...');
+  try {
+    await drivePull();
+    setSyncState('ok', 'Synced');
+    _lastSyncTime = Date.now();
+  } catch(e) {
+    setSyncState('ok', 'Ready');
+  }
+
+  _tokenResolvers.forEach(r => r(true));
+  _tokenResolvers = [];
+}
+
+function _onDriveTokenError(err) {
+  console.warn('GIS token error:', err?.type || err);
+  if (_googleUser) {
+    setSyncState('error', 'Reconnect');
+  } else if (localStorage.getItem('ft_skipped_config') !== '1') {
+    _showDriveSignIn();
+  }
+  _tokenResolvers.forEach(r => r(false));
+  _tokenResolvers = [];
+}
+
+function _scheduleTokenRefresh(expiresIn) {
+  const delay = Math.max((expiresIn - 300) * 1000, 30000);
+  setTimeout(() => {
+    if (_tokenClient && _googleUser) _tokenClient.requestAccessToken({ prompt: 'none' });
+  }, delay);
+}
+
+function _ensureFreshDriveToken() {
+  if (_driveToken && Date.now() < _driveTokenExp) return Promise.resolve(true);
+  if (!_tokenClient) return Promise.resolve(false);
+  return new Promise(resolve => {
+    _tokenResolvers.push(resolve);
+    if (_tokenResolvers.length === 1) {
+      _tokenClient.requestAccessToken({ prompt: 'none' });
+    }
+    setTimeout(() => {
+      const idx = _tokenResolvers.indexOf(resolve);
+      if (idx !== -1) { _tokenResolvers.splice(idx, 1); resolve(false); }
+    }, 10000);
+  });
+}
+
+function isDriveEnabled() {
+  return !!(CONFIG.syncProvider === 'drive' && _driveToken && Date.now() < _driveTokenExp + 300000);
+}
+
+async function signOutGoogle() {
+  if (_driveToken && typeof google !== 'undefined') {
+    google.accounts.oauth2.revoke(_driveToken, () => {});
+  }
+  _driveToken = null; _driveTokenExp = 0; _driveFileId = null; _googleUser = null;
+  localStorage.removeItem('ft_google_user');
+  const chip = document.getElementById('user-chip');
+  if (chip) chip.style.display = 'none';
+  CONFIG.syncProvider = 'none';
+  persistConfig();
+  setSyncState('ok', 'Local only');
+  if (localStorage.getItem('ft_skipped_config') !== '1') _showDriveSignIn();
+}
+
+function continueWithoutAccount() {
+  localStorage.setItem('ft_skipped_config', '1');
+  _hideDriveSignIn();
+  setSyncState('ok', 'Local only');
+  toast('Using local storage — sign in anytime via Settings');
+}
+
+function _showDriveSignIn() {
+  const el = document.getElementById('google-signin-screen');
+  if (el) el.classList.add('show');
+}
+function _hideDriveSignIn() {
+  const el = document.getElementById('google-signin-screen');
+  if (el) el.classList.remove('show');
+}
+
+function _renderUserChip() {
+  if (!_googleUser) return;
+  const chip = document.getElementById('user-chip');
+  if (!chip) return;
+  chip.style.display = '';
+  const initial = (_googleUser.name || _googleUser.email || '?')[0].toUpperCase();
+  const pic = _googleUser.picture
+    ? `<img class="user-avatar" src="${_esc(_googleUser.picture)}" referrerpolicy="no-referrer" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+    : '';
+  chip.innerHTML = `
+    ${pic}
+    <div class="user-avatar-fallback" style="${_googleUser.picture ? 'display:none' : ''}">${initial}</div>
+    <div class="user-info">
+      <div class="user-name-label">${_esc(_googleUser.name || 'Google User')}</div>
+      <div class="user-email-label">${_esc(_googleUser.email || '')}</div>
+    </div>
+    <button class="user-signout-btn" onclick="signOutGoogle()" title="Sign out">&#x2715;</button>
+  `;
+}
+
+function _renderDriveSettingsPanel() {
+  const el = document.getElementById('drive-settings-content');
+  if (!el) return;
+  if (_googleUser) {
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg-2);border:var(--border2);border-radius:10px;margin-bottom:10px">
+        ${_googleUser.picture ? `<img src="${_esc(_googleUser.picture)}" referrerpolicy="no-referrer" width="30" height="30" style="border-radius:50%;flex-shrink:0">` : ''}
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;color:var(--text);font-weight:500">${_esc(_googleUser.name || '')}</div>
+          <div style="font-size:11px;color:var(--text3)">${_esc(_googleUser.email || '')}</div>
+        </div>
+        <span style="font-size:10px;padding:2px 7px;background:var(--green-bg);color:var(--green);border-radius:5px;flex-shrink:0">Connected</span>
+      </div>
+      <button class="btn btn-sm btn-danger" onclick="signOutGoogle()">Sign out of Google</button>
+    `;
+  } else {
+    el.innerHTML = `
+      <div style="margin-bottom:12px;font-size:12px;color:var(--text3)">Not signed in. Connect your Google account to enable Drive sync.</div>
+      <button class="google-signin-btn" onclick="signInWithGoogle()" style="max-width:220px;margin:0 auto">
+        <svg width="16" height="16" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.08 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.29-8.16 2.29-6.26 0-11.57-3.59-13.46-8.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        Sign in with Google
+      </button>
+    `;
+  }
+}
+
+function _esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Google Drive REST API (no gapi needed) ────────────────────────
+
+async function drivePull() {
+  const ok = await _ensureFreshDriveToken();
+  if (!ok) throw new Error('No Drive token');
+  const fileId = await _driveGetFileId();
+  if (!fileId) return; // new user — no data file yet, start fresh
+  const r = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+    headers: { Authorization: `Bearer ${_driveToken}` }
+  });
+  if (!r.ok) throw new Error(`Drive read failed (${r.status})`);
+  const data = await r.json();
+  S = { ...S, ...data };
+  normalizeLinkedData();
+  invalidateDateCache();
+  localStorage.setItem(LSKEY, JSON.stringify(S));
+  renderAll();
+}
+
+async function drivePush() {
+  const ok = await _ensureFreshDriveToken();
+  if (!ok) throw new Error('No Drive token');
+  const content = JSON.stringify(S);
+  const fileId  = await _driveGetFileId();
+  if (fileId) {
+    const r = await fetch(
+      `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`,
+      { method: 'PATCH', headers: { Authorization: `Bearer ${_driveToken}`, 'Content-Type': 'application/json' }, body: content }
+    );
+    if (!r.ok) throw new Error(`Drive update failed (${r.status})`);
+  } else {
+    // Create new file in appDataFolder (hidden from user's Drive)
+    const meta = JSON.stringify({ name: DRIVE_FILE_NAME, parents: ['appDataFolder'] });
+    const form = new FormData();
+    form.append('metadata', new Blob([meta], { type: 'application/json' }));
+    form.append('file', new Blob([content], { type: 'application/json' }));
+    const r = await fetch(
+      'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
+      { method: 'POST', headers: { Authorization: `Bearer ${_driveToken}` }, body: form }
+    );
+    if (!r.ok) throw new Error(`Drive create failed (${r.status})`);
+    const d = await r.json();
+    _driveFileId = d.id;
+  }
+}
+
+async function _driveGetFileId() {
+  if (_driveFileId) return _driveFileId;
+  const q = encodeURIComponent(`name='${DRIVE_FILE_NAME}' and trashed=false`);
+  const r = await fetch(
+    `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=${q}&fields=files(id)`,
+    { headers: { Authorization: `Bearer ${_driveToken}` } }
+  );
+  if (!r.ok) throw new Error(`Drive file search failed (${r.status})`);
+  const d = await r.json();
+  _driveFileId = d.files?.[0]?.id || null;
+  return _driveFileId;
+}
+
+// ═══════════════════════════════════════════════
 // CONFIG & GOOGLE SHEETS
 // ═══════════════════════════════════════════════
 const SHEET_NAMES = {
@@ -1281,6 +1577,7 @@ function normalizeSheetId(input) {
 }
 function canReadViaScript() { return !!(CONFIG.scriptUrl && CONFIG.sheetId); }
 function canReadRemotely() {
+  if (CONFIG.syncProvider === 'drive')   return isDriveEnabled();
   if (CONFIG.syncProvider === 'gist')    return !!(CONFIG.gistToken && CONFIG.gistId);
   if (CONFIG.syncProvider === 'jsonbin') return !!(CONFIG.jsonbinKey && CONFIG.jsonbinId);
   if (CONFIG.syncProvider === 'sheets')  return canReadViaScript();
@@ -1299,17 +1596,19 @@ function persistConfig() {
 }
 
 function loadConfig() {
-  // Check skip flag FIRST — before anything else can crash
-  const skipped = localStorage.getItem('ft_skipped_config') === '1';
-  if (skipped) {
-    document.getElementById('config-banner').classList.remove('show');
-  }
-
   const saved = localStorage.getItem('ft_config');
   if (saved) {
     try { CONFIG = { ...CONFIG, ...JSON.parse(saved) }; } catch(e) { CONFIG = { sheetId:'', scriptUrl:'' }; }
   }
   CONFIG.scriptUrl = normalizeScriptUrl(CONFIG.scriptUrl);
+
+  // Hide sign-in screen immediately for returning/skipped users (before GIS loads)
+  const skipped   = localStorage.getItem('ft_skipped_config') === '1';
+  const hasGUser  = !!localStorage.getItem('ft_google_user');
+  if (skipped || hasGUser) {
+    const scr = document.getElementById('google-signin-screen');
+    if (scr) scr.classList.remove('show');
+  }
 
   // Null-safe population of settings fields
   const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
@@ -1321,13 +1620,9 @@ function loadConfig() {
   setVal('set-jb-id',      CONFIG.jsonbinId);
   const autoSyncEl = document.getElementById('set-auto-sync');
   if (autoSyncEl) autoSyncEl.checked = CONFIG.autoSync !== false;
-  const providerEl = document.querySelector(`input[name="sync-provider"][value="${CONFIG.syncProvider || 'sheets'}"]`);
-  if (providerEl) { providerEl.checked = true; showProviderPanel(CONFIG.syncProvider || 'sheets'); }
-
-  // Also hide banner if credentials are saved
-  if (canReadRemotely()) {
-    document.getElementById('config-banner').classList.remove('show');
-  }
+  const syncProvider = CONFIG.syncProvider || (hasGUser ? 'drive' : 'sheets');
+  const providerEl = document.querySelector(`input[name="sync-provider"][value="${syncProvider}"]`);
+  if (providerEl) { providerEl.checked = true; showProviderPanel(syncProvider); }
 }
 
 function saveConfig() {
@@ -1343,7 +1638,6 @@ function saveConfig() {
   _sv('set-sheet-id',   CONFIG.sheetId);
   _sv('set-script-url', CONFIG.scriptUrl);
   localStorage.removeItem('ft_skipped_config');
-  document.getElementById('config-banner').classList.remove('show');
   toast('Connected via Apps Script. Loading your data...');
   loadAllFromSheets();
 }
@@ -1867,6 +2161,7 @@ async function jsonbinPull() {
 
 // ── Provider router ───────────────────────────────────────────────
 async function providerPush() {
+  if (CONFIG.syncProvider === 'drive')   return drivePush();
   if (CONFIG.syncProvider === 'gist')    return gistPush();
   if (CONFIG.syncProvider === 'jsonbin') return jsonbinPush();
   if (CONFIG.syncProvider === 'sheets') {
@@ -1874,15 +2169,17 @@ async function providerPush() {
   }
 }
 async function providerPull() {
+  if (CONFIG.syncProvider === 'drive')   return drivePull();
   if (CONFIG.syncProvider === 'gist')    return gistPull();
   if (CONFIG.syncProvider === 'jsonbin') return jsonbinPull();
   if (CONFIG.syncProvider === 'sheets')  return loadAllFromSheets();
 }
 function showProviderPanel(provider) {
-  ['sheets', 'gist', 'jsonbin'].forEach(p => {
+  ['drive', 'sheets', 'gist', 'jsonbin', 'none'].forEach(p => {
     const el = document.getElementById(`sync-panel-${p}`);
     if (el) el.style.display = p === provider ? '' : 'none';
   });
+  if (provider === 'drive') _renderDriveSettingsPanel();
 }
 
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
@@ -4238,6 +4535,7 @@ function toast(msg) {
 loadTheme();
 loadConfig();
 loadLocal();
+initGoogleAuth();
 privacyMode = !!localStorage.getItem('ft_privacy');
 if (privacyMode) document.body.classList.add('privacy-on');
 renderAll();
