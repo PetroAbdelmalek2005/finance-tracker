@@ -273,7 +273,7 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
     border-bottom:var(--border);
     position:sticky;top:0;z-index:9;
   }
-  .mob-header-title{font-family:'DM Serif Display',serif;font-size:56px;line-height:1;color:var(--text);}
+  .mob-header-title{font-family:'DM Serif Display',serif;font-size:26px;line-height:1;color:var(--text);}
   .mob-header-actions{display:flex;gap:8px;}
   .page-header{display:none;}
 
@@ -306,8 +306,8 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
   .metric{border-radius:14px;padding:14px 15px;}
   .metric-value{font-size:19px;}
   .metric-trend{font-size:10px;}
-  .ws-hero{border-radius:30px;padding:26px 18px 20px;}
-  .ws-hero-value{font-size:56px;margin-bottom:14px;}
+  .ws-hero{border-radius:30px;padding:22px 18px 18px;}
+  .ws-hero-value{font-size:32px;margin-bottom:12px;}
   .ws-hero-sub-value{font-size:14px;}
   .grid-2{grid-template-columns:1fr;gap:0;}
 
@@ -375,10 +375,10 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
 .summary-cards .bucket-value{font-size:20px;line-height:1.2;}
 .summary-cards .bucket-pct{min-height:34px;}
 /* ── WEALTHSIMPLE HERO BALANCE ───────────────────────────── */
-.ws-hero{text-align:center;padding:38px 24px 30px;border-radius:34px;}
-.ws-hero-label{font-size:12px;color:var(--text4);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;}
-.ws-hero-value{font-family:'DM Serif Display',serif;font-size:72px;font-weight:400;color:var(--text);letter-spacing:-.03em;line-height:.96;}
-.ws-hero-sub{font-size:16px;color:var(--text4);margin-top:10px;}
+.ws-hero{text-align:center;padding:26px 22px 22px;border-radius:28px;}
+.ws-hero-label{font-size:11px;color:var(--text4);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;}
+.ws-hero-value{font-family:'DM Serif Display',serif;font-size:42px;font-weight:400;color:var(--text);letter-spacing:-.03em;line-height:1;}
+.ws-hero-sub{font-size:13px;color:var(--text4);margin-top:8px;}
 /* ── WEALTHSIMPLE TWO TILES ──────────────────────────────── */
 .ws-tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;}
 .ws-tile{background:var(--bg-card);border:var(--border);border-radius:var(--radius-xl);padding:22px 20px;cursor:default;transition:transform .2s ease,box-shadow .2s ease;}
@@ -1308,6 +1308,13 @@ let _tokenClient    = null;  // GIS token client instance
 let _tokenResolvers = [];    // promise resolvers waiting for a fresh token
 
 function initGoogleAuth() {
+  // If the client ID hasn't been configured, silently use local-only mode
+  if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID.startsWith('YOUR_GOOGLE_CLIENT_ID')) {
+    localStorage.setItem('ft_skipped_config', '1');
+    _hideDriveSignIn();
+    setSyncState('ok', 'Local only');
+    return;
+  }
   if (typeof google === 'undefined' || !google?.accounts?.oauth2) {
     setTimeout(initGoogleAuth, 250);
     return;
