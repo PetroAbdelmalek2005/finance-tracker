@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — Finance Tracker</title>
+  <style>
+    :root { --bg: #0b0e18; --card: #13172a; --text: #e8eaf6; --text2: #a0a8c8; --accent: #6c8ef5; --border: 1px solid rgba(255,255,255,.08); --radius: 12px; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'DM Sans', system-ui, sans-serif; font-size: 15px; line-height: 1.7; padding: 40px 20px 80px; }
+    .container { max-width: 720px; margin: 0 auto; }
+    header { margin-bottom: 40px; }
+    .brand { font-family: 'DM Serif Display', Georgia, serif; font-size: 28px; color: var(--text); margin-bottom: 6px; }
+    .sub { font-size: 12px; color: var(--text2); text-transform: uppercase; letter-spacing: .1em; }
+    h1 { font-size: 22px; font-weight: 600; margin: 40px 0 12px; color: var(--text); }
+    h2 { font-size: 16px; font-weight: 600; margin: 28px 0 8px; color: var(--text); }
+    p { color: var(--text2); margin-bottom: 12px; }
+    ul { color: var(--text2); padding-left: 20px; margin-bottom: 12px; }
+    li { margin-bottom: 6px; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .card { background: var(--card); border: var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 20px; }
+    .updated { font-size: 12px; color: var(--text2); margin-bottom: 32px; }
+    footer { margin-top: 60px; padding-top: 20px; border-top: var(--border); font-size: 12px; color: var(--text2); }
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">Finance</div>
+      <div class="sub">Personal Tracker</div>
+    </header>
+
+    <h1>Privacy Policy</h1>
+    <p class="updated">Last updated: March 2026</p>
+
+    <div class="card">
+      <p>Finance Tracker is a personal finance dashboard that runs entirely in your browser. This policy explains what data the app accesses, how it is stored, and how it is used.</p>
+    </div>
+
+    <h2>What data the app accesses</h2>
+    <p>When you sign in with Google, Finance Tracker requests access to:</p>
+    <ul>
+      <li><strong>Your Google account profile</strong> — your name, email address, and profile picture. This is used only to display your identity in the app.</li>
+      <li><strong>Files created by this app in your Google Drive</strong> — a single JSON file (<code>ft_data.json</code>) that stores your financial data. The app can only read and write files it created; it cannot access any other files in your Drive.</li>
+    </ul>
+
+    <h2>What data is stored</h2>
+    <p>Finance Tracker stores the following information you enter:</p>
+    <ul>
+      <li>Account names, types, balances, and currencies</li>
+      <li>Transaction history (descriptions, amounts, categories, dates)</li>
+      <li>Budget allocations and categories</li>
+      <li>Investment holdings (ticker symbols, share counts, cost basis)</li>
+      <li>Savings goals and progress</li>
+    </ul>
+    <p>This data is stored in two places:</p>
+    <ul>
+      <li><strong>Your browser's localStorage</strong> — on your device only.</li>
+      <li><strong>Your own Google Drive</strong> — in a file named <code>ft_data.json</code>, visible in your Drive. This file belongs to you and can be deleted at any time.</li>
+    </ul>
+
+    <h2>How your data is used</h2>
+    <p>Your financial data is used solely to power the Finance Tracker dashboard — to display balances, charts, budgets, and reports within the app. It is never sent to any server operated by this app's developer, and it is never shared with or sold to third parties.</p>
+
+    <h2>Third-party services</h2>
+    <p>The app may contact the following external services:</p>
+    <ul>
+      <li><strong>Google Drive API</strong> — to read and write your sync file in your own Drive.</li>
+      <li><strong>Yahoo Finance</strong> — to fetch live stock prices for tickers you add.</li>
+      <li><strong>Open Exchange Rates</strong> — to fetch the USD/CAD exchange rate.</li>
+      <li><strong>GitHub Gist API / JSONBin.io / Google Apps Script</strong> — only if you choose one of these as an alternative sync provider in Settings.</li>
+    </ul>
+    <p>None of these services receive your financial data except Google Drive (your own storage) and your chosen sync provider.</p>
+
+    <h2>Deleting your data</h2>
+    <p>You can delete all your data at any time:</p>
+    <ul>
+      <li><strong>Local data:</strong> Open Settings in the app and use the "Clear all data" option, or clear your browser's localStorage.</li>
+      <li><strong>Google Drive data:</strong> Delete the file <code>ft_data.json</code> directly from your Google Drive.</li>
+      <li><strong>Revoking access:</strong> Go to <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">Google Account Permissions</a> and revoke access for Finance Tracker.</li>
+    </ul>
+
+    <h2>Children's privacy</h2>
+    <p>This app is not directed at children under 13. We do not knowingly collect data from children.</p>
+
+    <h2>Changes to this policy</h2>
+    <p>If this policy changes materially, the "Last updated" date above will be revised. Continued use of the app after changes constitutes acceptance of the updated policy.</p>
+
+    <h2>Contact</h2>
+    <p>Questions about this privacy policy can be directed to the developer via the <a href="https://github.com/PetroAbdelmalek2005/finance-tracker" target="_blank" rel="noopener">GitHub repository</a>.</p>
+
+    <footer>
+      <a href="index.html">&larr; Back to Finance Tracker</a>
+    </footer>
+  </div>
+</body>
+</html>
