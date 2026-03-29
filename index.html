@@ -1367,17 +1367,27 @@ async function _onDriveTokenReceived(tokenResponse) {
 
   _renderUserChip();
   _hideDriveSignIn();
+  _renderDriveSettingsPanel();
   CONFIG.syncProvider = 'drive';
   persistConfig();
 
-  // Pull latest data from Drive
-  setSyncState('syncing', 'Loading...');
+  // Pull latest data from Drive; push if new user (no file yet)
+  setSyncState('syncing', 'Syncing...');
   try {
     await drivePull();
+    if (!_driveFileId) {
+      // New user — no existing Drive file, create it with current local data
+      await drivePush();
+      toast('Signed in — data saved to Google Drive ✓');
+    } else {
+      toast('Signed in — synced from Google Drive ✓');
+    }
     setSyncState('ok', 'Synced');
     _lastSyncTime = Date.now();
   } catch(e) {
-    setSyncState('ok', 'Ready');
+    console.error('Drive sync error:', e);
+    setSyncState('error', 'Sync failed');
+    toast('Drive sync failed — ' + (e.message || 'unknown error'));
   }
 
   _tokenResolvers.forEach(r => r(true));
@@ -2067,6 +2077,7 @@ async function syncNow() {
 function setSyncState(state, label) {
   const dot = document.getElementById('sync-dot');
   const lbl = document.getElementById('sync-label');
+  if (!dot || !lbl) return;
   dot.className = 'sync-dot' + (state === 'syncing' ? ' syncing' : state === 'error' ? ' error' : '');
   lbl.textContent = label;
 }
@@ -2500,6 +2511,7 @@ function showTab(id, btn) {
   if (id === 'investments') renderStocks();
   if (id === 'goals') renderGoals();
   if (id === 'dashboard') renderDash();
+  if (id === 'settings') _renderDriveSettingsPanel();
   setTimeout(() => drawCharts(id), 60);
   if (id === 'investments') setTimeout(() => refreshPrices(false), 200);
   // Keep "More" button active when viewing a "more" tab
