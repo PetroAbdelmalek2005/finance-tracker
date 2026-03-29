@@ -754,65 +754,9 @@ body.privacy-on .metric-value.pos,body.privacy-on .metric-value.neg{color:var(--
             <div><div style="font-size:13px;font-weight:500;color:var(--text)">Google Drive <span style="font-size:10px;background:var(--green-bg);color:var(--green);padding:2px 7px;border-radius:4px;margin-left:6px;font-weight:500">Recommended</span></div><div style="font-size:11px;color:var(--text3);margin-top:2px">Sign in with Google — zero setup — stored privately in your Drive</div></div>
           </label>
           <label style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--bg-2);border:var(--border2);border-radius:10px;cursor:pointer">
-            <input type="radio" name="sync-provider" value="gist" onchange="showProviderPanel('gist');updateConfig()" style="margin-top:2px;accent-color:var(--green)">
-            <div><div style="font-size:13px;font-weight:500;color:var(--text)">GitHub Gist</div><div style="font-size:11px;color:var(--text3);margin-top:2px">Free · No custom code · Just a GitHub account + token · Best choice</div></div>
-          </label>
-          <label style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--bg-2);border:var(--border2);border-radius:10px;cursor:pointer">
-            <input type="radio" name="sync-provider" value="jsonbin" onchange="showProviderPanel('jsonbin');updateConfig()" style="margin-top:2px;accent-color:var(--green)">
-            <div><div style="font-size:13px;font-weight:500;color:var(--text)">JSONBin.io</div><div style="font-size:11px;color:var(--text3);margin-top:2px">Free · No GitHub needed · Simple API key · 200 KB limit</div></div>
-          </label>
-          <label style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--bg-2);border:var(--border2);border-radius:10px;cursor:pointer">
-            <input type="radio" name="sync-provider" value="sheets" onchange="showProviderPanel('sheets');updateConfig()" style="margin-top:2px;accent-color:var(--green)">
-            <div><div style="font-size:13px;font-weight:500;color:var(--text)">Google Sheets</div><div style="font-size:11px;color:var(--text3);margin-top:2px">Requires deploying a custom Apps Script — more setup</div></div>
-          </label>
-          <label style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--bg-2);border:var(--border2);border-radius:10px;cursor:pointer">
             <input type="radio" name="sync-provider" value="none" onchange="showProviderPanel('none');updateConfig()" style="margin-top:2px;accent-color:var(--green)">
             <div><div style="font-size:13px;font-weight:500;color:var(--text)">Local only</div><div style="font-size:11px;color:var(--text3);margin-top:2px">No cloud sync — data stays on this device only</div></div>
           </label>
-        </div>
-
-        <!-- GitHub Gist panel -->
-        <div id="sync-panel-gist" style="display:none">
-          <div style="margin-bottom:12px;padding:10px 12px;background:var(--blue-bg);border-radius:10px;font-size:12px;color:var(--blue);line-height:1.7">
-            <strong>Setup (2 minutes):</strong><br>
-            1. Go to <strong>github.com → Settings → Developer Settings → Personal access tokens → Tokens (classic)</strong><br>
-            2. Generate new token → check <strong>gist</strong> scope → copy the token<br>
-            3. Go to <strong>gist.github.com</strong> → New gist → set to <strong>Secret</strong> → create → copy the Gist ID from the URL
-          </div>
-          <div class="field"><label>GitHub Personal Access Token</label><input id="set-gist-token" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" oninput="updateConfig()"></div>
-          <div class="field"><label>Gist ID <span style="color:var(--text4);font-size:10px">(from the URL: gist.github.com/username/<strong>THIS_PART</strong>)</span></label><input id="set-gist-id" placeholder="a1b2c3d4e5f6..." oninput="updateConfig()"></div>
-          <button class="btn btn-primary btn-sm" onclick="testGist()">Test Gist Connection</button>
-          <div id="gist-test-status" style="font-size:11px;color:var(--text3);margin-top:8px;min-height:14px"></div>
-        </div>
-
-        <!-- JSONBin panel -->
-        <div id="sync-panel-jsonbin" style="display:none">
-          <div style="margin-bottom:12px;padding:10px 12px;background:var(--blue-bg);border-radius:10px;font-size:12px;color:var(--blue);line-height:1.7">
-            <strong>Setup (2 minutes):</strong><br>
-            1. Sign up at <strong>jsonbin.io</strong> (free)<br>
-            2. Dashboard → <strong>API Keys</strong> → copy your Secret Key<br>
-            3. Dashboard → <strong>Bins → Create Bin</strong> → set name, make Private → copy the Bin ID
-          </div>
-          <div class="field"><label>JSONBin Secret Key</label><input id="set-jb-key" type="password" placeholder="$2b$10$..." oninput="updateConfig()"></div>
-          <div class="field"><label>Bin ID</label><input id="set-jb-id" placeholder="64a1b2c3d4e5f6..." oninput="updateConfig()"></div>
-          <button class="btn btn-primary btn-sm" onclick="testJsonbin()">Test JSONBin Connection</button>
-          <div id="jb-test-status" style="font-size:11px;color:var(--text3);margin-top:8px;min-height:14px"></div>
-        </div>
-
-        <!-- Google Sheets panel -->
-        <div id="sync-panel-sheets" style="display:none">
-          <div style="margin-bottom:12px;padding:10px 12px;background:var(--blue-bg);border-radius:10px;font-size:12px;color:var(--blue);line-height:1.7">
-            <strong>Setup:</strong> Google Sheet → Extensions → Apps Script → paste the script → Deploy → Web App → Execute as Me → Access: Anyone → copy URL.
-            <br><a href="javascript:void(0)" onclick="showAppsScriptCode()" style="color:var(--blue);font-weight:500">Show script code →</a>
-          </div>
-          <div class="field"><label>Spreadsheet ID <span style="color:var(--text4);font-size:10px">(paste full URL or just the ID — we'll extract it)</span></label><input id="set-sheet-id" placeholder="1BxiMVs0XRA..." oninput="updateConfig()"></div>
-          <div class="field"><label>Apps Script URL</label><input id="set-script-url" placeholder="https://script.google.com/macros/s/.../exec" oninput="updateConfig()"></div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn btn-primary btn-sm" onclick="updateConfig();toast('Saved')">Save</button>
-            <button class="btn btn-sm" onclick="testConnection()">Test Connection</button>
-            <button class="btn btn-sm" onclick="runConnectionDiagnostics()">Run Diagnostics</button>
-          </div>
-          <div id="conn-diagnostics" style="display:none;margin-top:10px;padding:10px 12px;background:var(--bg-2);border:var(--border2);border-radius:10px;font-size:11px;line-height:1.6;color:var(--text3);white-space:pre-wrap"></div>
         </div>
 
         <!-- Google Drive panel -->
@@ -1304,7 +1248,7 @@ const DRIVE_FILE_NAME  = 'ft_data.json';
 let _googleUser     = null;  // { name, email, picture }
 let _driveToken     = null;  // OAuth access token string
 let _driveTokenExp  = 0;     // timestamp (ms) when token expires
-let _driveFileId    = null;  // cached Drive file ID
+let _driveFileId    = localStorage.getItem('ft_drive_file_id') || null;  // cached Drive file ID
 let _tokenClient    = null;  // GIS token client instance
 let _tokenResolvers = [];    // promise resolvers waiting for a fresh token
 
@@ -1437,6 +1381,7 @@ async function signOutGoogle() {
   }
   _driveToken = null; _driveTokenExp = 0; _driveFileId = null; _googleUser = null;
   localStorage.removeItem('ft_google_user');
+  localStorage.removeItem('ft_drive_file_id');
   const chip = document.getElementById('user-chip');
   if (chip) chip.style.display = 'none';
   CONFIG.syncProvider = 'none';
@@ -1554,6 +1499,7 @@ async function drivePush() {
     if (!r.ok) throw new Error(`Drive create failed (${r.status})`);
     const d = await r.json();
     _driveFileId = d.id;
+    if (_driveFileId) localStorage.setItem('ft_drive_file_id', _driveFileId);
   }
 }
 
@@ -1561,12 +1507,17 @@ async function _driveGetFileId() {
   if (_driveFileId) return _driveFileId;
   const q = encodeURIComponent(`name='${DRIVE_FILE_NAME}' and trashed=false`);
   const r = await fetch(
-    `https://www.googleapis.com/drive/v3/files?spaces=drive&q=${q}&fields=files(id)`,
+    `https://www.googleapis.com/drive/v3/files?corpora=user&spaces=drive&q=${q}&fields=files(id)`,
     { headers: { Authorization: `Bearer ${_driveToken}` } }
   );
-  if (!r.ok) throw new Error(`Drive file search failed (${r.status})`);
+  if (!r.ok) {
+    // Token may be stale — clear it so next call forces re-auth
+    _driveToken = null; _driveTokenExp = 0;
+    throw new Error(`Drive file search failed (${r.status})`);
+  }
   const d = await r.json();
   _driveFileId = d.files?.[0]?.id || null;
+  if (_driveFileId) localStorage.setItem('ft_drive_file_id', _driveFileId);
   return _driveFileId;
 }
 
@@ -1584,7 +1535,7 @@ const SHEET_NAMES = {
 
 let CONFIG = {
   sheetId: '', scriptUrl: '', autoSync: true,
-  syncProvider: 'sheets',   // 'sheets' | 'gist' | 'jsonbin' | 'none'
+  syncProvider: 'drive',   // 'drive' | 'none'
   gistToken: '', gistId: '',
   jsonbinKey: '', jsonbinId: ''
 };
@@ -1638,7 +1589,7 @@ function loadConfig() {
   setVal('set-jb-id',      CONFIG.jsonbinId);
   const autoSyncEl = document.getElementById('set-auto-sync');
   if (autoSyncEl) autoSyncEl.checked = CONFIG.autoSync !== false;
-  const syncProvider = CONFIG.syncProvider || (hasGUser ? 'drive' : 'sheets');
+  const syncProvider = CONFIG.syncProvider || 'drive';
   const providerEl = document.querySelector(`input[name="sync-provider"][value="${syncProvider}"]`);
   if (providerEl) { providerEl.checked = true; showProviderPanel(syncProvider); }
 }
@@ -1667,7 +1618,7 @@ function skipConfig() {
   const banner = document.getElementById('config-banner');
   if (banner) banner.classList.remove('show');
   // Small delay so user sees banner close before toast appears
-  setTimeout(() => toast('Using local storage — add Google Sheets in Settings anytime'), 100);
+  setTimeout(() => toast('Using local storage — sign in with Google anytime via Settings'), 100);
 }
 
 function updateConfig() {
@@ -2194,7 +2145,7 @@ async function providerPull() {
   if (CONFIG.syncProvider === 'sheets')  return loadAllFromSheets();
 }
 function showProviderPanel(provider) {
-  ['drive', 'sheets', 'gist', 'jsonbin', 'none'].forEach(p => {
+  ['drive', 'none'].forEach(p => {
     const el = document.getElementById(`sync-panel-${p}`);
     if (el) el.style.display = p === provider ? '' : 'none';
   });
@@ -2952,7 +2903,7 @@ function renderTx() {
   if (!txs.length) {
     const hint = canReadViaScript()
       ? 'No transactions yet. Use <strong>↓ Pull</strong> in Settings to load data from Google Sheets.'
-      : 'No transactions yet. Add one above, or connect Google Sheets in Settings.';
+      : 'No transactions yet. Add one above, or connect Google Drive in Settings.';
     el.innerHTML = `<div class="empty"><div class="empty-icon">📋</div>${hint}</div>`;
     return;
   }
