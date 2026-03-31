@@ -53,9 +53,9 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
 .nav-section{padding:12px 8px 8px;flex:1;overflow-y:auto;}
 .nav-label{font-size:10px;color:var(--text5);text-transform:uppercase;letter-spacing:.1em;padding:0 10px;margin-bottom:4px;margin-top:12px;}
 .nav-label:first-child{margin-top:0;}
-.nav-btn{display:flex;align-items:center;gap:10px;width:100%;padding:9px 12px;background:none;border:none;color:var(--text3);font-size:13px;font-family:'DM Sans',sans-serif;border-radius:var(--radius-sm);cursor:pointer;text-align:left;transition:all var(--t-base);margin-bottom:1px;}
+.nav-btn{display:flex;align-items:center;gap:10px;width:100%;padding:9px 10px 9px 12px;background:none;border:none;border-left:2px solid transparent;color:var(--text3);font-size:13px;font-family:'DM Sans',sans-serif;border-radius:var(--radius-sm);cursor:pointer;text-align:left;transition:all var(--t-base);margin-bottom:1px;}
 .nav-btn:hover{background:var(--bg-2);color:var(--text2);}
-.nav-btn.active{background:var(--bg-3);color:var(--text);font-weight:500;box-shadow:var(--shadow-card);}
+.nav-btn.active{background:var(--bg-3);color:var(--text);font-weight:500;border-left:2px solid var(--blue);}
 .nav-icon{width:16px;height:16px;opacity:.55;flex-shrink:0;transition:opacity var(--t-fast);}
 .nav-btn.active .nav-icon{opacity:1;}
 .sidebar-footer{padding:12px 8px;border-top:var(--border);}
@@ -69,8 +69,8 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
 /* ── PAGE HEADER ─────────────────────────────────────────────── */
 .mob-header{display:none;}
 .page-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:22px;flex-wrap:wrap;gap:10px;}
-.page-title{font-family:'DM Serif Display',serif;font-size:36px;color:var(--text);line-height:1;}
-.page-sub{font-size:12px;color:var(--text4);margin-top:3px;}
+.page-title{font-family:'DM Serif Display',serif;font-size:34px;color:var(--text);line-height:1;letter-spacing:-.02em;}
+.page-sub{font-size:13px;color:var(--text3);margin-top:5px;}
 .header-actions{display:flex;gap:8px;align-items:center;}
 
 /* ── BUTTONS ─────────────────────────────────────────────────── */
@@ -86,7 +86,7 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
 
 /* ── METRIC CARDS ────────────────────────────────────────────── */
 .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:20px;}
-.metric{background:var(--bg-card);border:var(--border);border-radius:var(--radius-lg);padding:18px 20px;position:relative;overflow:hidden;box-shadow:var(--shadow-card);transition:transform var(--t-base),box-shadow var(--t-base);}
+.metric{background:var(--bg-card);border:var(--border);border-radius:var(--radius-lg);padding:18px 20px;position:relative;overflow:hidden;box-shadow:var(--shadow-card);transition:transform var(--t-base),box-shadow var(--t-base);will-change:transform;}
 .metric:hover{transform:translateY(-2px);box-shadow:var(--shadow-soft);}
 .metric::after{content:'';position:absolute;bottom:-10px;right:-10px;width:52px;height:52px;border-radius:50%;opacity:.1;}
 .metric.green::after{background:var(--green);}
@@ -94,33 +94,35 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
 .metric.blue::after{background:var(--blue);}
 .metric.amber::after{background:var(--amber);}
 .metric-label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;font-weight:500;}
-.metric-value{font-size:22px;font-weight:300;color:var(--text);letter-spacing:-.025em;line-height:1.1;}
+.metric-value{font-family:'DM Serif Display',serif;font-size:24px;font-weight:400;color:var(--text);letter-spacing:-.03em;line-height:1.1;}
 .metric-value.pos{color:var(--green);}
 .metric-value.neg{color:var(--red);}
 .metric-trend{font-size:11px;color:var(--text4);margin-top:4px;}
 
 /* ── WEALTHSIMPLE HERO CARD ──────────────────────────────────── */
-.ws-hero{background:var(--bg-card);border:var(--border);border-radius:var(--radius-xl);padding:28px 24px 22px;box-shadow:var(--shadow-card);margin-bottom:16px;text-align:center;}
-.ws-hero-label{font-size:11px;color:var(--text4);text-transform:uppercase;letter-spacing:.1em;font-weight:500;margin-bottom:10px;}
-.ws-hero-value{font-family:'DM Serif Display',serif;font-size:40px;font-weight:400;letter-spacing:-.03em;line-height:1;margin-bottom:16px;color:var(--text);}
+.ws-hero{background:linear-gradient(150deg,var(--bg-card) 0%,var(--bg-2) 100%);border:var(--border2);border-radius:var(--radius-xl);padding:32px 28px 26px;box-shadow:var(--shadow-soft);margin-bottom:16px;text-align:center;}
+.ws-hero-label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:.14em;font-weight:500;margin-bottom:14px;}
+.ws-hero-value{font-family:'DM Serif Display',serif;font-size:46px;font-weight:400;letter-spacing:-.04em;line-height:1;margin-bottom:6px;color:var(--text);}
 .ws-hero-value.pos{color:var(--green);}
 .ws-hero-value.neg{color:var(--red);}
+.ws-hero-date{font-size:12px;color:var(--text4);margin-bottom:20px;letter-spacing:.01em;}
 .ws-hero-sub{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-.ws-hero-sub-item{background:var(--bg-2);border-radius:var(--radius-sm);padding:12px 14px;text-align:left;}
+.ws-hero-sub-item{background:rgba(255,255,255,.03);border:var(--border);border-radius:var(--radius-sm);padding:14px 16px;text-align:left;transition:background var(--t-fast);}
+body.light .ws-hero-sub-item{background:var(--bg-2);}
 .ws-hero-sub-label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;font-weight:500;}
-.ws-hero-sub-value{font-size:16px;font-weight:500;letter-spacing:-.02em;color:var(--text);}
+.ws-hero-sub-value{font-family:'DM Serif Display',serif;font-size:18px;font-weight:400;letter-spacing:-.02em;color:var(--text);}
 .ws-hero-sub-value.pos{color:var(--green);}
 .ws-hero-sub-value.neg{color:var(--red);}
 
 /* ── CARDS ───────────────────────────────────────────────────── */
-.card{background:var(--bg-card);border:var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:16px;box-shadow:var(--shadow-card);transition:box-shadow var(--t-base),border-color var(--t-base);}
+.card{background:var(--bg-card);border:var(--border);border-radius:var(--radius-lg);padding:20px;margin-bottom:16px;box-shadow:var(--shadow-card);transition:box-shadow var(--t-base),border-color var(--t-base);will-change:transform;}
 .card:hover{box-shadow:var(--shadow-soft);}
 .card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
-.card-title{font-size:13px;font-weight:600;color:var(--text);}
+.card-title{font-size:14px;font-weight:600;color:var(--text);letter-spacing:-.01em;}
 .action-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
 .action-btn{padding:11px 13px;background:var(--bg-2);border:var(--border2);border-radius:var(--radius-sm);color:var(--text2);font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all var(--t-fast);text-align:left;}
 .action-btn:hover{background:var(--bg-3);color:var(--text);transform:translateY(-1px);}
-.health-score{font-size:30px;font-weight:300;line-height:1;color:var(--text);}
+.health-score{font-family:'DM Serif Display',serif;font-size:30px;font-weight:400;line-height:1;color:var(--text);letter-spacing:-.03em;}
 .health-sub{font-size:12px;color:var(--text4);margin-top:4px;}
 .health-meter{height:8px;background:var(--bg-3);border-radius:99px;overflow:hidden;margin-top:10px;}
 .health-fill{height:100%;border-radius:99px;transition:width .55s ease;}
@@ -137,9 +139,10 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
   .brand-name{font-size:16px;}
   .brand-sub{display:none;}
   .nav-btn{font-size:12px;padding:8px 8px;}
-  .page-title{font-size:22px;}
+  .page-title{font-size:26px;}
   .metrics{grid-template-columns:1fr 1fr;}
-  .ws-hero-value{font-size:32px;}
+  .ws-hero-value{font-size:38px;}
+  .ws-tile-value{font-size:24px;}
 }
 
 /* ── CHARTS ──────────────────────────────────────────────────── */
@@ -298,9 +301,11 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
   .metric{border-radius:var(--radius-lg);padding:14px 15px;}
   .metric-value{font-size:18px;}
   .metric-trend{font-size:10px;}
-  .ws-hero{border-radius:var(--radius-xl);padding:22px 18px 18px;}
-  .ws-hero-value{font-size:32px;margin-bottom:12px;}
-  .ws-hero-sub-value{font-size:14px;}
+  .ws-hero{border-radius:var(--radius-xl);padding:24px 18px 20px;}
+  .ws-hero-value{font-size:36px;margin-bottom:6px;}
+  .ws-hero-sub-value{font-size:15px;}
+  .ws-tile-value{font-size:24px;}
+  .metric-value{font-size:20px;}
   .grid-2{grid-template-columns:1fr;gap:0;}
 
   /* Charts — shorter on mobile */
@@ -314,7 +319,7 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
   .btn-sm{padding:5px 10px;font-size:11px;}
 
   /* Page titles handled by mob-header */
-  .page-title{font-size:20px;}
+  .page-title{font-size:22px;}
   .page-sub{font-size:12px;}
 
   /* Modal — slide up from bottom */
@@ -355,28 +360,28 @@ body{font-family:'DM Sans',sans-serif;font-weight:400;background:var(--bg-base);
 .buckets{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;}
 .summary-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;}
 @media(max-width:700px){.buckets,.summary-cards{grid-template-columns:1fr 1fr;}}
-.bucket-card{background:var(--bg-card);border:var(--border);border-radius:var(--radius-lg);padding:14px 16px;box-shadow:var(--shadow-card);transition:transform var(--t-base),box-shadow var(--t-base);}
+.bucket-card{background:var(--bg-card);border:var(--border);border-radius:var(--radius-lg);padding:14px 16px;box-shadow:var(--shadow-card);transition:transform var(--t-base),box-shadow var(--t-base);will-change:transform;}
 .bucket-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-soft);}
 .bucket-label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;font-weight:500;}
-.bucket-value{font-size:18px;font-weight:300;color:var(--text);letter-spacing:-.02em;}
+.bucket-value{font-family:'DM Serif Display',serif;font-size:20px;font-weight:400;color:var(--text);letter-spacing:-.02em;}
 .bucket-pct{font-size:11px;color:var(--text4);margin-top:3px;}
 .bucket-bar{height:3px;background:var(--bg-3);border-radius:2px;margin-top:10px;overflow:hidden;}
 .bucket-bar-fill{height:100%;border-radius:2px;transition:width .6s ease;}
 .summary-cards .bucket-card{padding:12px 14px;}
-.summary-cards .bucket-value{font-size:20px;line-height:1.2;}
+.summary-cards .bucket-value{font-family:'DM Serif Display',serif;font-size:22px;font-weight:400;line-height:1.2;}
 .summary-cards .bucket-pct{min-height:34px;}
 /* ── WEALTHSIMPLE TWO TILES ──────────────────────────────── */
 .ws-tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px;}
-.ws-tile{background:var(--bg-card);border:var(--border);border-radius:var(--radius-xl);padding:20px 18px;cursor:default;transition:transform var(--t-base),box-shadow var(--t-base);}
+.ws-tile{background:var(--bg-card);border:var(--border);border-radius:var(--radius-xl);padding:22px 20px;cursor:default;transition:transform var(--t-base),box-shadow var(--t-base);will-change:transform;}
 .ws-tile:hover{transform:translateY(-2px);box-shadow:var(--shadow-soft);}
-.ws-tile-label{font-size:12px;color:var(--text3);margin-bottom:8px;font-weight:400;}
-.ws-tile-value{font-size:24px;font-weight:300;color:var(--text);letter-spacing:-.02em;margin-bottom:12px;}
-.ws-pill{display:inline-flex;align-items:center;gap:5px;background:var(--green-bg);color:var(--green);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:500;}
+.ws-tile-label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:.1em;font-weight:500;margin-bottom:10px;}
+.ws-tile-value{font-family:'DM Serif Display',serif;font-size:28px;font-weight:400;color:var(--text);letter-spacing:-.025em;margin-bottom:12px;}
+.ws-pill{display:inline-flex;align-items:center;gap:5px;background:var(--green-bg);color:var(--green);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:500;}
 .ws-pill.red{background:var(--red-bg);color:var(--red);}
 .ws-pill.amber{background:var(--amber-bg);color:var(--amber);}
 .ws-pill.neutral{background:var(--bg-3);color:var(--text3);}
 /* ── SECTION HEADER ──────────────────────────────────────── */
-.section-header{font-size:15px;font-weight:600;color:var(--text);margin:20px 0 10px;}
+.section-header{font-size:10px;font-weight:600;color:var(--text4);text-transform:uppercase;letter-spacing:.1em;margin:22px 0 10px;}
 /* ── PRIVACY MODE COLOR OVERRIDE ─────────────────────────── */
 body.privacy-on .pos,body.privacy-on .neg{color:var(--text4)!important;}
 body.privacy-on .chg.up,body.privacy-on .chg.dn{color:var(--text4)!important;}
@@ -592,15 +597,15 @@ body.privacy-on .metric-value.pos,body.privacy-on .metric-value.neg{color:var(--
         <div><div class="mob-header-title">Home</div></div>
         <div class="mob-header-actions">
           <button class="btn btn-primary btn-sm" onclick="openModal('tx-modal')">+ Add</button>
-          <button onclick="togglePrivacy()" class="btn btn-sm privacy-btn" style="padding:6px 9px" title="Hide numbers">👁</button>
-          <button onclick="toggleTheme()" id="theme-btn" class="btn btn-sm" style="padding:6px 9px">🌙</button>
+          <button onclick="togglePrivacy()" class="btn btn-sm privacy-btn" style="padding:6px 9px" title="Hide numbers"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+          <button onclick="toggleTheme()" id="theme-btn" class="btn btn-sm" style="padding:6px 9px"><span class="icon-moon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span><span class="icon-sun" style="display:none"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></span></button>
         </div>
       </div>
       <div class="page-header">
         <div><div class="page-title">Home</div><div class="page-sub" id="dash-date"></div></div>
         <div class="header-actions">
-          <button onclick="togglePrivacy()" class="btn btn-sm privacy-btn" style="padding:6px 9px" title="Hide numbers">👁</button>
-          <button onclick="toggleTheme()" id="theme-btn-desk" class="btn btn-sm" style="padding:6px 9px">🌙</button>
+          <button onclick="togglePrivacy()" class="btn btn-sm privacy-btn" style="padding:6px 9px" title="Hide numbers"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+          <button onclick="toggleTheme()" id="theme-btn-desk" class="btn btn-sm" style="padding:6px 9px"><span class="icon-moon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span><span class="icon-sun" style="display:none"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></span></button>
           <button class="btn btn-primary btn-sm" onclick="openModal('tx-modal')">+ Transaction</button>
         </div>
       </div>
@@ -2242,6 +2247,12 @@ function fmtPct(pct) {
   if (privacyMode) return '•••••••••';
   return pct + '%';
 }
+function fmtShortDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso + 'T00:00:00');
+  if (isNaN(d)) return iso;
+  return d.toLocaleDateString('en-CA', { month: 'short', day: 'numeric' });
+}
 function formatCountUpValue(value, fmtType) {
   if (fmtType === 'percent') return Math.round(value) + '%';
   if (fmtType === 'currencyCompactSigned') return privacyMode ? '•••••••••' : (value >= 0 ? '+' : '') + fmtK(value);
@@ -2488,16 +2499,9 @@ function showTab(id, btn) {
   }
   incoming.classList.add('active');
   setTimeout(() => incoming.classList.remove('enter-left', 'enter-right'), 320);
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.mob-nav-btn').forEach(b => b.classList.remove('active'));
-  if (btn) {
-    btn.classList.add('active');
-    const tabId = id;
-    // Sync mobile nav by data-tab attribute
-    document.querySelectorAll('.mob-nav-btn').forEach(b => { if (b.dataset.tab === tabId) b.classList.add('active'); });
-    // Sync sidebar nav by data-tab attribute (set on each nav-btn)
-    document.querySelectorAll('.nav-btn[data-tab]').forEach(b => { if (b.dataset.tab === tabId) b.classList.add('active'); });
-  }
+  // Always sync all nav items by data-tab — regardless of whether btn was provided
+  document.querySelectorAll('.nav-btn[data-tab]').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
+  document.querySelectorAll('.mob-nav-btn[data-tab]').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
   activeTab = id;
   if (id === 'accounts') renderAccounts();
   if (id === 'transactions') { renderTx(); renderBudget(); }
@@ -3863,7 +3867,7 @@ async function deleteItem(col, idOrIdx, syncFn) {
 function renderDash() {
   const now = new Date();
   document.getElementById('dash-date').textContent = now.toLocaleDateString('en-CA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  document.getElementById('dash-month-label').textContent = now.toLocaleDateString('en-CA', { month: 'long', year: 'numeric' });
+  document.getElementById('dash-month-label').textContent = 'Last 6 months';
 
   const txm = thisMonthTxs();
   let inc = 0;
@@ -3872,14 +3876,25 @@ function renderDash() {
     if (t.type === 'income') inc += t.amount;
     else if (t.type === 'expense' || t.type === 'bill') exp += t.amount;
   }
-  const save = inc - exp;
-  const accountBalance = S.accounts.reduce((s, a) => s + getAccountCurrentBalanceCAD(a), 0);
   const nw = netWorth();
-  // Hero: Net Worth
-  document.getElementById('dash-hero').innerHTML = `
+
+  // Hero: Net Worth with income/expense context
+  const heroEl = document.getElementById('dash-hero');
+  heroEl.innerHTML = `
     <div class="ws-hero-label">Total Net Worth</div>
-    <div class="ws-hero-value">${fmt(nw)}</div>
-    <div class="ws-hero-sub">As of ${now.toLocaleDateString('en-CA',{month:'long',day:'numeric',year:'numeric'})}</div>`;
+    <div class="ws-hero-value countup" data-value="${nw}" data-format="currencyCompact">${fmt(nw)}</div>
+    <div class="ws-hero-date">As of ${now.toLocaleDateString('en-CA',{month:'long',day:'numeric',year:'numeric'})}</div>
+    <div class="ws-hero-sub">
+      <div class="ws-hero-sub-item">
+        <div class="ws-hero-sub-label">Income This Month</div>
+        <div class="ws-hero-sub-value pos">${privacyMode ? '•••••••••' : fmtK(inc)}</div>
+      </div>
+      <div class="ws-hero-sub-item">
+        <div class="ws-hero-sub-label">Expenses This Month</div>
+        <div class="ws-hero-sub-value neg">${privacyMode ? '•••••••••' : fmtK(exp)}</div>
+      </div>
+    </div>`;
+  animateCountUps(heroEl);
 
   // Two tiles: Spend + Invest
   const totalBudget = S.budgets.reduce((s, b) => s + b.amount, 0);
@@ -3889,24 +3904,25 @@ function renderDash() {
 
   const spendPillClass = budgetRemaining === null ? 'neutral' : budgetRemaining >= 0 ? '' : 'red';
   const spendPillText = privacyMode ? '•••••••••' : budgetRemaining !== null ? `${budgetPct}% of budget used` : `${fmtK(exp)} spent`;
-  const spendTileValue = budgetRemaining !== null ? fmtK(budgetRemaining) : fmtK(exp);
+  const spendTileRaw = budgetRemaining !== null ? budgetRemaining : exp;
+  const spendTileValue = privacyMode ? '•••••••••' : fmtK(spendTileRaw);
   const spendTileLabel = budgetRemaining !== null ? 'Budget Remaining' : 'Spent This Month';
   const investPillClass = portfolioVal > 0 ? '' : 'neutral';
   const investPillText = portfolioVal > 0 ? `${S.stocks.length} holding${S.stocks.length !== 1 ? 's' : ''}` : 'No holdings';
 
-  document.getElementById('dash-tiles').innerHTML = `
+  const tilesEl = document.getElementById('dash-tiles');
+  tilesEl.innerHTML = `
     <div class="ws-tile">
       <div class="ws-tile-label">${spendTileLabel}</div>
-      <div class="ws-tile-value">${spendTileValue}</div>
+      <div class="ws-tile-value countup" data-value="${spendTileRaw}" data-format="currencyCompact">${spendTileValue}</div>
       <div class="ws-pill ${spendPillClass}">${spendPillText}</div>
     </div>
     <div class="ws-tile">
       <div class="ws-tile-label">Portfolio</div>
-      <div class="ws-tile-value">${fmtK(portfolioVal)}</div>
+      <div class="ws-tile-value countup" data-value="${portfolioVal}" data-format="currencyCompact">${privacyMode ? '•••••••••' : fmtK(portfolioVal)}</div>
       <div class="ws-pill ${investPillClass}">${investPillText}</div>
     </div>`;
-
-  document.getElementById('dash-month-label').textContent = 'Last 6 months';
+  if (!privacyMode) animateCountUps(tilesEl);
 
   // Bucket summary cards
   renderBucketCards(txm, exp);
@@ -3917,9 +3933,11 @@ function renderDash() {
   // Weekly insights
   renderWeeklyInsights();
 
-  // Recent txns
+  // Recent txns — sorted by date descending
   const el = document.getElementById('dash-recent');
-  const recent = S.transactions.slice(0, 6);
+  const recent = [...S.transactions]
+    .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+    .slice(0, 6);
   if (!recent.length) { el.innerHTML = '<div class="empty">No transactions yet.</div>'; return; }
   el.innerHTML = recent.map(t => {
     let amtClass, amtPrefix;
@@ -3932,7 +3950,7 @@ function renderDash() {
     return `<div class="row">
       <div class="row-left">
         <div class="row-title" style="display:flex;align-items:center;gap:4px">${t.desc}${badge}</div>
-        <div class="row-sub">${t.cat} · ${t.date}</div>
+        <div class="row-sub">${t.cat} · ${fmtShortDate(t.date)}</div>
       </div>
       <span class="amount ${amtClass}">${amtPrefix} ${fmt(t.amount)}</span>
     </div>`;
@@ -4116,17 +4134,18 @@ function drawBar() {
   const incData = months.map(({ m, y }) => monthTxs(m, y).filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0));
   const expData = months.map(({ m, y }) => monthTxs(m, y).filter(t => t.type === 'expense' || t.type === 'bill').reduce((s, t) => s + t.amount, 0));
   const ctx = document.getElementById('chart-bar'); if (!ctx) return;
+  const maxVal = Math.max(100, ...incData, ...expData);
   charts['bar'] = new Chart(ctx, {
     type: 'bar',
     data: { labels, datasets: [
-      { label: 'Income',   data: incData, backgroundColor: '#00c896', borderRadius: 4, borderSkipped: false },
-      { label: 'Expenses', data: expData, backgroundColor: '#ff4d4d', borderRadius: 4, borderSkipped: false }
+      { label: 'Income',   data: incData, backgroundColor: '#34d47e', borderRadius: 5, borderSkipped: false },
+      { label: 'Expenses', data: expData, backgroundColor: '#ff5f72', borderRadius: 5, borderSkipped: false }
     ]},
-    options: { responsive: true, maintainAspectRatio: false,
+    options: { animation: { duration: 400 }, responsive: true, maintainAspectRatio: false,
       plugins: { legend: { position: 'top', labels: { color: chartColors().text, font: { size: 11 }, boxWidth: 9, padding: 8 } } },
       scales: {
         x: { grid: { display: false }, ticks: { color: chartColors().text, font: { size: 11 } } },
-        y: { beginAtZero: true, grid: { color: chartColors().grid }, ticks: { color: chartColors().text, font: { size: 11 }, callback: v => fmtK(v), maxTicksLimit: 5 } }
+        y: { beginAtZero: true, suggestedMax: maxVal, grid: { color: chartColors().grid }, ticks: { color: chartColors().text, font: { size: 11 }, callback: v => fmtK(v), maxTicksLimit: 5 } }
       }
     }
   });
@@ -4142,7 +4161,7 @@ function drawDonut() {
   charts['donut'] = new Chart(ctx, {
     type: 'pie',
     data: { labels, datasets: [{ data, backgroundColor: PALETTE.slice(0, labels.length), borderWidth: 0, hoverOffset: 4 }] },
-    options: { responsive: true, maintainAspectRatio: false,
+    options: { animation: { duration: 400 }, responsive: true, maintainAspectRatio: false,
       plugins: { legend: { position: 'right', labels: { color: chartColors().text, font: { size: 11 }, boxWidth: 9, padding: 8 } } } }
   });
 }
@@ -4175,7 +4194,7 @@ function drawNetWorth() {
   charts['nw'] = new Chart(ctx, {
     type: 'line',
     data: { labels, datasets: [{ label: 'Net Worth', data, borderColor: '#5b8aff', backgroundColor: 'rgba(91,138,255,.08)', fill: true, tension: .4, pointRadius: 4, pointBackgroundColor: '#5b8aff', pointBorderColor: '#07080f', pointBorderWidth: 2 }] },
-    options: { responsive: true, maintainAspectRatio: false,
+    options: { animation: { duration: 400 }, responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: { x: { grid: { display: false }, ticks: { color: chartColors().text, font: { size: 11 } } },
                 y: { beginAtZero:false, grid: { color: chartColors().grid }, ticks: { color: chartColors().text, font: { size: 11 }, callback: nwTickFmt, maxTicksLimit:5 } } } }
@@ -4200,7 +4219,7 @@ function drawTypePie(type, accounts) {
         borderWidth: 0, hoverOffset: 4 }]
     },
     options: {
-      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 400 }, responsive: true, maintainAspectRatio: false,
       plugins: { legend: { position: 'right', labels: { color: chartColors().text, font: { size: 11 }, boxWidth: 9, padding: 8 } } }
     }
   });
@@ -4227,7 +4246,7 @@ function drawAccountsPie() {
         borderWidth: 0, hoverOffset: 4 }]
     },
     options: {
-      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 400 }, responsive: true, maintainAspectRatio: false,
       plugins: { legend: { position: 'right', labels: { color: chartColors().text, font: { size: 11 }, boxWidth: 9, padding: 8 } } }
     }
   });
@@ -4576,11 +4595,21 @@ if ('serviceWorker' in navigator) {
 // ═══════════════════════════════════════════════
 // DARK / LIGHT THEME
 // ═══════════════════════════════════════════════
+function _setThemeIcon(isDark) {
+  ['theme-btn','theme-btn-desk'].forEach(id => {
+    const b = document.getElementById(id);
+    if (!b) return;
+    const moon = b.querySelector('.icon-moon');
+    const sun  = b.querySelector('.icon-sun');
+    if (moon) moon.style.display = isDark ? '' : 'none';
+    if (sun)  sun.style.display  = isDark ? 'none' : '';
+  });
+}
+
 function toggleTheme() {
   const isLight = document.body.classList.toggle('light');
   localStorage.setItem('ft_theme', isLight ? 'light' : 'dark');
-  const icon = isLight ? '🌙' : '☀️';
-  ['theme-btn','theme-btn-desk'].forEach(id => { const b = document.getElementById(id); if (b) b.textContent = icon; });
+  _setThemeIcon(!isLight);
   drawCharts(activeTab);
 }
 
@@ -4588,7 +4617,6 @@ function togglePrivacy() {
   privacyMode = !privacyMode;
   localStorage.setItem('ft_privacy', privacyMode ? '1' : '');
   document.body.classList.toggle('privacy-on', privacyMode);
-  document.querySelectorAll('.privacy-btn').forEach(b => { b.textContent = privacyMode ? '👁‍🗨' : '👁'; });
   renderAll();
 }
 
@@ -4597,8 +4625,7 @@ function loadTheme() {
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
   const useDark = saved ? saved === 'dark' : prefersDark;
   if (!useDark) document.body.classList.add('light');
-  const icon = useDark ? '🌙' : '☀️';
-  ['theme-btn','theme-btn-desk'].forEach(id => { const b = document.getElementById(id); if (b) b.textContent = icon; });
+  _setThemeIcon(useDark);
 }
 
 // ═══════════════════════════════════════════════
