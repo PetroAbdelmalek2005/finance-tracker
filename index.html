@@ -160,7 +160,7 @@ body.light .ws-hero-sub-item{background:var(--bg-2);}
 .row-title{font-size:13px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .row-sub{font-size:11px;color:var(--text4);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .row-right{display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:10px;}
-.amount{font-size:13px;font-weight:500;}
+.amount{font-family:'DM Serif Display',serif;font-size:15px;font-weight:400;letter-spacing:-.02em;}
 .amount.pos{color:var(--green);}
 .amount.neg{color:var(--red);}
 .amount.neutral{color:var(--text3);}
@@ -304,7 +304,8 @@ body.light .ws-hero-sub-item{background:var(--bg-2);}
   .ws-hero{border-radius:var(--radius-xl);padding:24px 18px 20px;}
   .ws-hero-value{font-size:36px;margin-bottom:6px;}
   .ws-hero-sub-value{font-size:15px;}
-  .ws-tile-value{font-size:24px;}
+  .ws-tiles{grid-template-columns:1fr;gap:10px;}
+  .ws-tile-value{font-size:26px;}
   .metric-value{font-size:20px;}
   .grid-2{grid-template-columns:1fr;gap:0;}
 
@@ -429,7 +430,7 @@ body.privacy-on .metric-value.pos,body.privacy-on .metric-value.neg{color:var(--
 .tx-stats-row{display:flex;gap:8px;margin-top:12px;}
 .tx-stat{flex:1;background:var(--bg-2);border:var(--border);border-radius:var(--radius-sm);padding:10px 12px;}
 .tx-stat-label{font-size:10px;color:var(--text4);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;font-weight:500;}
-.tx-stat-value{font-size:15px;font-weight:500;letter-spacing:-.02em;}
+.tx-stat-value{font-family:'DM Serif Display',serif;font-size:18px;font-weight:400;letter-spacing:-.02em;}
 
 /* ── MORE SHEET (mobile) ─────────────────────────────────────── */
 .more-sheet-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:19;}
@@ -457,7 +458,7 @@ body.privacy-on .metric-value.pos,body.privacy-on .metric-value.neg{color:var(--
 .detail-pane.open{display:block;}
 .detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;}
 .detail-label{font-size:10px;color:var(--text5);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px;font-weight:500;}
-.detail-value{font-size:13px;color:var(--text3);font-weight:400;}
+.detail-value{font-family:'DM Serif Display',serif;font-size:14px;font-weight:400;letter-spacing:-.02em;color:var(--text);}
 .detail-value.pos{color:var(--green);}
 .detail-value.neg{color:var(--red);}
 
@@ -481,7 +482,9 @@ body.privacy-on .metric-value.pos,body.privacy-on .metric-value.neg{color:var(--
 .group-header-left{display:flex;align-items:center;gap:6px;}
 .group-header-label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;}
 .group-header-chevron{font-size:11px;color:var(--text4);}
-.group-header-value{font-size:12px;color:var(--text2);font-weight:500;}
+.group-header-value{font-family:'DM Serif Display',serif;font-size:15px;font-weight:400;letter-spacing:-.02em;color:var(--text2);}
+.group-header-value.pos{color:var(--green);}
+.group-header-value.neg{color:var(--red);}
 
 /* ── EXPAND SECTION (buy-more / goal contrib layout) ─────────── */
 .expand-section{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;}
@@ -2723,7 +2726,7 @@ function renderAccounts() {
           <span class="badge badge-gray">${group.length}</span>
         </span>
         <span style="display:flex;align-items:center;gap:10px">
-          <span class="amount ${sign}" style="font-size:14px;font-weight:600">${groupTotal < 0 ? '-' : ''}${fmt(Math.abs(groupTotal))}</span>
+          <span class="group-header-value ${sign}">${groupTotal < 0 ? '−' : ''}${fmt(Math.abs(groupTotal))}</span>
           <span style="color:var(--text4);font-size:12px">${isOpen ? '▲' : '▼'}</span>
         </span>
       </div>
@@ -2967,14 +2970,14 @@ function renderTx() {
     }
     const goalName = goalNameMap[t.goalId] || '';
     const subGoal  = goalName ? ' · Goal: ' + goalName : '';
-    const subExtra = (t.dueDate ? ' · due ' + t.dueDate : '') + subGoal;
+    const subExtra = (t.dueDate ? ' · due ' + fmtShortDate(t.dueDate) : '') + subGoal;
     return `<div class="row">
       <div class="row-left">
         <div class="row-title" style="display:flex;align-items:center;gap:4px">${t.desc}${typeLabel}</div>
-        <div class="row-sub">${t.cat} · ${t.account}${subExtra} · ${t.date}</div>
+        <div class="row-sub">${t.cat} · ${t.account}${subExtra} · ${fmtShortDate(t.date)}</div>
       </div>
       <div class="row-right">
-        <span class="amount ${amtClass}" style="font-size:12px">${amtPrefix} ${fmt(t.amount)}</span>
+        <span class="amount ${amtClass}">${amtPrefix} ${fmt(t.amount)}</span>
         <button class="btn btn-sm" style="font-size:11px;padding:3px 8px" onclick="editTransaction('${t.id}')">Edit</button>
         <button class="del" onclick="deleteItem('transactions','${t.id}',syncTransactions)">×</button>
       </div>
@@ -3664,10 +3667,11 @@ function renderStocks() {
   const portVal  = S.stocks.reduce((s, st) => s + st.shares * st.current, 0);
   const portCost = S.stocks.reduce((s, st) => s + st.shares * st.costPerShare, 0);
   const portGain = portVal - portCost;
-  document.getElementById('invest-metrics').innerHTML = `
+  const investMetricsEl = document.getElementById('invest-metrics');
+  investMetricsEl.innerHTML = `
     <div class="ws-hero">
       <div class="ws-hero-label">Portfolio Value</div>
-      <div class="ws-hero-value">${fmt(portVal)}</div>
+      <div class="ws-hero-value countup" data-value="${portVal}" data-format="currencyCompact">${fmt(portVal)}</div>
       <div class="ws-hero-sub">
         <div class="ws-hero-sub-item">
           <div class="ws-hero-sub-label">Total Gain / Loss</div>
@@ -3679,6 +3683,7 @@ function renderStocks() {
         </div>
       </div>
     </div>`;
+  if (!privacyMode) animateCountUps(investMetricsEl);
 }
 
 // ═══════════════════════════════════════════════
@@ -4670,7 +4675,7 @@ function renderBillAlerts() {
 
   el.innerHTML = `<div class="card" style="margin-bottom:18px;border-left:3px solid var(--${urgent||overdue?'red':'amber'})">
     <div class="card-header" style="margin-bottom:10px">
-      <span class="card-title">📅 Upcoming Bills</span>
+      <span class="card-title">Upcoming Bills</span>
       <span class="badge badge-${urgent||overdue?'red':'amber'}">${upcoming.length} due this month</span>
     </div>
     ${items}
