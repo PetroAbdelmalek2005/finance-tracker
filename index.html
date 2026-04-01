@@ -1390,6 +1390,7 @@ function _onDriveTokenError(err) {
   console.warn('GIS token error:', err?.type || err);
   if (_googleUser) {
     setSyncState('error', 'Reconnect');
+    _renderDriveSettingsPanel();
   } else if (localStorage.getItem('ft_skipped_config') !== '1') {
     _showDriveSignIn();
   }
@@ -1478,6 +1479,7 @@ function _renderDriveSettingsPanel() {
   const el = document.getElementById('drive-settings-content');
   if (!el) return;
   if (_googleUser) {
+    const _tokenOk = !!(_driveToken && Date.now() < _driveTokenExp);
     el.innerHTML = `
       <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg-2);border:var(--border2);border-radius:10px;margin-bottom:10px">
         ${_googleUser.picture ? `<img src="${_esc(_googleUser.picture)}" referrerpolicy="no-referrer" width="30" height="30" style="border-radius:50%;flex-shrink:0">` : ''}
@@ -1485,9 +1487,13 @@ function _renderDriveSettingsPanel() {
           <div style="font-size:13px;color:var(--text);font-weight:500">${_esc(_googleUser.name || '')}</div>
           <div style="font-size:11px;color:var(--text3)">${_esc(_googleUser.email || '')}</div>
         </div>
-        <span style="font-size:10px;padding:2px 7px;background:var(--green-bg);color:var(--green);border-radius:5px;flex-shrink:0">Connected</span>
+        ${_tokenOk
+          ? `<span style="font-size:10px;padding:2px 7px;background:var(--green-bg);color:var(--green);border-radius:5px;flex-shrink:0">Connected</span>`
+          : `<span style="font-size:10px;padding:2px 7px;background:#fff3cd;color:#856404;border-radius:5px;flex-shrink:0">Session expired</span>`}
       </div>
-      <button class="btn btn-sm btn-danger" onclick="signOutGoogle()">Sign out of Google</button>
+      ${_tokenOk
+        ? `<button class="btn btn-sm btn-danger" onclick="signOutGoogle()">Sign out of Google</button>`
+        : `<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-sm btn-primary" onclick="signInWithGoogle()">Reconnect</button><button class="btn btn-sm btn-danger" onclick="signOutGoogle()">Sign out</button></div>`}
     `;
   } else {
     el.innerHTML = `
@@ -4360,7 +4366,16 @@ function importData(e) {
 async function forcePush() {
   updateConfig(); // read current form values
   const statusEl = document.getElementById('manual-sync-status');
-  if (CONFIG.syncProvider === 'drive' && _googleUser) await _ensureFreshDriveToken();
+  if (CONFIG.syncProvider === 'drive' && _googleUser) {
+    const tokenOk = await _ensureFreshDriveToken();
+    if (!tokenOk) {
+      const msg = 'Google session expired — click Reconnect above to sign in again';
+      if (statusEl) statusEl.textContent = msg;
+      toast(msg);
+      _renderDriveSettingsPanel();
+      return;
+    }
+  }
   if (!canReadRemotely()) {
     if (statusEl) statusEl.textContent = 'No sync credentials configured. Add them above first.';
     toast('No sync credentials — configure a provider first'); return;
@@ -4384,7 +4399,16 @@ async function forcePush() {
 async function forcePull() {
   updateConfig();
   const statusEl = document.getElementById('manual-sync-status');
-  if (CONFIG.syncProvider === 'drive' && _googleUser) await _ensureFreshDriveToken();
+  if (CONFIG.syncProvider === 'drive' && _googleUser) {
+    const tokenOk = await _ensureFreshDriveToken();
+    if (!tokenOk) {
+      const msg = 'Google session expired — click Reconnect above to sign in again';
+      if (statusEl) statusEl.textContent = msg;
+      toast(msg);
+      _renderDriveSettingsPanel();
+      return;
+    }
+  }
   if (!canReadRemotely()) {
     if (statusEl) statusEl.textContent = 'No sync credentials configured. Add them above first.';
     toast('No sync credentials — configure a provider first'); return;
