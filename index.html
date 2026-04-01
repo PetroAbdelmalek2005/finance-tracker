@@ -1293,6 +1293,7 @@ let _driveTokenExp  = 0;     // timestamp (ms) when token expires
 let _driveFileId    = localStorage.getItem('ft_drive_file_id') || null;  // cached Drive file ID
 let _tokenClient    = null;  // GIS token client instance
 let _tokenResolvers = [];    // promise resolvers waiting for a fresh token
+let _lastTokenPrompt = 'none'; // remembers which prompt mode requested the latest token
 
 function initGoogleAuth() {
   // If the client ID hasn't been configured, silently use local-only mode
@@ -1320,7 +1321,7 @@ function initGoogleAuth() {
   if (_googleUser) {
     _renderUserChip();
     _hideDriveSignIn();
-    _tokenClient.requestAccessToken({ prompt: 'none' }); // silent refresh
+    _requestDriveAccessToken('none'); // silent refresh
   } else if (localStorage.getItem('ft_skipped_config') !== '1') {
     _showDriveSignIn();
   }
@@ -1328,7 +1329,7 @@ function initGoogleAuth() {
 
 function signInWithGoogle() {
   if (!_tokenClient) { toast('Google sign-in initializing — try again in a moment'); return; }
-  _tokenClient.requestAccessToken({ prompt: 'select_account' });
+  _requestDriveAccessToken('select_account');
 }
 
 async function _onDriveTokenReceived(tokenResponse) {
@@ -1382,8 +1383,9 @@ async function _onDriveTokenReceived(tokenResponse) {
 
 function _onDriveTokenError(err) {
   console.warn('GIS token error:', err?.type || err);
+  const interactive = _lastTokenPrompt !== 'none';
   if (_googleUser) {
-    setSyncState('error', 'Reconnect');
+    setSyncState('error', interactive ? 'Sign-in canceled' : 'Reconnect');
   } else if (localStorage.getItem('ft_skipped_config') !== '1') {
     _showDriveSignIn();
   }
@@ -1394,23 +1396,36 @@ function _onDriveTokenError(err) {
 function _scheduleTokenRefresh(expiresIn) {
   const delay = Math.max((expiresIn - 300) * 1000, 30000);
   setTimeout(() => {
-    if (_tokenClient && _googleUser) _tokenClient.requestAccessToken({ prompt: 'none' });
+    if (_tokenClient && _googleUser) _requestDriveAccessToken('none');
   }, delay);
 }
 
-function _ensureFreshDriveToken() {
-  if (_driveToken && Date.now() < _driveTokenExp) return Promise.resolve(true);
+function _requestDriveAccessToken(prompt = 'none') {
+  if (!_tokenClient) return;
+  _lastTokenPrompt = prompt;
+  _tokenClient.requestAccessToken({ prompt });
+}
+
+function _requestDriveTokenOnce(prompt = 'none') {
   if (!_tokenClient) return Promise.resolve(false);
   return new Promise(resolve => {
     _tokenResolvers.push(resolve);
     if (_tokenResolvers.length === 1) {
-      _tokenClient.requestAccessToken({ prompt: 'none' });
+      _requestDriveAccessToken(prompt);
     }
     setTimeout(() => {
       const idx = _tokenResolvers.indexOf(resolve);
       if (idx !== -1) { _tokenResolvers.splice(idx, 1); resolve(false); }
     }, 10000);
   });
+}
+
+async function _ensureFreshDriveToken(interactive = false) {
+  if (_driveToken && Date.now() < _driveTokenExp) return true;
+  const silentOk = await _requestDriveTokenOnce('none');
+  if (silentOk) return true;
+  if (!interactive) return false;
+  return _requestDriveTokenOnce('select_account');
 }
 
 function isDriveEnabled() {
@@ -1588,7 +1603,7 @@ function normalizeSheetId(input) {
 }
 function canReadViaScript() { return !!(CONFIG.scriptUrl && CONFIG.sheetId); }
 function canReadRemotely() {
-  if (CONFIG.syncProvider === 'drive')   return isDriveEnabled();
+  if (CONFIG.syncProvider === 'drive')   return !!_googleUser;
   if (CONFIG.syncProvider === 'gist')    return !!(CONFIG.gistToken && CONFIG.gistId);
   if (CONFIG.syncProvider === 'jsonbin') return !!(CONFIG.jsonbinKey && CONFIG.jsonbinId);
   if (CONFIG.syncProvider === 'sheets')  return canReadViaScript();
@@ -4340,6 +4355,15 @@ function importData(e) {
 async function forcePush() {
   updateConfig(); // read current form values
   const statusEl = document.getElementById('manual-sync-status');
+  if (CONFIG.syncProvider === 'drive' && _googleUser && !isDriveEnabled()) {
+    if (statusEl) statusEl.textContent = 'Refreshing Google Drive access…';
+    const ok = await _ensureFreshDriveToken(true);
+    if (!ok) {
+      if (statusEl) statusEl.textContent = 'Google Drive sign-in is required to continue.';
+      toast('Please sign in to Google Drive again');
+      return;
+    }
+  }
   if (!canReadRemotely()) {
     if (statusEl) statusEl.textContent = 'No sync credentials configured. Add them above first.';
     toast('No sync credentials — configure a provider first'); return;
@@ -4363,6 +4387,15 @@ async function forcePush() {
 async function forcePull() {
   updateConfig();
   const statusEl = document.getElementById('manual-sync-status');
+  if (CONFIG.syncProvider === 'drive' && _googleUser && !isDriveEnabled()) {
+    if (statusEl) statusEl.textContent = 'Refreshing Google Drive access…';
+    const ok = await _ensureFreshDriveToken(true);
+    if (!ok) {
+      if (statusEl) statusEl.textContent = 'Google Drive sign-in is required to continue.';
+      toast('Please sign in to Google Drive again');
+      return;
+    }
+  }
   if (!canReadRemotely()) {
     if (statusEl) statusEl.textContent = 'No sync credentials configured. Add them above first.';
     toast('No sync credentials — configure a provider first'); return;
