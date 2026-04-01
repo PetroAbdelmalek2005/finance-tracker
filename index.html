@@ -829,6 +829,7 @@ body.privacy-on .chart-wrap{filter:blur(12px);pointer-events:none;user-select:no
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-primary btn-sm" onclick="forcePush()">↑ Push all data</button>
           <button class="btn btn-sm" onclick="forcePull()">↓ Pull all data</button>
+          <button class="btn btn-sm" onclick="checkDriveSyncHealth()">Check Drive status</button>
         </div>
         <div id="manual-sync-status" style="font-size:11px;color:var(--text5);margin-top:10px;min-height:16px"></div>
       </div>
@@ -1360,8 +1361,8 @@ async function _onDriveTokenReceived(tokenResponse) {
   _renderUserChip();
   _hideDriveSignIn();
   _renderDriveSettingsPanel();
-  CONFIG.syncProvider = 'drive';
-  persistConfig();
+  setSyncProvider('drive', { quiet: true });
+  setManualSyncStatus('');
 
   // Pull latest data from Drive; push if new user (no file yet)
   setSyncState('syncing', 'Syncing...');
@@ -1433,9 +1434,9 @@ async function signOutGoogle() {
   localStorage.removeItem('ft_drive_file_id');
   const chip = document.getElementById('user-chip');
   if (chip) chip.style.display = 'none';
-  CONFIG.syncProvider = 'none';
-  persistConfig();
+  setSyncProvider('none', { quiet: true });
   setSyncState('ok', 'Local only');
+  setManualSyncStatus('');
   if (localStorage.getItem('ft_skipped_config') !== '1') _showDriveSignIn();
 }
 
@@ -1618,6 +1619,20 @@ function persistConfig() {
   localStorage.setItem('ft_config', JSON.stringify(CONFIG));
 }
 
+function setManualSyncStatus(msg = '') {
+  const el = document.getElementById('manual-sync-status');
+  if (el) el.textContent = msg;
+}
+
+function setSyncProvider(provider, { quiet = false } = {}) {
+  CONFIG.syncProvider = provider;
+  persistConfig();
+  const radio = document.querySelector(`input[name="sync-provider"][value="${provider}"]`);
+  if (radio) radio.checked = true;
+  showProviderPanel(provider);
+  if (!quiet) toast(`Sync provider set to ${provider === 'drive' ? 'Google Drive' : 'Local only'}`);
+}
+
 function loadConfig() {
   const saved = localStorage.getItem('ft_config');
   if (saved) {
@@ -1646,6 +1661,7 @@ function loadConfig() {
   const syncProvider = CONFIG.syncProvider || 'drive';
   const providerEl = document.querySelector(`input[name="sync-provider"][value="${syncProvider}"]`);
   if (providerEl) { providerEl.checked = true; showProviderPanel(syncProvider); }
+  setManualSyncStatus('');
 }
 
 function saveConfig() {
@@ -2209,6 +2225,7 @@ function showProviderPanel(provider) {
     const el = document.getElementById(`sync-panel-${p}`);
     if (el) el.style.display = p === provider ? '' : 'none';
   });
+  setManualSyncStatus('');
   if (provider === 'drive') _renderDriveSettingsPanel();
 }
 
@@ -4370,86 +4387,99 @@ function importData(e) {
 }
 
 async function forcePush() {
-  const statusEl = document.getElementById('manual-sync-status');
-  if (CONFIG.syncProvider === 'drive') {
-    if (!_googleUser) {
-      // Signed-in user data not yet loaded — wait for silent token refresh
-      const tokenOk = await _ensureFreshDriveToken();
-      if (!tokenOk || !_googleUser) {
-        const msg = 'Sign in with Google to enable Drive sync';
-        if (statusEl) statusEl.textContent = msg;
-        toast(msg);
-        _renderDriveSettingsPanel();
-        return;
-      }
-    } else {
-      const tokenOk = await _ensureFreshDriveToken();
-      if (!tokenOk) {
-        const msg = 'Google session expired — click Reconnect above to sign in again';
-        if (statusEl) statusEl.textContent = msg;
-        toast(msg);
-        _renderDriveSettingsPanel();
-        return;
-      }
-    }
-  } else if (!canReadRemotely()) {
-    if (statusEl) statusEl.textContent = 'No sync credentials configured. Add them above first.';
-    toast('No sync credentials — configure a provider first'); return;
-  }
-  if (statusEl) statusEl.textContent = 'Pushing all local data…';
+  const ready = await ensureDriveSyncReady();
+  if (!ready) return;
+  setManualSyncStatus('Pushing all local data…');
   setSyncState('syncing', 'Pushing...');
   try {
     await providerPush();
     setSyncState('ok', 'Synced');
     const now = new Date().toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit' });
-    if (statusEl) statusEl.textContent = `✓ All data pushed · ${now}`;
+    setManualSyncStatus(`✓ All data pushed · ${now}`);
     toast('All data pushed');
   } catch(e) {
     console.error(e);
     setSyncState('error', 'Error');
-    if (statusEl) statusEl.textContent = `Push failed — ${e.message}`;
+    setManualSyncStatus(`Push failed — ${e.message}`);
     toast('Push failed — check credentials');
   }
 }
 
 async function forcePull() {
-  const statusEl = document.getElementById('manual-sync-status');
-  if (CONFIG.syncProvider === 'drive') {
-    if (!_googleUser) {
-      const tokenOk = await _ensureFreshDriveToken();
-      if (!tokenOk || !_googleUser) {
-        const msg = 'Sign in with Google to enable Drive sync';
-        if (statusEl) statusEl.textContent = msg;
-        toast(msg);
-        _renderDriveSettingsPanel();
-        return;
-      }
-    } else {
-      const tokenOk = await _ensureFreshDriveToken();
-      if (!tokenOk) {
-        const msg = 'Google session expired — click Reconnect above to sign in again';
-        if (statusEl) statusEl.textContent = msg;
-        toast(msg);
-        _renderDriveSettingsPanel();
-        return;
-      }
-    }
-  } else if (!canReadRemotely()) {
-    if (statusEl) statusEl.textContent = 'No sync credentials configured. Add them above first.';
-    toast('No sync credentials — configure a provider first'); return;
-  }
+  const ready = await ensureDriveSyncReady();
+  if (!ready) return;
   if (!confirm('This will replace all local data with what\'s in your sync store. Any unsynced local changes will be lost. Continue?')) return;
-  if (statusEl) statusEl.textContent = 'Pulling all data…';
+  setManualSyncStatus('Pulling all data…');
   setSyncState('syncing', 'Pulling...');
   try {
     await providerPull();
     const now = new Date().toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit' });
-    if (statusEl) statusEl.textContent = `✓ All data pulled · ${now}`;
+    setManualSyncStatus(`✓ All data pulled · ${now}`);
     toast('Data pulled');
   } catch(e) {
     setSyncState('error', 'Error');
-    if (statusEl) statusEl.textContent = `Pull failed — ${e.message || 'check credentials'}`;
+    setManualSyncStatus(`Pull failed — ${e.message || 'check credentials'}`);
     toast('Pull failed');
+  }
+}
+
+async function ensureDriveSyncReady() {
+  // Auto-heal the most common mismatch: signed in but provider left on "Local only".
+  if (CONFIG.syncProvider !== 'drive') {
+    if (_googleUser) {
+      setSyncProvider('drive', { quiet: true });
+      setManualSyncStatus('Switched provider to Google Drive (detected active Google session).');
+    } else {
+      setManualSyncStatus('No sync credentials configured. Select Google Drive and sign in first.');
+      toast('No sync credentials — configure Google Drive first');
+      return false;
+    }
+  }
+  if (!_googleUser) {
+    const tokenOk = await _ensureFreshDriveToken();
+    if (!tokenOk || !_googleUser) {
+      const msg = 'Sign in with Google to enable Drive sync';
+      setManualSyncStatus(msg);
+      toast(msg);
+      _renderDriveSettingsPanel();
+      return false;
+    }
+  }
+  const tokenOk = await _ensureFreshDriveToken();
+  if (!tokenOk) {
+    const msg = 'Google session expired — click Reconnect above to sign in again';
+    setManualSyncStatus(msg);
+    toast(msg);
+    _renderDriveSettingsPanel();
+    return false;
+  }
+  return true;
+}
+
+async function checkDriveSyncHealth() {
+  const ready = await ensureDriveSyncReady();
+  if (!ready) return;
+  setManualSyncStatus('Checking Google Drive sync status…');
+  try {
+    const fileId = await _driveGetFileId();
+    if (!fileId) {
+      setManualSyncStatus('No ft_data.json found in Drive yet. Push once to create it.');
+      toast('Drive connected, but no sync file exists yet');
+      return;
+    }
+    const r = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${fileId}?fields=id,name,size,modifiedTime,version`,
+      { headers: { Authorization: `Bearer ${_driveToken}` } }
+    );
+    if (!r.ok) throw new Error(`Drive metadata check failed (${r.status})`);
+    const meta = await r.json();
+    const when = meta.modifiedTime ? new Date(meta.modifiedTime).toLocaleString() : 'unknown time';
+    const size = Number(meta.size || 0).toLocaleString();
+    setManualSyncStatus(`✓ Drive file found · ${meta.name || DRIVE_FILE_NAME} · updated ${when} · ${size} bytes`);
+    toast('Drive sync file verified');
+  } catch (e) {
+    setManualSyncStatus(`Drive status check failed — ${e.message || 'unknown error'}`);
+    toast('Could not verify Drive status');
   }
 }
 
