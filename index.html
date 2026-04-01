@@ -1335,7 +1335,7 @@ function initGoogleAuth() {
 
 function signInWithGoogle() {
   if (!_tokenClient) { toast('Google sign-in initializing — try again in a moment'); return; }
-  _tokenClient.requestAccessToken({ prompt: 'select_account' });
+  _tokenClient.requestAccessToken({ prompt: 'select_account consent' });
 }
 
 async function _onDriveTokenReceived(tokenResponse) {
@@ -1389,8 +1389,18 @@ async function _onDriveTokenReceived(tokenResponse) {
 
 function _onDriveTokenError(err) {
   console.warn('GIS token error:', err?.type || err);
+  const errType = String(err?.type || err?.error || '').toLowerCase();
+  const isAccessRevoked = errType.includes('invalid_grant') || errType.includes('access_denied');
+  // Always clear stale token state so reconnect starts from a clean session.
+  _driveToken = null;
+  _driveTokenExp = 0;
+  if (isAccessRevoked) {
+    _driveFileId = null;
+    localStorage.removeItem('ft_drive_file_id');
+  }
   if (_googleUser) {
     setSyncState('error', 'Reconnect');
+    setManualSyncStatus('Google session expired — click Reconnect and approve access.');
     _renderDriveSettingsPanel();
   } else if (localStorage.getItem('ft_skipped_config') !== '1') {
     _showDriveSignIn();
@@ -4950,9 +4960,18 @@ async function confirmImport() {
   resetImport();
   renderAll();
   setSyncState('syncing', 'Saving...');
-  await syncTransactions();
-  setSyncState('ok', 'Synced');
-  toast(`${newTxs.length} transactions imported`);
+  try {
+    if (CONFIG.syncProvider === 'sheets') {
+      await syncTransactions();
+    } else if (canReadRemotely()) {
+      await providerPush();
+    }
+    setSyncState('ok', 'Synced');
+    toast(`${newTxs.length} transactions imported`);
+  } catch (e) {
+    setSyncState('error', 'Sync failed');
+    toast(`${newTxs.length} imported locally — remote sync failed`);
+  }
 }
 
 // ── OFX Parser ──────────────────────────────────────────────────────────────
