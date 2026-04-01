@@ -2095,9 +2095,15 @@ const AUTO_SYNC_INTERVAL_MS     = 120000; // 2 minutes
 const VISIBILITY_SYNC_COOLDOWN_MS = 30000; // 30 seconds
 
 function schedulePush() {
-  if (!CONFIG.autoSync || !canReadRemotely()) return;
+  if (!CONFIG.autoSync) return;
+  if (CONFIG.syncProvider !== 'drive' && !canReadRemotely()) return;
+  if (CONFIG.syncProvider === 'drive' && !_googleUser) return;
   clearTimeout(_pushTimer);
   _pushTimer = setTimeout(async () => {
+    if (CONFIG.syncProvider === 'drive') {
+      const ok = await _ensureFreshDriveToken();
+      if (!ok) return;
+    }
     setSyncState('syncing', 'Auto-saving...');
     try {
       await providerPush();
@@ -4364,19 +4370,29 @@ function importData(e) {
 }
 
 async function forcePush() {
-  updateConfig(); // read current form values
   const statusEl = document.getElementById('manual-sync-status');
-  if (CONFIG.syncProvider === 'drive' && _googleUser) {
-    const tokenOk = await _ensureFreshDriveToken();
-    if (!tokenOk) {
-      const msg = 'Google session expired — click Reconnect above to sign in again';
-      if (statusEl) statusEl.textContent = msg;
-      toast(msg);
-      _renderDriveSettingsPanel();
-      return;
+  if (CONFIG.syncProvider === 'drive') {
+    if (!_googleUser) {
+      // Signed-in user data not yet loaded — wait for silent token refresh
+      const tokenOk = await _ensureFreshDriveToken();
+      if (!tokenOk || !_googleUser) {
+        const msg = 'Sign in with Google to enable Drive sync';
+        if (statusEl) statusEl.textContent = msg;
+        toast(msg);
+        _renderDriveSettingsPanel();
+        return;
+      }
+    } else {
+      const tokenOk = await _ensureFreshDriveToken();
+      if (!tokenOk) {
+        const msg = 'Google session expired — click Reconnect above to sign in again';
+        if (statusEl) statusEl.textContent = msg;
+        toast(msg);
+        _renderDriveSettingsPanel();
+        return;
+      }
     }
-  }
-  if (!canReadRemotely()) {
+  } else if (!canReadRemotely()) {
     if (statusEl) statusEl.textContent = 'No sync credentials configured. Add them above first.';
     toast('No sync credentials — configure a provider first'); return;
   }
@@ -4397,19 +4413,28 @@ async function forcePush() {
 }
 
 async function forcePull() {
-  updateConfig();
   const statusEl = document.getElementById('manual-sync-status');
-  if (CONFIG.syncProvider === 'drive' && _googleUser) {
-    const tokenOk = await _ensureFreshDriveToken();
-    if (!tokenOk) {
-      const msg = 'Google session expired — click Reconnect above to sign in again';
-      if (statusEl) statusEl.textContent = msg;
-      toast(msg);
-      _renderDriveSettingsPanel();
-      return;
+  if (CONFIG.syncProvider === 'drive') {
+    if (!_googleUser) {
+      const tokenOk = await _ensureFreshDriveToken();
+      if (!tokenOk || !_googleUser) {
+        const msg = 'Sign in with Google to enable Drive sync';
+        if (statusEl) statusEl.textContent = msg;
+        toast(msg);
+        _renderDriveSettingsPanel();
+        return;
+      }
+    } else {
+      const tokenOk = await _ensureFreshDriveToken();
+      if (!tokenOk) {
+        const msg = 'Google session expired — click Reconnect above to sign in again';
+        if (statusEl) statusEl.textContent = msg;
+        toast(msg);
+        _renderDriveSettingsPanel();
+        return;
+      }
     }
-  }
-  if (!canReadRemotely()) {
+  } else if (!canReadRemotely()) {
     if (statusEl) statusEl.textContent = 'No sync credentials configured. Add them above first.';
     toast('No sync credentials — configure a provider first'); return;
   }
