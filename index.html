@@ -4360,6 +4360,7 @@ function importData(e) {
 async function forcePush() {
   updateConfig(); // read current form values
   const statusEl = document.getElementById('manual-sync-status');
+  if (CONFIG.syncProvider === 'drive' && _googleUser) await _ensureFreshDriveToken();
   if (!canReadRemotely()) {
     if (statusEl) statusEl.textContent = 'No sync credentials configured. Add them above first.';
     toast('No sync credentials — configure a provider first'); return;
@@ -4383,6 +4384,7 @@ async function forcePush() {
 async function forcePull() {
   updateConfig();
   const statusEl = document.getElementById('manual-sync-status');
+  if (CONFIG.syncProvider === 'drive' && _googleUser) await _ensureFreshDriveToken();
   if (!canReadRemotely()) {
     if (statusEl) statusEl.textContent = 'No sync credentials configured. Add them above first.';
     toast('No sync credentials — configure a provider first'); return;
