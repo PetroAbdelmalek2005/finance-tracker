@@ -27,10 +27,11 @@ export default function ResetPassword() {
 
   const { checks, score, strong } = checkPasswordStrength(password)
 
-  // Read the event from the store — avoids the race condition where
-  // PASSWORD_RECOVERY fires before this component mounts its own listener.
+  // Valid recovery: Supabase fires PASSWORD_RECOVERY after processing the link.
+  // Expired/invalid link: Supabase puts error params in the URL hash.
+  // INITIAL_SESSION fires on every page load — do not treat it as expired.
   const isRecovery = authEvent === 'PASSWORD_RECOVERY'
-  const isExpired  = authEvent != null && authEvent !== 'PASSWORD_RECOVERY'
+  const isExpired  = window.location.hash.includes('error=')
 
   async function handleSubmit(e) {
     e.preventDefault()
