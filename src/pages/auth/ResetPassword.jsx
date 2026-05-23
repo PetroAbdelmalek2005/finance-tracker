@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/store/authStore'
@@ -17,9 +17,23 @@ const requirementLabels = {
 const strengthLabel = ['', 'Very weak', 'Weak', 'Fair', 'Strong', 'Very strong']
 const strengthColor  = ['', 'bg-red-500', 'bg-orange-400', 'bg-yellow-400', 'bg-blue-400', 'bg-green-500']
 
+// Supabase puts errors in the hash (implicit flow) or query string (PKCE)
+function urlHasError() {
+  return window.location.hash.includes('error=') || window.location.search.includes('error=')
+}
+
+// Recovery link contains type=recovery in hash (implicit) or a code param (PKCE)
+function urlIsRecoveryLink() {
+  const hash  = new URLSearchParams(window.location.hash.slice(1))
+  const query = new URLSearchParams(window.location.search)
+  return hash.get('type') === 'recovery' || query.has('code')
+}
+
 export default function ResetPassword() {
   const navigate   = useNavigate()
   const authEvent  = useAuthStore((s) => s.authEvent)
+  const [ready,    setReady]    = useState(false)
+  const [expired,  setExpired]  = useState(urlHasError)
   const [password, setPassword] = useState('')
   const [confirm,  setConfirm]  = useState('')
   const [error,    setError]    = useState(null)
@@ -27,11 +41,19 @@ export default function ResetPassword() {
 
   const { checks, score, strong } = checkPasswordStrength(password)
 
-  // Valid recovery: Supabase fires PASSWORD_RECOVERY after processing the link.
-  // Expired/invalid link: Supabase puts error params in the URL hash.
-  // INITIAL_SESSION fires on every page load — do not treat it as expired.
-  const isRecovery = authEvent === 'PASSWORD_RECOVERY'
-  const isExpired  = window.location.hash.includes('error=')
+  // Strategy 1: event already stored in authStore (fires before component mounts)
+  useEffect(() => {
+    if (authEvent === 'PASSWORD_RECOVERY') setReady(true)
+  }, [authEvent])
+
+  // Strategy 2: getSession() directly — catches cases where detectSessionInUrl
+  // processed the token before onAuthStateChange was registered
+  useEffect(() => {
+    if (ready || expired) return
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session && urlIsRecoveryLink()) setReady(true)
+    })
+  }, [ready, expired])
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -59,8 +81,7 @@ export default function ResetPassword() {
     }
   }
 
-  // Link is expired or invalid
-  if (isExpired) {
+  if (expired) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-surface-muted px-4">
         <div className="w-full max-w-sm rounded-xl border border-surface-border bg-surface p-8 text-center shadow-sm">
@@ -84,8 +105,7 @@ export default function ResetPassword() {
     )
   }
 
-  // Waiting for PASSWORD_RECOVERY event
-  if (!isRecovery) {
+  if (!ready) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-surface-muted px-4">
         <div className="w-full max-w-sm rounded-xl border border-surface-border bg-surface p-8 text-center shadow-sm">
@@ -93,9 +113,12 @@ export default function ResetPassword() {
           <p className="mt-2 text-sm text-slate-500">Verifying reset link…</p>
           <p className="mt-4 text-xs text-slate-400">
             Taking too long?{' '}
-            <Link to="/forgot-password" className="text-brand-600 hover:underline">
-              Request a new link
-            </Link>
+            <button
+              onClick={() => setExpired(true)}
+              className="text-brand-600 hover:underline"
+            >
+              Try a new link
+            </button>
           </p>
         </div>
       </div>
