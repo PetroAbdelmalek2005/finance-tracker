@@ -43,8 +43,11 @@ export default function SignUp() {
     try {
       const { data, error } = await supabase.auth.signUp({ email, password })
       if (error) throw error
-      // Supabase returns identities: [] when the email is already registered
-      if (data.user?.identities?.length === 0) {
+      // Duplicate email detection:
+      // - Enumeration protection OFF → error above is thrown ("User already registered")
+      // - Enumeration protection ON, older Supabase → data.user returned with identities: []
+      // - Enumeration protection ON, newer Supabase → data.user is null
+      if (!data.user || data.user.identities?.length === 0) {
         throw new Error('An account with this email already exists. Try signing in instead.')
       }
       setSubmitted(true)
