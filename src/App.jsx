@@ -8,7 +8,12 @@ import Login          from '@/pages/auth/Login'
 import SignUp         from '@/pages/auth/SignUp'
 import ForgotPassword from '@/pages/auth/ForgotPassword'
 import ResetPassword  from '@/pages/auth/ResetPassword'
-import Dashboard      from '@/pages/app/Dashboard'
+
+import Dashboard     from '@/pages/app/Dashboard'
+import Accounts      from '@/pages/app/Accounts'
+import Transactions  from '@/pages/app/Transactions'
+import Investments   from '@/pages/app/Investments'
+import Settings      from '@/pages/app/Settings'
 
 export default function App() {
   const initialize = useAuthStore((s) => s.initialize)
@@ -29,11 +34,15 @@ export default function App() {
       {/* Protected app routes */}
       <Route element={<ProtectedRoute />}>
         <Route element={<AppShell />}>
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboard"    element={<Dashboard />} />
+          <Route path="/accounts"     element={<Accounts />} />
+          <Route path="/transactions" element={<Transactions />} />
+          <Route path="/investments"  element={<Investments />} />
+          <Route path="/settings"     element={<Settings />} />
         </Route>
       </Route>
 
-      {/* Root → dashboard (ProtectedRoute handles redirect to /login if unauthed) */}
+      {/* Root → dashboard */}
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
       {/* Catch-all */}

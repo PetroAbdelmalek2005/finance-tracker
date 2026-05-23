@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
+import { useAuthStore } from '@/store/authStore'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { checkPasswordStrength } from '@/utils/formatters'
@@ -17,23 +18,19 @@ const strengthLabel = ['', 'Very weak', 'Weak', 'Fair', 'Strong', 'Very strong']
 const strengthColor  = ['', 'bg-red-500', 'bg-orange-400', 'bg-yellow-400', 'bg-blue-400', 'bg-green-500']
 
 export default function ResetPassword() {
-  const navigate = useNavigate()
-  const [password,  setPassword]  = useState('')
-  const [confirm,   setConfirm]   = useState('')
-  const [error,     setError]     = useState(null)
-  const [loading,   setLoading]   = useState(false)
-  const [ready,     setReady]     = useState(false)
+  const navigate   = useNavigate()
+  const authEvent  = useAuthStore((s) => s.authEvent)
+  const [password, setPassword] = useState('')
+  const [confirm,  setConfirm]  = useState('')
+  const [error,    setError]    = useState(null)
+  const [loading,  setLoading]  = useState(false)
 
   const { checks, score, strong } = checkPasswordStrength(password)
 
-  // Supabase fires PASSWORD_RECOVERY when the user arrives via the reset link.
-  // Until that event fires, the session isn't valid for updateUser.
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') setReady(true)
-    })
-    return () => subscription.unsubscribe()
-  }, [])
+  // Read the event from the store — avoids the race condition where
+  // PASSWORD_RECOVERY fires before this component mounts its own listener.
+  const isRecovery = authEvent === 'PASSWORD_RECOVERY'
+  const isExpired  = authEvent != null && authEvent !== 'PASSWORD_RECOVERY'
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -53,7 +50,7 @@ export default function ResetPassword() {
       const { error } = await supabase.auth.updateUser({ password })
       if (error) throw error
       await supabase.auth.signOut()
-      navigate('/login', { replace: true, state: { message: 'Password updated. Please sign in.' } })
+      navigate('/login', { replace: true, state: { message: 'Password updated. Please sign in with your new password.' } })
     } catch (err) {
       setError(err.message)
     } finally {
@@ -61,12 +58,44 @@ export default function ResetPassword() {
     }
   }
 
-  if (!ready) {
+  // Link is expired or invalid
+  if (isExpired) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-surface-muted px-4">
+        <div className="w-full max-w-sm rounded-xl border border-surface-border bg-surface p-8 text-center shadow-sm">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-50">
+            <svg className="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+            </svg>
+          </div>
+          <h2 className="font-display text-2xl text-slate-900">Link expired</h2>
+          <p className="mt-2 text-sm text-slate-500">
+            This reset link has expired or already been used. Request a new one.
+          </p>
+          <Link
+            to="/forgot-password"
+            className="mt-6 inline-block rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
+          >
+            Request new link
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  // Waiting for PASSWORD_RECOVERY event
+  if (!isRecovery) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-surface-muted px-4">
         <div className="w-full max-w-sm rounded-xl border border-surface-border bg-surface p-8 text-center shadow-sm">
           <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" />
-          <p className="text-sm text-slate-500">Verifying reset link…</p>
+          <p className="mt-2 text-sm text-slate-500">Verifying reset link…</p>
+          <p className="mt-4 text-xs text-slate-400">
+            Taking too long?{' '}
+            <Link to="/forgot-password" className="text-brand-600 hover:underline">
+              Request a new link
+            </Link>
+          </p>
         </div>
       </div>
     )
