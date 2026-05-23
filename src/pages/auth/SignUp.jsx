@@ -41,8 +41,12 @@ export default function SignUp() {
 
     setLoading(true)
     try {
-      const { error } = await supabase.auth.signUp({ email, password })
+      const { data, error } = await supabase.auth.signUp({ email, password })
       if (error) throw error
+      // Supabase returns identities: [] when the email is already registered
+      if (data.user?.identities?.length === 0) {
+        throw new Error('An account with this email already exists. Try signing in instead.')
+      }
       setSubmitted(true)
     } catch (err) {
       setError(err.message)
