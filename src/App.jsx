@@ -7,6 +7,7 @@ import AppShell from '@/components/layout/AppShell'
 import Login          from '@/pages/auth/Login'
 import SignUp         from '@/pages/auth/SignUp'
 import ForgotPassword from '@/pages/auth/ForgotPassword'
+import ResetPassword  from '@/pages/auth/ResetPassword'
 import Dashboard      from '@/pages/app/Dashboard'
 
 export default function App() {
@@ -23,6 +24,7 @@ export default function App() {
       <Route path="/login"           element={<Login />} />
       <Route path="/signup"          element={<SignUp />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password"  element={<ResetPassword />} />
 
       {/* Protected app routes */}
       <Route element={<ProtectedRoute />}>
