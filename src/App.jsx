@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
+import { useFinanceStore } from '@/store/financeStore'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import AppShell from '@/components/layout/AppShell'
 
@@ -17,11 +18,24 @@ import Settings      from '@/pages/app/Settings'
 
 export default function App() {
   const initialize = useAuthStore((s) => s.initialize)
+  const user       = useAuthStore((s) => s.user)
+  const loading    = useAuthStore((s) => s.loading)
+  const fetchAll   = useFinanceStore((s) => s.fetchAll)
+  const clearAll   = useFinanceStore((s) => s.clearAll)
 
   useEffect(() => {
     const { unsubscribe } = initialize()
     return unsubscribe
   }, [initialize])
+
+  useEffect(() => {
+    if (loading) return
+    if (user) {
+      fetchAll()
+    } else {
+      clearAll()
+    }
+  }, [user, loading, fetchAll, clearAll])
 
   return (
     <Routes>
