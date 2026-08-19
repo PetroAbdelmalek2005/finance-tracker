@@ -6,19 +6,16 @@ This file is intended for AI assistants (Claude, Copilot, etc.) working on this 
 
 ## Project Overview
 
-**Finance Tracker** is a personal finance dashboard built as a single-page application (SPA). It is entirely client-side — no backend, no build system, no npm. The entire application lives in one HTML file (`index.html`, ~4,500 lines) with embedded CSS and JavaScript.
+**Finance Tracker** is a single-user personal finance app: a chat-first way to log transactions and ask spending questions, a dashboard for browsing/editing/filtering transactions, and a statements importer that reconciles bank CSV/PDF exports against what's already logged.
+
+Everything is served from one Cloudflare Worker: the static frontend and the JSON API share one origin, so there's no CORS to manage.
 
 **Live Features:**
-- Account management (multi-type, multi-currency CAD/USD)
-- Transaction tracking (expense, income, bill, transfer)
-- Budget management with adherence tracking
-- Investment portfolio (stocks with live Yahoo Finance prices)
-- Savings goals with auto-tracking
-- Cloud sync to Google Sheets, GitHub Gist, or JSONBin
-- OFX/QFX/CSV import from bank statements
-- PWA support (offline-capable, installable)
-- Dark/light theme
-- Health score with daily check-in streaks
+- Chat-based transaction logging — natural language in, an editable confirm card out, never auto-saved
+- Chat-based spending Q&A, answered by Gemini grounded in the current month's actual transactions
+- Dashboard: inline edit/delete, filter by month/category/currency, category totals bar chart
+- Bank statement import: CSV (parsed client-side) or PDF (sent to Gemini as multimodal input), reconciled against existing transactions
+- Dark "ledger" themed UI with a ticker tape of recent transactions
 
 ---
 
@@ -26,16 +23,15 @@ This file is intended for AI assistants (Claude, Copilot, etc.) working on this 
 
 | Layer | Technology |
 |---|---|
-| Markup | HTML5 |
-| Styling | CSS3 (inline, CSS variables) |
-| Logic | Vanilla JavaScript (ES6+) |
+| Hosting | Cloudflare Workers (serves both static assets and `/api/*`) |
+| Database | Cloudflare D1 (SQLite) |
+| AI | Google Gemini — `gemini-2.5-flash-lite` for chat parsing, `gemini-2.5-flash` for statement extraction (multimodal PDF support) |
+| Frontend | Vanilla HTML/CSS/JS — no framework, no bundler |
 | Charts | Chart.js 4.4.1 (CDN) |
-| Fonts | Google Fonts — DM Serif Display, DM Sans (CDN) |
-| Storage | localStorage |
-| Offline | Service Worker (`sw.js`) |
-| PWA | `manifest.json` |
+| CSV parsing | PapaParse 5.4.1 (CDN), client-side only |
+| Fonts | Google Fonts — DM Sans, JetBrains Mono (CDN) |
 
-**No build tool, no package manager, no TypeScript, no framework.**
+**No build tool, no package manager beyond Wrangler, no TypeScript, no frontend framework.**
 
 ---
 
@@ -43,127 +39,61 @@ This file is intended for AI assistants (Claude, Copilot, etc.) working on this 
 
 ```
 finance-tracker/
-├── index.html            # Entire application (HTML + CSS + JS)
-├── sw.js                 # Service worker (offline caching + background sync)
-├── manifest.json         # PWA manifest
-├── README.md             # Minimal title only
-├── FEATURE_GAP_ANALYSIS.md  # Roadmap & known gaps
-└── CLAUDE.md             # This file
+├── public/                 # static assets, served via Workers Assets binding
+│   ├── index.html            # shell: auth gate, ticker tape, 3 tabs, bottom nav
+│   ├── style.css              # dark ledger theme, CSS custom properties
+│   └── app.js                  # all frontend logic
+├── src/
+│   └── worker.js              # Worker entry point — handles everything under /api/*
+├── migrations/
+│   └── 0001_init.sql          # D1 schema + default categories seed
+├── wrangler.toml
+├── package.json                # wrangler devDependency only
+└── CLAUDE.md                   # this file
 ```
 
-### `index.html` Internal Layout
-
-| Lines | Content |
-|---|---|
-| 1–390 | `<style>` block — all CSS |
-| 392–1184 | HTML structure (sidebar, tabs, modals) |
-| 1186–4548 | `<script>` block — all JavaScript |
-
-The JavaScript is divided by comment banners:
-```javascript
-// ═══════════════════════════════════════════════
-// SECTION NAME
-// ═══════════════════════════════════════════════
-```
+Routing precedence: Cloudflare checks `public/` for a matching static file first; only unmatched paths (in practice, everything under `/api/*`) reach `src/worker.js`. `worker.js` does not need to reference the `ASSETS` binding itself.
 
 ---
 
-## Architecture
+## Data Model (D1)
 
-### State Management
-
-All application state lives in a single global object `S`:
-
-```javascript
-let S = {
-  accounts: [],
-  transactions: [],
-  budgets: [],
-  stocks: [],
-  goals: []
-}
+**transactions**
+```sql
+id TEXT PRIMARY KEY, date TEXT, merchant TEXT, category TEXT,
+type TEXT ('expense'|'income'), amount REAL, currency TEXT ('CAD'|'USD'|'EUR'|'GBP'),
+notes TEXT, source TEXT, createdAt TEXT
 ```
 
-- `saveLocal()` — serializes `S` to `localStorage` key `ft_data_v2`
-- `loadLocal()` — deserializes from localStorage on startup
-- `renderAll()` — re-renders every view; call after any state mutation
-- Individual `render{Feature}()` functions for targeted re-renders
-
-### Configuration
-
-Sync provider credentials are stored in `localStorage` under `ft_config`:
-
-```javascript
-CONFIG = {
-  syncProvider: 'sheets' | 'gist' | 'jsonbin' | 'none',
-  scriptUrl: '',    // Google Apps Script endpoint
-  sheetId: '',
-  gistToken: '',
-  gistId: '',
-  jsonbinKey: '',
-  jsonbinId: '',
-  autoSync: true
-}
+**categories**
+```sql
+category TEXT PRIMARY KEY
 ```
+Default categories: Groceries, Dining, Transport, Gas, Housing, Utilities, Subscriptions, Shopping, Health, Entertainment, Travel, Income, Transfers, Other. New categories are created on demand — any transaction write whose `category` isn't already in the table gets it inserted (`INSERT OR IGNORE`).
 
-### Data Models
+IDs are `crypto.randomUUID()`, generated server-side in `worker.js` — never client-side, never `Math.random()`.
 
-**Account**
-```javascript
-{ id, name, type, balance, currency }
-// type: Chequing|Savings|CreditCard|FHSA|TFSA|RRSP|Loan|Other
-// currency: 'CAD' | 'USD'
-```
+---
 
-**Transaction**
-```javascript
-{ id, date, desc, type, amount, cat, account, xferDir, xferRef, dueDate, goalId, bucket }
-// type: expense|income|transfer|bill
-// bucket: Bills|Spending|Savings|Investing
-// xferDir: 'in' | 'out' (transfers only)
-```
+## API Routes (`src/worker.js`, all under `/api/`)
 
-**Budget**
-```javascript
-{ id, cat, amount }
-```
+| Route | Purpose |
+|---|---|
+| `GET /api/transactions` | List, with optional `?month=YYYY-MM&category=&currency=` filters |
+| `POST /api/transactions` | Create |
+| `PUT /api/transactions/:id` | Update |
+| `DELETE /api/transactions/:id` | Delete |
+| `GET /api/categories` | List known categories |
+| `POST /api/chat/parse` | `{ text }` → Gemini decides: log a transaction, answer a spending question, or ask a clarifying question |
+| `POST /api/statements/csv` | `{ rows }` (client-parsed CSV) → Gemini extracts + categorizes transactions |
+| `POST /api/statements/pdf` | `{ base64 }` → same, via Gemini multimodal (`inline_data`, `mime_type: application/pdf`) |
+| `GET /api/test` | Connectivity check — confirms auth + D1 wiring, no Gemini call |
 
-**Stock**
-```javascript
-{ id, ticker, name, shares, costPerShare, current, linkedAccount }
-```
+All routes require `Authorization: Bearer <API_SECRET>`; a mismatch returns `401` before any D1 or Gemini call happens (so an unauthenticated request never burns Gemini quota).
 
-**Goal**
-```javascript
-{ id, name, target, current, deadline, linkedAccount, trackMode }
-// trackMode: 'account' | 'manual'
-```
+### Gemini calling convention
 
-### Sync Providers
-
-Cloud sync uses three optional providers (user picks one):
-
-| Provider | Read | Write |
-|---|---|---|
-| Google Sheets | Apps Script `GET /exec?action=read` | Apps Script `POST /exec` |
-| GitHub Gist | `GET /gists/{id}` | `PATCH /gists/{id}` |
-| JSONBin | `GET /v3/b/{id}/latest` | `PUT /v3/b/{id}` |
-
-Auto-sync fires 3 seconds after any state change (debounced). Periodic sync runs every 2 minutes.
-
-### Charts
-
-Chart.js instances are cached in a global `charts` object to avoid re-creating on every render. Always call `.destroy()` on an existing chart before creating a new one for the same canvas.
-
-### Performance Caches
-
-These caches are populated lazily and must be invalidated when state changes:
-
-- `_txDateCache` — Maps transaction IDs to `Date` objects
-- `_goalNameMap` — Maps goal IDs to names
-- `_txFilterOptionsCache` — Cached filter option lists
-
-Call `invalidateDateCache()` after mutating transactions.
+Every Gemini call goes through the `callGemini()` helper in `worker.js`, which always sets `generationConfig.responseMimeType = "application/json"` plus a `responseSchema`. **Never** hand-roll JSON extraction from free-text model output — if a new route needs structured output, give it a schema and use the helper.
 
 ---
 
@@ -173,24 +103,18 @@ Call `invalidateDateCache()` after mutating transactions.
 
 | Thing | Convention | Example |
 |---|---|---|
-| Variables / functions | camelCase | `renderDash()`, `activeTab` |
-| Constants | UPPER_SNAKE_CASE | `EXPENSE_CATS`, `AUTO_SYNC_DEBOUNCE_MS` |
-| CSS classes | kebab-case | `.nav-btn`, `.modal-bg` |
-| HTML IDs | kebab-case | `#tab-dashboard`, `#tx-modal` |
-| Data IDs | nanoid-style lowercase strings | `"a1b2c3"` |
+| Variables / functions | camelCase | `renderTxList()`, `activeTab` |
+| Constants | UPPER_SNAKE_CASE | `CATEGORIES`, `CHAT_SCHEMA` |
+| CSS classes | kebab-case | `.tx-row`, `.confirm-card` |
+| HTML IDs | kebab-case | `#tab-dashboard`, `#chat-form` |
 
 ### Patterns
 
-- **Render on mutation** — After every state change: call `saveLocal()`, then `renderAll()` (or a targeted render).
-- **No reactive framework** — All DOM updates are manual via `innerHTML` or `textContent` reassignment.
-- **Async sync** — Sync operations use `async/await` with `try/catch`. Failures are logged to console and surfaced as toasts.
-- **Toast notifications** — Use `showToast(message, type)` for all user-facing feedback (`type`: `'success'`, `'error'`, `'info'`).
-- **Modal pattern** — Modals use `.modal-bg` with a `.modal` child. Show via `el.style.display='flex'`, hide via `el.style.display='none'`.
-- **Transfers** — Transfers create two linked transactions (one `xferDir:'out'`, one `xferDir:'in'`) linked by `xferRef`. Do not double-count them in summaries.
-
-### IDs
-
-Generate new record IDs with the existing helper (search for `genId` in the script block). Do not use `Math.random()` directly.
+- **Frontend state**: a single `state` object in `app.js` (`secret`, `transactions`, `categories`, `activeTab`). After any mutation (`POST`/`PUT`/`DELETE`), reload from the API and re-render the affected views — there's no client-side cache invalidation logic to maintain, the transaction list is small enough to just refetch.
+- **Auth gate**: the shared secret lives in `localStorage` (`ft_secret`), entered once via the gate screen, sent as `Authorization: Bearer` on every `/api/*` call through the `api()` wrapper in `app.js`. A `401` clears it and re-shows the gate. This is *not* real security — it's just enough that a stranger who finds the URL can't burn Gemini quota or write into the database.
+- **Chat confirm cards**: `log_transaction` results are always rendered as an editable card with Save/Cancel — the frontend must never call `POST /api/transactions` directly off a chat response without the user confirming.
+- **Transfers/multi-currency beyond the 4 supported currencies**: out of scope. `currency` is constrained to `CAD|USD|EUR|GBP` at the D1 level (`CHECK` constraint) and in the Gemini response schemas.
+- **Reconciliation matching**: statement rows are matched against existing transactions by `amount` equality (within $0.01) and `date` within 3 days — see `reconcileStatement()` in `app.js`. This runs client-side against the already-loaded transaction list, not in the Worker.
 
 ---
 
@@ -198,126 +122,52 @@ Generate new record IDs with the existing helper (search for `genId` in the scri
 
 ### Navigation
 
-- **Desktop**: Fixed sidebar (220px) with vertical tab buttons
-- **Mobile** (≤680px): Bottom navigation bar with icon buttons
+Bottom nav bar (mobile-first, also used on desktop) with three tabs, toggled via `.tab`/`.active` classes in `app.js`'s `switchTab()`:
 
-### Tabs
-
-| Tab | HTML ID | Render Function |
-|---|---|---|
-| Dashboard | `tab-dashboard` | `renderDash()` |
-| Accounts | `tab-accounts` | `renderAccounts()` |
-| Transactions | `tab-transactions` | `renderTx()` |
-| Investments | `tab-investments` | `renderInvestments()` |
-| Goals | `tab-goals` | `renderGoals()` |
-
-Settings are in a slide-in panel, not a tab.
-
-### Modals
-
-| Purpose | ID |
+| Tab | HTML ID |
 |---|---|
-| Add/edit transaction | `tx-modal` |
-| Add/edit account | `acct-modal` |
-| Add/edit stock | `stock-modal` |
-| Add/edit goal | `goal-modal` |
-| Add/edit budget | `budget-modal` |
-| Import transactions | `import-modal` |
-| Initial setup config | `config-modal` |
+| Chat | `tab-chat` |
+| Dashboard | `tab-dashboard` |
+| Statements | `tab-statements` |
+
+A ticker tape (`#ticker`) above the tabs shows the 15 most recent transactions on a CSS marquee animation — teal for income, amber for expense.
 
 ---
 
-## Responsive Breakpoints
+## Environment / Secrets
 
-| Breakpoint | Target |
+Set via `wrangler secret put`, never committed:
+
+| Secret | Purpose |
 |---|---|
-| ≤680px | Mobile (bottom nav, stacked layout) |
-| ≤900px | Tablet (condensed sidebar) |
-| >900px | Desktop (full sidebar + multi-column grid) |
+| `GEMINI_API_KEY` | Google Gemini API key |
+| `API_SECRET` | Shared-secret value checked against every `/api/*` request's `Authorization` header |
 
-CSS uses `repeat(auto-fit, minmax(...))` grid patterns extensively.
-
----
-
-## LocalStorage Keys
-
-| Key | Contents |
-|---|---|
-| `ft_data_v2` | Full state object `S` |
-| `ft_config` | Sync configuration |
-| `ft_skipped_config` | Boolean — user skipped setup |
-| `ft_theme` | `"dark"` or `"light"` |
-| `ft_checkins_v1` | Array of ISO date strings (daily check-ins) |
-| `ft_milestones_v1` | Achievement tracking object |
-
----
-
-## Service Worker (`sw.js`)
-
-- Caches the app shell for offline use
-- Listens for `sync` event tagged `ft-sync`
-- On network restore, posts a message to the main window to trigger re-sync
-- Does **not** intercept POST requests to external sync APIs
+`wrangler.toml` binds `DB` (D1 database) and `ASSETS` (static assets directory `./public`).
 
 ---
 
 ## How to Run
 
-No build step required. Open `index.html` directly in a browser, or serve the directory with any static file server:
-
 ```bash
-# Python
-python3 -m http.server 8080
-
-# Node
-npx serve .
+npm install
+npx wrangler d1 migrations apply finance-tracker-db --local   # first time / after schema changes
+npx wrangler dev                                               # local dev server, http://localhost:8787
 ```
 
-For PWA/service worker functionality, HTTPS or `localhost` is required.
+Deploy:
+```bash
+npx wrangler d1 migrations apply finance-tracker-db --remote   # first time / after schema changes
+npx wrangler deploy
+```
 
 ---
 
 ## Development Guidelines for AI Assistants
 
-1. **Edit `index.html` only** — There is no separate JS or CSS file. All changes go into the single HTML file.
-
-2. **Preserve section banners** — Keep the `// ═══ SECTION ═══` comment dividers to maintain readability of the monolithic file.
-
-3. **Always call `saveLocal()` + `renderAll()` after state mutations** — Never mutate `S` without persisting and re-rendering.
-
-4. **Invalidate caches** — After modifying transactions, call `invalidateDateCache()`.
-
-5. **No build system** — Do not introduce npm, webpack, TypeScript, or any build tooling unless explicitly requested.
-
-6. **No new files for features** — Keep all code inside `index.html`. Only create new standalone files if adding a completely independent service (e.g., a new service worker feature).
-
-7. **Match existing style** — Use the CSS variable tokens (e.g., `var(--accent)`, `var(--bg-card)`) for all new UI. Do not hardcode colors.
-
-8. **Test sync providers independently** — Google Sheets, Gist, and JSONBin paths are separate code branches. Changes to sync logic must not break any provider.
-
-9. **Handle transfers carefully** — When computing account balances or category totals, always check `xferDir` and `xferRef` to avoid double-counting.
-
-10. **Currency conversions** — USD-denominated accounts use a live exchange rate fetched from Open Exchange Rates. Always apply the stored `usdRate` when converting to CAD for net worth calculations.
-
----
-
-## Known Gaps (from `FEATURE_GAP_ANALYSIS.md`)
-
-- No user authentication
-- No AI-driven insights
-- Formal 4-bucket allocation engine is partial
-- Loading skeletons (CSS exists, but render logic is incomplete)
-- Multi-currency ledger (beyond CAD/USD pair) not supported
-
----
-
-## External APIs Used
-
-| API | Purpose | Auth |
-|---|---|---|
-| Google Apps Script | Primary sync | None (public deployment URL) |
-| GitHub Gist API | Alternative sync | Personal access token |
-| JSONBin API | Alternative sync | API key |
-| Yahoo Finance (v8) | Live stock prices | None |
-| Open Exchange Rates | USD/CAD rate | None (free tier, no key) |
-| CORS proxies (allorigins.win, corsproxy.io) | Bypass CORS on Yahoo Finance | None |
+1. **No build system** — do not introduce npm frontend deps, a bundler, TypeScript, or a frontend framework unless explicitly requested. `public/` is served as-is.
+2. **Keep the Worker framework-free** — the route count is small; a router library is not warranted.
+3. **New Gemini-backed routes** must use `callGemini()` with a `responseSchema` — never parse free text for structured data.
+4. **Never auto-save from chat** — any transaction Gemini proposes from `/api/chat/parse` must go through the confirm-card flow.
+5. **D1 schema changes** go in a new numbered file under `migrations/` (e.g. `0002_*.sql`) — never edit `0001_init.sql` after it's been applied anywhere.
+6. **Match existing style** — use the CSS variable tokens in `style.css` (`var(--teal)`, `var(--amber)`, `var(--bg-card)`, etc.) for new UI; don't hardcode colors.

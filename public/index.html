@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Finance Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+
+<!-- ═══ AUTH GATE ═══ -->
+<div id="gate" class="gate">
+  <form id="gate-form" class="gate-card">
+    <h1>Finance Tracker</h1>
+    <p>Enter your access key to continue.</p>
+    <input id="gate-input" type="password" placeholder="Access key" autocomplete="off" required />
+    <button type="submit">Unlock</button>
+    <p id="gate-error" class="gate-error" hidden>Wrong key. Try again.</p>
+  </form>
+</div>
+
+<!-- ═══ APP SHELL ═══ -->
+<div id="app" class="app" hidden>
+
+  <div class="ticker-wrap">
+    <div id="ticker" class="ticker"></div>
+  </div>
+
+  <main class="tabs">
+
+    <!-- ─── CHAT TAB ─── -->
+    <section id="tab-chat" class="tab active">
+      <div id="chat-thread" class="chat-thread"></div>
+      <form id="chat-form" class="chat-form">
+        <input id="chat-input" type="text" placeholder="Log a transaction or ask about your spending…" autocomplete="off" />
+        <button type="submit">Send</button>
+      </form>
+    </section>
+
+    <!-- ─── DASHBOARD TAB ─── -->
+    <section id="tab-dashboard" class="tab">
+      <div class="filter-bar">
+        <select id="filter-month"></select>
+        <select id="filter-category"><option value="">All categories</option></select>
+        <select id="filter-currency">
+          <option value="">All currencies</option>
+          <option value="CAD">CAD</option>
+          <option value="USD">USD</option>
+          <option value="EUR">EUR</option>
+          <option value="GBP">GBP</option>
+        </select>
+      </div>
+      <div class="chart-card">
+        <canvas id="category-chart" height="140"></canvas>
+      </div>
+      <div id="tx-list" class="tx-list"></div>
+    </section>
+
+    <!-- ─── STATEMENTS TAB ─── -->
+    <section id="tab-statements" class="tab">
+      <div class="statement-upload">
+        <label class="upload-btn">
+          Upload CSV
+          <input id="csv-input" type="file" accept=".csv" hidden />
+        </label>
+        <label class="upload-btn">
+          Upload PDF
+          <input id="pdf-input" type="file" accept="application/pdf" hidden />
+        </label>
+      </div>
+      <div id="statement-status" class="statement-status"></div>
+      <div id="reconcile-results" class="reconcile-results"></div>
+    </section>
+
+  </main>
+
+  <nav class="bottom-nav">
+    <button class="nav-btn active" data-tab="tab-chat">Chat</button>
+    <button class="nav-btn" data-tab="tab-dashboard">Dashboard</button>
+    <button class="nav-btn" data-tab="tab-statements">Statements</button>
+  </nav>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>
