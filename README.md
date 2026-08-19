@@ -1,23 +1,18 @@
 # Finance Tracker
 
-A chat-first personal finance tracker. Log transactions in plain English, ask spending questions, import bank statements — all served from a single Cloudflare Worker backed by D1 and Google Gemini.
+A chat-first personal finance tracker. Log transactions in plain English, ask spending questions, import bank statements. Runs entirely on your own machine — one Node.js process, one local JSON file, no cloud account, no database server, no build step. The only outside call is to Google Gemini for the AI features.
 
 See `CLAUDE.md` for architecture and conventions.
 
 ## Setup
 
 ```bash
-npm install
-npx wrangler d1 create finance-tracker-db      # paste the returned database_id into wrangler.toml
-npx wrangler d1 migrations apply finance-tracker-db --local
-npx wrangler secret put GEMINI_API_KEY
-npx wrangler secret put API_SECRET
-npx wrangler dev
+cp .env.example .env
+# edit .env: set GEMINI_API_KEY (from https://aistudio.google.com/apikey)
+#            and pick any passphrase for API_SECRET
+node --env-file=.env server.js
 ```
 
-## Deploy
+Open `http://localhost:3000` and enter the `API_SECRET` you picked as the access key.
 
-```bash
-npx wrangler d1 migrations apply finance-tracker-db --remote
-npx wrangler deploy
-```
+No `npm install` needed — the app has zero dependencies.

@@ -4,12 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
-    "migrate:local": "wrangler d1 migrations apply finance-tracker-db --local",
-    "migrate:remote": "wrangler d1 migrations apply finance-tracker-db --remote"
-  },
-  "devDependencies": {
-    "wrangler": "^4.0.0"
+    "start": "node --env-file=.env server.js",
+    "dev": "node --env-file=.env --watch server.js"
   }
 }
